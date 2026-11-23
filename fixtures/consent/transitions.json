@@ -1,0 +1,2632 @@
+{
+ "note": "Actors: A proposed the request. B is the other partner. C is a third owner. H is a helper (not an owner). Times: before the expiry instant, exactly at it, after it. A request is expired from the instant onwards.",
+ "cases": [
+  {
+   "status": "pending",
+   "event": "approve",
+   "actor": "A",
+   "when": "before",
+   "expect": {
+    "ok": false,
+    "reason": "own-request",
+    "status": "pending"
+   }
+  },
+  {
+   "status": "pending",
+   "event": "approve",
+   "actor": "A",
+   "when": "at",
+   "expect": {
+    "ok": false,
+    "reason": "expired",
+    "status": "expired"
+   }
+  },
+  {
+   "status": "pending",
+   "event": "approve",
+   "actor": "A",
+   "when": "after",
+   "expect": {
+    "ok": false,
+    "reason": "expired",
+    "status": "expired"
+   }
+  },
+  {
+   "status": "pending",
+   "event": "approve",
+   "actor": "B",
+   "when": "before",
+   "expect": {
+    "ok": true,
+    "status": "approved"
+   }
+  },
+  {
+   "status": "pending",
+   "event": "approve",
+   "actor": "B",
+   "when": "at",
+   "expect": {
+    "ok": false,
+    "reason": "expired",
+    "status": "expired"
+   }
+  },
+  {
+   "status": "pending",
+   "event": "approve",
+   "actor": "B",
+   "when": "after",
+   "expect": {
+    "ok": false,
+    "reason": "expired",
+    "status": "expired"
+   }
+  },
+  {
+   "status": "pending",
+   "event": "approve",
+   "actor": "C",
+   "when": "before",
+   "expect": {
+    "ok": true,
+    "status": "approved"
+   }
+  },
+  {
+   "status": "pending",
+   "event": "approve",
+   "actor": "C",
+   "when": "at",
+   "expect": {
+    "ok": false,
+    "reason": "expired",
+    "status": "expired"
+   }
+  },
+  {
+   "status": "pending",
+   "event": "approve",
+   "actor": "C",
+   "when": "after",
+   "expect": {
+    "ok": false,
+    "reason": "expired",
+    "status": "expired"
+   }
+  },
+  {
+   "status": "pending",
+   "event": "approve",
+   "actor": "H",
+   "when": "before",
+   "expect": {
+    "ok": false,
+    "reason": "not-a-partner",
+    "status": "pending"
+   }
+  },
+  {
+   "status": "pending",
+   "event": "approve",
+   "actor": "H",
+   "when": "at",
+   "expect": {
+    "ok": false,
+    "reason": "expired",
+    "status": "expired"
+   }
+  },
+  {
+   "status": "pending",
+   "event": "approve",
+   "actor": "H",
+   "when": "after",
+   "expect": {
+    "ok": false,
+    "reason": "expired",
+    "status": "expired"
+   }
+  },
+  {
+   "status": "pending",
+   "event": "decline",
+   "actor": "A",
+   "when": "before",
+   "expect": {
+    "ok": false,
+    "reason": "own-request",
+    "status": "pending"
+   }
+  },
+  {
+   "status": "pending",
+   "event": "decline",
+   "actor": "A",
+   "when": "at",
+   "expect": {
+    "ok": false,
+    "reason": "expired",
+    "status": "expired"
+   }
+  },
+  {
+   "status": "pending",
+   "event": "decline",
+   "actor": "A",
+   "when": "after",
+   "expect": {
+    "ok": false,
+    "reason": "expired",
+    "status": "expired"
+   }
+  },
+  {
+   "status": "pending",
+   "event": "decline",
+   "actor": "B",
+   "when": "before",
+   "expect": {
+    "ok": true,
+    "status": "declined"
+   }
+  },
+  {
+   "status": "pending",
+   "event": "decline",
+   "actor": "B",
+   "when": "at",
+   "expect": {
+    "ok": false,
+    "reason": "expired",
+    "status": "expired"
+   }
+  },
+  {
+   "status": "pending",
+   "event": "decline",
+   "actor": "B",
+   "when": "after",
+   "expect": {
+    "ok": false,
+    "reason": "expired",
+    "status": "expired"
+   }
+  },
+  {
+   "status": "pending",
+   "event": "decline",
+   "actor": "C",
+   "when": "before",
+   "expect": {
+    "ok": true,
+    "status": "declined"
+   }
+  },
+  {
+   "status": "pending",
+   "event": "decline",
+   "actor": "C",
+   "when": "at",
+   "expect": {
+    "ok": false,
+    "reason": "expired",
+    "status": "expired"
+   }
+  },
+  {
+   "status": "pending",
+   "event": "decline",
+   "actor": "C",
+   "when": "after",
+   "expect": {
+    "ok": false,
+    "reason": "expired",
+    "status": "expired"
+   }
+  },
+  {
+   "status": "pending",
+   "event": "decline",
+   "actor": "H",
+   "when": "before",
+   "expect": {
+    "ok": false,
+    "reason": "not-a-partner",
+    "status": "pending"
+   }
+  },
+  {
+   "status": "pending",
+   "event": "decline",
+   "actor": "H",
+   "when": "at",
+   "expect": {
+    "ok": false,
+    "reason": "expired",
+    "status": "expired"
+   }
+  },
+  {
+   "status": "pending",
+   "event": "decline",
+   "actor": "H",
+   "when": "after",
+   "expect": {
+    "ok": false,
+    "reason": "expired",
+    "status": "expired"
+   }
+  },
+  {
+   "status": "pending",
+   "event": "withdraw",
+   "actor": "A",
+   "when": "before",
+   "expect": {
+    "ok": true,
+    "status": "withdrawn"
+   }
+  },
+  {
+   "status": "pending",
+   "event": "withdraw",
+   "actor": "A",
+   "when": "at",
+   "expect": {
+    "ok": false,
+    "reason": "expired",
+    "status": "expired"
+   }
+  },
+  {
+   "status": "pending",
+   "event": "withdraw",
+   "actor": "A",
+   "when": "after",
+   "expect": {
+    "ok": false,
+    "reason": "expired",
+    "status": "expired"
+   }
+  },
+  {
+   "status": "pending",
+   "event": "withdraw",
+   "actor": "B",
+   "when": "before",
+   "expect": {
+    "ok": false,
+    "reason": "not-the-proposer",
+    "status": "pending"
+   }
+  },
+  {
+   "status": "pending",
+   "event": "withdraw",
+   "actor": "B",
+   "when": "at",
+   "expect": {
+    "ok": false,
+    "reason": "expired",
+    "status": "expired"
+   }
+  },
+  {
+   "status": "pending",
+   "event": "withdraw",
+   "actor": "B",
+   "when": "after",
+   "expect": {
+    "ok": false,
+    "reason": "expired",
+    "status": "expired"
+   }
+  },
+  {
+   "status": "pending",
+   "event": "withdraw",
+   "actor": "C",
+   "when": "before",
+   "expect": {
+    "ok": false,
+    "reason": "not-the-proposer",
+    "status": "pending"
+   }
+  },
+  {
+   "status": "pending",
+   "event": "withdraw",
+   "actor": "C",
+   "when": "at",
+   "expect": {
+    "ok": false,
+    "reason": "expired",
+    "status": "expired"
+   }
+  },
+  {
+   "status": "pending",
+   "event": "withdraw",
+   "actor": "C",
+   "when": "after",
+   "expect": {
+    "ok": false,
+    "reason": "expired",
+    "status": "expired"
+   }
+  },
+  {
+   "status": "pending",
+   "event": "withdraw",
+   "actor": "H",
+   "when": "before",
+   "expect": {
+    "ok": false,
+    "reason": "not-the-proposer",
+    "status": "pending"
+   }
+  },
+  {
+   "status": "pending",
+   "event": "withdraw",
+   "actor": "H",
+   "when": "at",
+   "expect": {
+    "ok": false,
+    "reason": "expired",
+    "status": "expired"
+   }
+  },
+  {
+   "status": "pending",
+   "event": "withdraw",
+   "actor": "H",
+   "when": "after",
+   "expect": {
+    "ok": false,
+    "reason": "expired",
+    "status": "expired"
+   }
+  },
+  {
+   "status": "pending",
+   "event": "expire",
+   "actor": "A",
+   "when": "before",
+   "expect": {
+    "ok": false,
+    "reason": "not-due",
+    "status": "pending"
+   }
+  },
+  {
+   "status": "pending",
+   "event": "expire",
+   "actor": "A",
+   "when": "at",
+   "expect": {
+    "ok": true,
+    "status": "expired"
+   }
+  },
+  {
+   "status": "pending",
+   "event": "expire",
+   "actor": "A",
+   "when": "after",
+   "expect": {
+    "ok": true,
+    "status": "expired"
+   }
+  },
+  {
+   "status": "pending",
+   "event": "expire",
+   "actor": "B",
+   "when": "before",
+   "expect": {
+    "ok": false,
+    "reason": "not-due",
+    "status": "pending"
+   }
+  },
+  {
+   "status": "pending",
+   "event": "expire",
+   "actor": "B",
+   "when": "at",
+   "expect": {
+    "ok": true,
+    "status": "expired"
+   }
+  },
+  {
+   "status": "pending",
+   "event": "expire",
+   "actor": "B",
+   "when": "after",
+   "expect": {
+    "ok": true,
+    "status": "expired"
+   }
+  },
+  {
+   "status": "pending",
+   "event": "expire",
+   "actor": "C",
+   "when": "before",
+   "expect": {
+    "ok": false,
+    "reason": "not-due",
+    "status": "pending"
+   }
+  },
+  {
+   "status": "pending",
+   "event": "expire",
+   "actor": "C",
+   "when": "at",
+   "expect": {
+    "ok": true,
+    "status": "expired"
+   }
+  },
+  {
+   "status": "pending",
+   "event": "expire",
+   "actor": "C",
+   "when": "after",
+   "expect": {
+    "ok": true,
+    "status": "expired"
+   }
+  },
+  {
+   "status": "pending",
+   "event": "expire",
+   "actor": "H",
+   "when": "before",
+   "expect": {
+    "ok": false,
+    "reason": "not-due",
+    "status": "pending"
+   }
+  },
+  {
+   "status": "pending",
+   "event": "expire",
+   "actor": "H",
+   "when": "at",
+   "expect": {
+    "ok": true,
+    "status": "expired"
+   }
+  },
+  {
+   "status": "pending",
+   "event": "expire",
+   "actor": "H",
+   "when": "after",
+   "expect": {
+    "ok": true,
+    "status": "expired"
+   }
+  },
+  {
+   "status": "approved",
+   "event": "approve",
+   "actor": "A",
+   "when": "before",
+   "expect": {
+    "ok": false,
+    "reason": "already-decided",
+    "status": "approved"
+   }
+  },
+  {
+   "status": "approved",
+   "event": "approve",
+   "actor": "A",
+   "when": "at",
+   "expect": {
+    "ok": false,
+    "reason": "already-decided",
+    "status": "approved"
+   }
+  },
+  {
+   "status": "approved",
+   "event": "approve",
+   "actor": "A",
+   "when": "after",
+   "expect": {
+    "ok": false,
+    "reason": "already-decided",
+    "status": "approved"
+   }
+  },
+  {
+   "status": "approved",
+   "event": "approve",
+   "actor": "B",
+   "when": "before",
+   "expect": {
+    "ok": false,
+    "reason": "already-decided",
+    "status": "approved"
+   }
+  },
+  {
+   "status": "approved",
+   "event": "approve",
+   "actor": "B",
+   "when": "at",
+   "expect": {
+    "ok": false,
+    "reason": "already-decided",
+    "status": "approved"
+   }
+  },
+  {
+   "status": "approved",
+   "event": "approve",
+   "actor": "B",
+   "when": "after",
+   "expect": {
+    "ok": false,
+    "reason": "already-decided",
+    "status": "approved"
+   }
+  },
+  {
+   "status": "approved",
+   "event": "approve",
+   "actor": "C",
+   "when": "before",
+   "expect": {
+    "ok": false,
+    "reason": "already-decided",
+    "status": "approved"
+   }
+  },
+  {
+   "status": "approved",
+   "event": "approve",
+   "actor": "C",
+   "when": "at",
+   "expect": {
+    "ok": false,
+    "reason": "already-decided",
+    "status": "approved"
+   }
+  },
+  {
+   "status": "approved",
+   "event": "approve",
+   "actor": "C",
+   "when": "after",
+   "expect": {
+    "ok": false,
+    "reason": "already-decided",
+    "status": "approved"
+   }
+  },
+  {
+   "status": "approved",
+   "event": "approve",
+   "actor": "H",
+   "when": "before",
+   "expect": {
+    "ok": false,
+    "reason": "already-decided",
+    "status": "approved"
+   }
+  },
+  {
+   "status": "approved",
+   "event": "approve",
+   "actor": "H",
+   "when": "at",
+   "expect": {
+    "ok": false,
+    "reason": "already-decided",
+    "status": "approved"
+   }
+  },
+  {
+   "status": "approved",
+   "event": "approve",
+   "actor": "H",
+   "when": "after",
+   "expect": {
+    "ok": false,
+    "reason": "already-decided",
+    "status": "approved"
+   }
+  },
+  {
+   "status": "approved",
+   "event": "decline",
+   "actor": "A",
+   "when": "before",
+   "expect": {
+    "ok": false,
+    "reason": "already-decided",
+    "status": "approved"
+   }
+  },
+  {
+   "status": "approved",
+   "event": "decline",
+   "actor": "A",
+   "when": "at",
+   "expect": {
+    "ok": false,
+    "reason": "already-decided",
+    "status": "approved"
+   }
+  },
+  {
+   "status": "approved",
+   "event": "decline",
+   "actor": "A",
+   "when": "after",
+   "expect": {
+    "ok": false,
+    "reason": "already-decided",
+    "status": "approved"
+   }
+  },
+  {
+   "status": "approved",
+   "event": "decline",
+   "actor": "B",
+   "when": "before",
+   "expect": {
+    "ok": false,
+    "reason": "already-decided",
+    "status": "approved"
+   }
+  },
+  {
+   "status": "approved",
+   "event": "decline",
+   "actor": "B",
+   "when": "at",
+   "expect": {
+    "ok": false,
+    "reason": "already-decided",
+    "status": "approved"
+   }
+  },
+  {
+   "status": "approved",
+   "event": "decline",
+   "actor": "B",
+   "when": "after",
+   "expect": {
+    "ok": false,
+    "reason": "already-decided",
+    "status": "approved"
+   }
+  },
+  {
+   "status": "approved",
+   "event": "decline",
+   "actor": "C",
+   "when": "before",
+   "expect": {
+    "ok": false,
+    "reason": "already-decided",
+    "status": "approved"
+   }
+  },
+  {
+   "status": "approved",
+   "event": "decline",
+   "actor": "C",
+   "when": "at",
+   "expect": {
+    "ok": false,
+    "reason": "already-decided",
+    "status": "approved"
+   }
+  },
+  {
+   "status": "approved",
+   "event": "decline",
+   "actor": "C",
+   "when": "after",
+   "expect": {
+    "ok": false,
+    "reason": "already-decided",
+    "status": "approved"
+   }
+  },
+  {
+   "status": "approved",
+   "event": "decline",
+   "actor": "H",
+   "when": "before",
+   "expect": {
+    "ok": false,
+    "reason": "already-decided",
+    "status": "approved"
+   }
+  },
+  {
+   "status": "approved",
+   "event": "decline",
+   "actor": "H",
+   "when": "at",
+   "expect": {
+    "ok": false,
+    "reason": "already-decided",
+    "status": "approved"
+   }
+  },
+  {
+   "status": "approved",
+   "event": "decline",
+   "actor": "H",
+   "when": "after",
+   "expect": {
+    "ok": false,
+    "reason": "already-decided",
+    "status": "approved"
+   }
+  },
+  {
+   "status": "approved",
+   "event": "withdraw",
+   "actor": "A",
+   "when": "before",
+   "expect": {
+    "ok": false,
+    "reason": "already-decided",
+    "status": "approved"
+   }
+  },
+  {
+   "status": "approved",
+   "event": "withdraw",
+   "actor": "A",
+   "when": "at",
+   "expect": {
+    "ok": false,
+    "reason": "already-decided",
+    "status": "approved"
+   }
+  },
+  {
+   "status": "approved",
+   "event": "withdraw",
+   "actor": "A",
+   "when": "after",
+   "expect": {
+    "ok": false,
+    "reason": "already-decided",
+    "status": "approved"
+   }
+  },
+  {
+   "status": "approved",
+   "event": "withdraw",
+   "actor": "B",
+   "when": "before",
+   "expect": {
+    "ok": false,
+    "reason": "already-decided",
+    "status": "approved"
+   }
+  },
+  {
+   "status": "approved",
+   "event": "withdraw",
+   "actor": "B",
+   "when": "at",
+   "expect": {
+    "ok": false,
+    "reason": "already-decided",
+    "status": "approved"
+   }
+  },
+  {
+   "status": "approved",
+   "event": "withdraw",
+   "actor": "B",
+   "when": "after",
+   "expect": {
+    "ok": false,
+    "reason": "already-decided",
+    "status": "approved"
+   }
+  },
+  {
+   "status": "approved",
+   "event": "withdraw",
+   "actor": "C",
+   "when": "before",
+   "expect": {
+    "ok": false,
+    "reason": "already-decided",
+    "status": "approved"
+   }
+  },
+  {
+   "status": "approved",
+   "event": "withdraw",
+   "actor": "C",
+   "when": "at",
+   "expect": {
+    "ok": false,
+    "reason": "already-decided",
+    "status": "approved"
+   }
+  },
+  {
+   "status": "approved",
+   "event": "withdraw",
+   "actor": "C",
+   "when": "after",
+   "expect": {
+    "ok": false,
+    "reason": "already-decided",
+    "status": "approved"
+   }
+  },
+  {
+   "status": "approved",
+   "event": "withdraw",
+   "actor": "H",
+   "when": "before",
+   "expect": {
+    "ok": false,
+    "reason": "already-decided",
+    "status": "approved"
+   }
+  },
+  {
+   "status": "approved",
+   "event": "withdraw",
+   "actor": "H",
+   "when": "at",
+   "expect": {
+    "ok": false,
+    "reason": "already-decided",
+    "status": "approved"
+   }
+  },
+  {
+   "status": "approved",
+   "event": "withdraw",
+   "actor": "H",
+   "when": "after",
+   "expect": {
+    "ok": false,
+    "reason": "already-decided",
+    "status": "approved"
+   }
+  },
+  {
+   "status": "approved",
+   "event": "expire",
+   "actor": "A",
+   "when": "before",
+   "expect": {
+    "ok": false,
+    "reason": "already-decided",
+    "status": "approved"
+   }
+  },
+  {
+   "status": "approved",
+   "event": "expire",
+   "actor": "A",
+   "when": "at",
+   "expect": {
+    "ok": false,
+    "reason": "already-decided",
+    "status": "approved"
+   }
+  },
+  {
+   "status": "approved",
+   "event": "expire",
+   "actor": "A",
+   "when": "after",
+   "expect": {
+    "ok": false,
+    "reason": "already-decided",
+    "status": "approved"
+   }
+  },
+  {
+   "status": "approved",
+   "event": "expire",
+   "actor": "B",
+   "when": "before",
+   "expect": {
+    "ok": false,
+    "reason": "already-decided",
+    "status": "approved"
+   }
+  },
+  {
+   "status": "approved",
+   "event": "expire",
+   "actor": "B",
+   "when": "at",
+   "expect": {
+    "ok": false,
+    "reason": "already-decided",
+    "status": "approved"
+   }
+  },
+  {
+   "status": "approved",
+   "event": "expire",
+   "actor": "B",
+   "when": "after",
+   "expect": {
+    "ok": false,
+    "reason": "already-decided",
+    "status": "approved"
+   }
+  },
+  {
+   "status": "approved",
+   "event": "expire",
+   "actor": "C",
+   "when": "before",
+   "expect": {
+    "ok": false,
+    "reason": "already-decided",
+    "status": "approved"
+   }
+  },
+  {
+   "status": "approved",
+   "event": "expire",
+   "actor": "C",
+   "when": "at",
+   "expect": {
+    "ok": false,
+    "reason": "already-decided",
+    "status": "approved"
+   }
+  },
+  {
+   "status": "approved",
+   "event": "expire",
+   "actor": "C",
+   "when": "after",
+   "expect": {
+    "ok": false,
+    "reason": "already-decided",
+    "status": "approved"
+   }
+  },
+  {
+   "status": "approved",
+   "event": "expire",
+   "actor": "H",
+   "when": "before",
+   "expect": {
+    "ok": false,
+    "reason": "already-decided",
+    "status": "approved"
+   }
+  },
+  {
+   "status": "approved",
+   "event": "expire",
+   "actor": "H",
+   "when": "at",
+   "expect": {
+    "ok": false,
+    "reason": "already-decided",
+    "status": "approved"
+   }
+  },
+  {
+   "status": "approved",
+   "event": "expire",
+   "actor": "H",
+   "when": "after",
+   "expect": {
+    "ok": false,
+    "reason": "already-decided",
+    "status": "approved"
+   }
+  },
+  {
+   "status": "declined",
+   "event": "approve",
+   "actor": "A",
+   "when": "before",
+   "expect": {
+    "ok": false,
+    "reason": "already-decided",
+    "status": "declined"
+   }
+  },
+  {
+   "status": "declined",
+   "event": "approve",
+   "actor": "A",
+   "when": "at",
+   "expect": {
+    "ok": false,
+    "reason": "already-decided",
+    "status": "declined"
+   }
+  },
+  {
+   "status": "declined",
+   "event": "approve",
+   "actor": "A",
+   "when": "after",
+   "expect": {
+    "ok": false,
+    "reason": "already-decided",
+    "status": "declined"
+   }
+  },
+  {
+   "status": "declined",
+   "event": "approve",
+   "actor": "B",
+   "when": "before",
+   "expect": {
+    "ok": false,
+    "reason": "already-decided",
+    "status": "declined"
+   }
+  },
+  {
+   "status": "declined",
+   "event": "approve",
+   "actor": "B",
+   "when": "at",
+   "expect": {
+    "ok": false,
+    "reason": "already-decided",
+    "status": "declined"
+   }
+  },
+  {
+   "status": "declined",
+   "event": "approve",
+   "actor": "B",
+   "when": "after",
+   "expect": {
+    "ok": false,
+    "reason": "already-decided",
+    "status": "declined"
+   }
+  },
+  {
+   "status": "declined",
+   "event": "approve",
+   "actor": "C",
+   "when": "before",
+   "expect": {
+    "ok": false,
+    "reason": "already-decided",
+    "status": "declined"
+   }
+  },
+  {
+   "status": "declined",
+   "event": "approve",
+   "actor": "C",
+   "when": "at",
+   "expect": {
+    "ok": false,
+    "reason": "already-decided",
+    "status": "declined"
+   }
+  },
+  {
+   "status": "declined",
+   "event": "approve",
+   "actor": "C",
+   "when": "after",
+   "expect": {
+    "ok": false,
+    "reason": "already-decided",
+    "status": "declined"
+   }
+  },
+  {
+   "status": "declined",
+   "event": "approve",
+   "actor": "H",
+   "when": "before",
+   "expect": {
+    "ok": false,
+    "reason": "already-decided",
+    "status": "declined"
+   }
+  },
+  {
+   "status": "declined",
+   "event": "approve",
+   "actor": "H",
+   "when": "at",
+   "expect": {
+    "ok": false,
+    "reason": "already-decided",
+    "status": "declined"
+   }
+  },
+  {
+   "status": "declined",
+   "event": "approve",
+   "actor": "H",
+   "when": "after",
+   "expect": {
+    "ok": false,
+    "reason": "already-decided",
+    "status": "declined"
+   }
+  },
+  {
+   "status": "declined",
+   "event": "decline",
+   "actor": "A",
+   "when": "before",
+   "expect": {
+    "ok": false,
+    "reason": "already-decided",
+    "status": "declined"
+   }
+  },
+  {
+   "status": "declined",
+   "event": "decline",
+   "actor": "A",
+   "when": "at",
+   "expect": {
+    "ok": false,
+    "reason": "already-decided",
+    "status": "declined"
+   }
+  },
+  {
+   "status": "declined",
+   "event": "decline",
+   "actor": "A",
+   "when": "after",
+   "expect": {
+    "ok": false,
+    "reason": "already-decided",
+    "status": "declined"
+   }
+  },
+  {
+   "status": "declined",
+   "event": "decline",
+   "actor": "B",
+   "when": "before",
+   "expect": {
+    "ok": false,
+    "reason": "already-decided",
+    "status": "declined"
+   }
+  },
+  {
+   "status": "declined",
+   "event": "decline",
+   "actor": "B",
+   "when": "at",
+   "expect": {
+    "ok": false,
+    "reason": "already-decided",
+    "status": "declined"
+   }
+  },
+  {
+   "status": "declined",
+   "event": "decline",
+   "actor": "B",
+   "when": "after",
+   "expect": {
+    "ok": false,
+    "reason": "already-decided",
+    "status": "declined"
+   }
+  },
+  {
+   "status": "declined",
+   "event": "decline",
+   "actor": "C",
+   "when": "before",
+   "expect": {
+    "ok": false,
+    "reason": "already-decided",
+    "status": "declined"
+   }
+  },
+  {
+   "status": "declined",
+   "event": "decline",
+   "actor": "C",
+   "when": "at",
+   "expect": {
+    "ok": false,
+    "reason": "already-decided",
+    "status": "declined"
+   }
+  },
+  {
+   "status": "declined",
+   "event": "decline",
+   "actor": "C",
+   "when": "after",
+   "expect": {
+    "ok": false,
+    "reason": "already-decided",
+    "status": "declined"
+   }
+  },
+  {
+   "status": "declined",
+   "event": "decline",
+   "actor": "H",
+   "when": "before",
+   "expect": {
+    "ok": false,
+    "reason": "already-decided",
+    "status": "declined"
+   }
+  },
+  {
+   "status": "declined",
+   "event": "decline",
+   "actor": "H",
+   "when": "at",
+   "expect": {
+    "ok": false,
+    "reason": "already-decided",
+    "status": "declined"
+   }
+  },
+  {
+   "status": "declined",
+   "event": "decline",
+   "actor": "H",
+   "when": "after",
+   "expect": {
+    "ok": false,
+    "reason": "already-decided",
+    "status": "declined"
+   }
+  },
+  {
+   "status": "declined",
+   "event": "withdraw",
+   "actor": "A",
+   "when": "before",
+   "expect": {
+    "ok": false,
+    "reason": "already-decided",
+    "status": "declined"
+   }
+  },
+  {
+   "status": "declined",
+   "event": "withdraw",
+   "actor": "A",
+   "when": "at",
+   "expect": {
+    "ok": false,
+    "reason": "already-decided",
+    "status": "declined"
+   }
+  },
+  {
+   "status": "declined",
+   "event": "withdraw",
+   "actor": "A",
+   "when": "after",
+   "expect": {
+    "ok": false,
+    "reason": "already-decided",
+    "status": "declined"
+   }
+  },
+  {
+   "status": "declined",
+   "event": "withdraw",
+   "actor": "B",
+   "when": "before",
+   "expect": {
+    "ok": false,
+    "reason": "already-decided",
+    "status": "declined"
+   }
+  },
+  {
+   "status": "declined",
+   "event": "withdraw",
+   "actor": "B",
+   "when": "at",
+   "expect": {
+    "ok": false,
+    "reason": "already-decided",
+    "status": "declined"
+   }
+  },
+  {
+   "status": "declined",
+   "event": "withdraw",
+   "actor": "B",
+   "when": "after",
+   "expect": {
+    "ok": false,
+    "reason": "already-decided",
+    "status": "declined"
+   }
+  },
+  {
+   "status": "declined",
+   "event": "withdraw",
+   "actor": "C",
+   "when": "before",
+   "expect": {
+    "ok": false,
+    "reason": "already-decided",
+    "status": "declined"
+   }
+  },
+  {
+   "status": "declined",
+   "event": "withdraw",
+   "actor": "C",
+   "when": "at",
+   "expect": {
+    "ok": false,
+    "reason": "already-decided",
+    "status": "declined"
+   }
+  },
+  {
+   "status": "declined",
+   "event": "withdraw",
+   "actor": "C",
+   "when": "after",
+   "expect": {
+    "ok": false,
+    "reason": "already-decided",
+    "status": "declined"
+   }
+  },
+  {
+   "status": "declined",
+   "event": "withdraw",
+   "actor": "H",
+   "when": "before",
+   "expect": {
+    "ok": false,
+    "reason": "already-decided",
+    "status": "declined"
+   }
+  },
+  {
+   "status": "declined",
+   "event": "withdraw",
+   "actor": "H",
+   "when": "at",
+   "expect": {
+    "ok": false,
+    "reason": "already-decided",
+    "status": "declined"
+   }
+  },
+  {
+   "status": "declined",
+   "event": "withdraw",
+   "actor": "H",
+   "when": "after",
+   "expect": {
+    "ok": false,
+    "reason": "already-decided",
+    "status": "declined"
+   }
+  },
+  {
+   "status": "declined",
+   "event": "expire",
+   "actor": "A",
+   "when": "before",
+   "expect": {
+    "ok": false,
+    "reason": "already-decided",
+    "status": "declined"
+   }
+  },
+  {
+   "status": "declined",
+   "event": "expire",
+   "actor": "A",
+   "when": "at",
+   "expect": {
+    "ok": false,
+    "reason": "already-decided",
+    "status": "declined"
+   }
+  },
+  {
+   "status": "declined",
+   "event": "expire",
+   "actor": "A",
+   "when": "after",
+   "expect": {
+    "ok": false,
+    "reason": "already-decided",
+    "status": "declined"
+   }
+  },
+  {
+   "status": "declined",
+   "event": "expire",
+   "actor": "B",
+   "when": "before",
+   "expect": {
+    "ok": false,
+    "reason": "already-decided",
+    "status": "declined"
+   }
+  },
+  {
+   "status": "declined",
+   "event": "expire",
+   "actor": "B",
+   "when": "at",
+   "expect": {
+    "ok": false,
+    "reason": "already-decided",
+    "status": "declined"
+   }
+  },
+  {
+   "status": "declined",
+   "event": "expire",
+   "actor": "B",
+   "when": "after",
+   "expect": {
+    "ok": false,
+    "reason": "already-decided",
+    "status": "declined"
+   }
+  },
+  {
+   "status": "declined",
+   "event": "expire",
+   "actor": "C",
+   "when": "before",
+   "expect": {
+    "ok": false,
+    "reason": "already-decided",
+    "status": "declined"
+   }
+  },
+  {
+   "status": "declined",
+   "event": "expire",
+   "actor": "C",
+   "when": "at",
+   "expect": {
+    "ok": false,
+    "reason": "already-decided",
+    "status": "declined"
+   }
+  },
+  {
+   "status": "declined",
+   "event": "expire",
+   "actor": "C",
+   "when": "after",
+   "expect": {
+    "ok": false,
+    "reason": "already-decided",
+    "status": "declined"
+   }
+  },
+  {
+   "status": "declined",
+   "event": "expire",
+   "actor": "H",
+   "when": "before",
+   "expect": {
+    "ok": false,
+    "reason": "already-decided",
+    "status": "declined"
+   }
+  },
+  {
+   "status": "declined",
+   "event": "expire",
+   "actor": "H",
+   "when": "at",
+   "expect": {
+    "ok": false,
+    "reason": "already-decided",
+    "status": "declined"
+   }
+  },
+  {
+   "status": "declined",
+   "event": "expire",
+   "actor": "H",
+   "when": "after",
+   "expect": {
+    "ok": false,
+    "reason": "already-decided",
+    "status": "declined"
+   }
+  },
+  {
+   "status": "withdrawn",
+   "event": "approve",
+   "actor": "A",
+   "when": "before",
+   "expect": {
+    "ok": false,
+    "reason": "already-decided",
+    "status": "withdrawn"
+   }
+  },
+  {
+   "status": "withdrawn",
+   "event": "approve",
+   "actor": "A",
+   "when": "at",
+   "expect": {
+    "ok": false,
+    "reason": "already-decided",
+    "status": "withdrawn"
+   }
+  },
+  {
+   "status": "withdrawn",
+   "event": "approve",
+   "actor": "A",
+   "when": "after",
+   "expect": {
+    "ok": false,
+    "reason": "already-decided",
+    "status": "withdrawn"
+   }
+  },
+  {
+   "status": "withdrawn",
+   "event": "approve",
+   "actor": "B",
+   "when": "before",
+   "expect": {
+    "ok": false,
+    "reason": "already-decided",
+    "status": "withdrawn"
+   }
+  },
+  {
+   "status": "withdrawn",
+   "event": "approve",
+   "actor": "B",
+   "when": "at",
+   "expect": {
+    "ok": false,
+    "reason": "already-decided",
+    "status": "withdrawn"
+   }
+  },
+  {
+   "status": "withdrawn",
+   "event": "approve",
+   "actor": "B",
+   "when": "after",
+   "expect": {
+    "ok": false,
+    "reason": "already-decided",
+    "status": "withdrawn"
+   }
+  },
+  {
+   "status": "withdrawn",
+   "event": "approve",
+   "actor": "C",
+   "when": "before",
+   "expect": {
+    "ok": false,
+    "reason": "already-decided",
+    "status": "withdrawn"
+   }
+  },
+  {
+   "status": "withdrawn",
+   "event": "approve",
+   "actor": "C",
+   "when": "at",
+   "expect": {
+    "ok": false,
+    "reason": "already-decided",
+    "status": "withdrawn"
+   }
+  },
+  {
+   "status": "withdrawn",
+   "event": "approve",
+   "actor": "C",
+   "when": "after",
+   "expect": {
+    "ok": false,
+    "reason": "already-decided",
+    "status": "withdrawn"
+   }
+  },
+  {
+   "status": "withdrawn",
+   "event": "approve",
+   "actor": "H",
+   "when": "before",
+   "expect": {
+    "ok": false,
+    "reason": "already-decided",
+    "status": "withdrawn"
+   }
+  },
+  {
+   "status": "withdrawn",
+   "event": "approve",
+   "actor": "H",
+   "when": "at",
+   "expect": {
+    "ok": false,
+    "reason": "already-decided",
+    "status": "withdrawn"
+   }
+  },
+  {
+   "status": "withdrawn",
+   "event": "approve",
+   "actor": "H",
+   "when": "after",
+   "expect": {
+    "ok": false,
+    "reason": "already-decided",
+    "status": "withdrawn"
+   }
+  },
+  {
+   "status": "withdrawn",
+   "event": "decline",
+   "actor": "A",
+   "when": "before",
+   "expect": {
+    "ok": false,
+    "reason": "already-decided",
+    "status": "withdrawn"
+   }
+  },
+  {
+   "status": "withdrawn",
+   "event": "decline",
+   "actor": "A",
+   "when": "at",
+   "expect": {
+    "ok": false,
+    "reason": "already-decided",
+    "status": "withdrawn"
+   }
+  },
+  {
+   "status": "withdrawn",
+   "event": "decline",
+   "actor": "A",
+   "when": "after",
+   "expect": {
+    "ok": false,
+    "reason": "already-decided",
+    "status": "withdrawn"
+   }
+  },
+  {
+   "status": "withdrawn",
+   "event": "decline",
+   "actor": "B",
+   "when": "before",
+   "expect": {
+    "ok": false,
+    "reason": "already-decided",
+    "status": "withdrawn"
+   }
+  },
+  {
+   "status": "withdrawn",
+   "event": "decline",
+   "actor": "B",
+   "when": "at",
+   "expect": {
+    "ok": false,
+    "reason": "already-decided",
+    "status": "withdrawn"
+   }
+  },
+  {
+   "status": "withdrawn",
+   "event": "decline",
+   "actor": "B",
+   "when": "after",
+   "expect": {
+    "ok": false,
+    "reason": "already-decided",
+    "status": "withdrawn"
+   }
+  },
+  {
+   "status": "withdrawn",
+   "event": "decline",
+   "actor": "C",
+   "when": "before",
+   "expect": {
+    "ok": false,
+    "reason": "already-decided",
+    "status": "withdrawn"
+   }
+  },
+  {
+   "status": "withdrawn",
+   "event": "decline",
+   "actor": "C",
+   "when": "at",
+   "expect": {
+    "ok": false,
+    "reason": "already-decided",
+    "status": "withdrawn"
+   }
+  },
+  {
+   "status": "withdrawn",
+   "event": "decline",
+   "actor": "C",
+   "when": "after",
+   "expect": {
+    "ok": false,
+    "reason": "already-decided",
+    "status": "withdrawn"
+   }
+  },
+  {
+   "status": "withdrawn",
+   "event": "decline",
+   "actor": "H",
+   "when": "before",
+   "expect": {
+    "ok": false,
+    "reason": "already-decided",
+    "status": "withdrawn"
+   }
+  },
+  {
+   "status": "withdrawn",
+   "event": "decline",
+   "actor": "H",
+   "when": "at",
+   "expect": {
+    "ok": false,
+    "reason": "already-decided",
+    "status": "withdrawn"
+   }
+  },
+  {
+   "status": "withdrawn",
+   "event": "decline",
+   "actor": "H",
+   "when": "after",
+   "expect": {
+    "ok": false,
+    "reason": "already-decided",
+    "status": "withdrawn"
+   }
+  },
+  {
+   "status": "withdrawn",
+   "event": "withdraw",
+   "actor": "A",
+   "when": "before",
+   "expect": {
+    "ok": false,
+    "reason": "already-decided",
+    "status": "withdrawn"
+   }
+  },
+  {
+   "status": "withdrawn",
+   "event": "withdraw",
+   "actor": "A",
+   "when": "at",
+   "expect": {
+    "ok": false,
+    "reason": "already-decided",
+    "status": "withdrawn"
+   }
+  },
+  {
+   "status": "withdrawn",
+   "event": "withdraw",
+   "actor": "A",
+   "when": "after",
+   "expect": {
+    "ok": false,
+    "reason": "already-decided",
+    "status": "withdrawn"
+   }
+  },
+  {
+   "status": "withdrawn",
+   "event": "withdraw",
+   "actor": "B",
+   "when": "before",
+   "expect": {
+    "ok": false,
+    "reason": "already-decided",
+    "status": "withdrawn"
+   }
+  },
+  {
+   "status": "withdrawn",
+   "event": "withdraw",
+   "actor": "B",
+   "when": "at",
+   "expect": {
+    "ok": false,
+    "reason": "already-decided",
+    "status": "withdrawn"
+   }
+  },
+  {
+   "status": "withdrawn",
+   "event": "withdraw",
+   "actor": "B",
+   "when": "after",
+   "expect": {
+    "ok": false,
+    "reason": "already-decided",
+    "status": "withdrawn"
+   }
+  },
+  {
+   "status": "withdrawn",
+   "event": "withdraw",
+   "actor": "C",
+   "when": "before",
+   "expect": {
+    "ok": false,
+    "reason": "already-decided",
+    "status": "withdrawn"
+   }
+  },
+  {
+   "status": "withdrawn",
+   "event": "withdraw",
+   "actor": "C",
+   "when": "at",
+   "expect": {
+    "ok": false,
+    "reason": "already-decided",
+    "status": "withdrawn"
+   }
+  },
+  {
+   "status": "withdrawn",
+   "event": "withdraw",
+   "actor": "C",
+   "when": "after",
+   "expect": {
+    "ok": false,
+    "reason": "already-decided",
+    "status": "withdrawn"
+   }
+  },
+  {
+   "status": "withdrawn",
+   "event": "withdraw",
+   "actor": "H",
+   "when": "before",
+   "expect": {
+    "ok": false,
+    "reason": "already-decided",
+    "status": "withdrawn"
+   }
+  },
+  {
+   "status": "withdrawn",
+   "event": "withdraw",
+   "actor": "H",
+   "when": "at",
+   "expect": {
+    "ok": false,
+    "reason": "already-decided",
+    "status": "withdrawn"
+   }
+  },
+  {
+   "status": "withdrawn",
+   "event": "withdraw",
+   "actor": "H",
+   "when": "after",
+   "expect": {
+    "ok": false,
+    "reason": "already-decided",
+    "status": "withdrawn"
+   }
+  },
+  {
+   "status": "withdrawn",
+   "event": "expire",
+   "actor": "A",
+   "when": "before",
+   "expect": {
+    "ok": false,
+    "reason": "already-decided",
+    "status": "withdrawn"
+   }
+  },
+  {
+   "status": "withdrawn",
+   "event": "expire",
+   "actor": "A",
+   "when": "at",
+   "expect": {
+    "ok": false,
+    "reason": "already-decided",
+    "status": "withdrawn"
+   }
+  },
+  {
+   "status": "withdrawn",
+   "event": "expire",
+   "actor": "A",
+   "when": "after",
+   "expect": {
+    "ok": false,
+    "reason": "already-decided",
+    "status": "withdrawn"
+   }
+  },
+  {
+   "status": "withdrawn",
+   "event": "expire",
+   "actor": "B",
+   "when": "before",
+   "expect": {
+    "ok": false,
+    "reason": "already-decided",
+    "status": "withdrawn"
+   }
+  },
+  {
+   "status": "withdrawn",
+   "event": "expire",
+   "actor": "B",
+   "when": "at",
+   "expect": {
+    "ok": false,
+    "reason": "already-decided",
+    "status": "withdrawn"
+   }
+  },
+  {
+   "status": "withdrawn",
+   "event": "expire",
+   "actor": "B",
+   "when": "after",
+   "expect": {
+    "ok": false,
+    "reason": "already-decided",
+    "status": "withdrawn"
+   }
+  },
+  {
+   "status": "withdrawn",
+   "event": "expire",
+   "actor": "C",
+   "when": "before",
+   "expect": {
+    "ok": false,
+    "reason": "already-decided",
+    "status": "withdrawn"
+   }
+  },
+  {
+   "status": "withdrawn",
+   "event": "expire",
+   "actor": "C",
+   "when": "at",
+   "expect": {
+    "ok": false,
+    "reason": "already-decided",
+    "status": "withdrawn"
+   }
+  },
+  {
+   "status": "withdrawn",
+   "event": "expire",
+   "actor": "C",
+   "when": "after",
+   "expect": {
+    "ok": false,
+    "reason": "already-decided",
+    "status": "withdrawn"
+   }
+  },
+  {
+   "status": "withdrawn",
+   "event": "expire",
+   "actor": "H",
+   "when": "before",
+   "expect": {
+    "ok": false,
+    "reason": "already-decided",
+    "status": "withdrawn"
+   }
+  },
+  {
+   "status": "withdrawn",
+   "event": "expire",
+   "actor": "H",
+   "when": "at",
+   "expect": {
+    "ok": false,
+    "reason": "already-decided",
+    "status": "withdrawn"
+   }
+  },
+  {
+   "status": "withdrawn",
+   "event": "expire",
+   "actor": "H",
+   "when": "after",
+   "expect": {
+    "ok": false,
+    "reason": "already-decided",
+    "status": "withdrawn"
+   }
+  },
+  {
+   "status": "expired",
+   "event": "approve",
+   "actor": "A",
+   "when": "before",
+   "expect": {
+    "ok": false,
+    "reason": "already-decided",
+    "status": "expired"
+   }
+  },
+  {
+   "status": "expired",
+   "event": "approve",
+   "actor": "A",
+   "when": "at",
+   "expect": {
+    "ok": false,
+    "reason": "already-decided",
+    "status": "expired"
+   }
+  },
+  {
+   "status": "expired",
+   "event": "approve",
+   "actor": "A",
+   "when": "after",
+   "expect": {
+    "ok": false,
+    "reason": "already-decided",
+    "status": "expired"
+   }
+  },
+  {
+   "status": "expired",
+   "event": "approve",
+   "actor": "B",
+   "when": "before",
+   "expect": {
+    "ok": false,
+    "reason": "already-decided",
+    "status": "expired"
+   }
+  },
+  {
+   "status": "expired",
+   "event": "approve",
+   "actor": "B",
+   "when": "at",
+   "expect": {
+    "ok": false,
+    "reason": "already-decided",
+    "status": "expired"
+   }
+  },
+  {
+   "status": "expired",
+   "event": "approve",
+   "actor": "B",
+   "when": "after",
+   "expect": {
+    "ok": false,
+    "reason": "already-decided",
+    "status": "expired"
+   }
+  },
+  {
+   "status": "expired",
+   "event": "approve",
+   "actor": "C",
+   "when": "before",
+   "expect": {
+    "ok": false,
+    "reason": "already-decided",
+    "status": "expired"
+   }
+  },
+  {
+   "status": "expired",
+   "event": "approve",
+   "actor": "C",
+   "when": "at",
+   "expect": {
+    "ok": false,
+    "reason": "already-decided",
+    "status": "expired"
+   }
+  },
+  {
+   "status": "expired",
+   "event": "approve",
+   "actor": "C",
+   "when": "after",
+   "expect": {
+    "ok": false,
+    "reason": "already-decided",
+    "status": "expired"
+   }
+  },
+  {
+   "status": "expired",
+   "event": "approve",
+   "actor": "H",
+   "when": "before",
+   "expect": {
+    "ok": false,
+    "reason": "already-decided",
+    "status": "expired"
+   }
+  },
+  {
+   "status": "expired",
+   "event": "approve",
+   "actor": "H",
+   "when": "at",
+   "expect": {
+    "ok": false,
+    "reason": "already-decided",
+    "status": "expired"
+   }
+  },
+  {
+   "status": "expired",
+   "event": "approve",
+   "actor": "H",
+   "when": "after",
+   "expect": {
+    "ok": false,
+    "reason": "already-decided",
+    "status": "expired"
+   }
+  },
+  {
+   "status": "expired",
+   "event": "decline",
+   "actor": "A",
+   "when": "before",
+   "expect": {
+    "ok": false,
+    "reason": "already-decided",
+    "status": "expired"
+   }
+  },
+  {
+   "status": "expired",
+   "event": "decline",
+   "actor": "A",
+   "when": "at",
+   "expect": {
+    "ok": false,
+    "reason": "already-decided",
+    "status": "expired"
+   }
+  },
+  {
+   "status": "expired",
+   "event": "decline",
+   "actor": "A",
+   "when": "after",
+   "expect": {
+    "ok": false,
+    "reason": "already-decided",
+    "status": "expired"
+   }
+  },
+  {
+   "status": "expired",
+   "event": "decline",
+   "actor": "B",
+   "when": "before",
+   "expect": {
+    "ok": false,
+    "reason": "already-decided",
+    "status": "expired"
+   }
+  },
+  {
+   "status": "expired",
+   "event": "decline",
+   "actor": "B",
+   "when": "at",
+   "expect": {
+    "ok": false,
+    "reason": "already-decided",
+    "status": "expired"
+   }
+  },
+  {
+   "status": "expired",
+   "event": "decline",
+   "actor": "B",
+   "when": "after",
+   "expect": {
+    "ok": false,
+    "reason": "already-decided",
+    "status": "expired"
+   }
+  },
+  {
+   "status": "expired",
+   "event": "decline",
+   "actor": "C",
+   "when": "before",
+   "expect": {
+    "ok": false,
+    "reason": "already-decided",
+    "status": "expired"
+   }
+  },
+  {
+   "status": "expired",
+   "event": "decline",
+   "actor": "C",
+   "when": "at",
+   "expect": {
+    "ok": false,
+    "reason": "already-decided",
+    "status": "expired"
+   }
+  },
+  {
+   "status": "expired",
+   "event": "decline",
+   "actor": "C",
+   "when": "after",
+   "expect": {
+    "ok": false,
+    "reason": "already-decided",
+    "status": "expired"
+   }
+  },
+  {
+   "status": "expired",
+   "event": "decline",
+   "actor": "H",
+   "when": "before",
+   "expect": {
+    "ok": false,
+    "reason": "already-decided",
+    "status": "expired"
+   }
+  },
+  {
+   "status": "expired",
+   "event": "decline",
+   "actor": "H",
+   "when": "at",
+   "expect": {
+    "ok": false,
+    "reason": "already-decided",
+    "status": "expired"
+   }
+  },
+  {
+   "status": "expired",
+   "event": "decline",
+   "actor": "H",
+   "when": "after",
+   "expect": {
+    "ok": false,
+    "reason": "already-decided",
+    "status": "expired"
+   }
+  },
+  {
+   "status": "expired",
+   "event": "withdraw",
+   "actor": "A",
+   "when": "before",
+   "expect": {
+    "ok": false,
+    "reason": "already-decided",
+    "status": "expired"
+   }
+  },
+  {
+   "status": "expired",
+   "event": "withdraw",
+   "actor": "A",
+   "when": "at",
+   "expect": {
+    "ok": false,
+    "reason": "already-decided",
+    "status": "expired"
+   }
+  },
+  {
+   "status": "expired",
+   "event": "withdraw",
+   "actor": "A",
+   "when": "after",
+   "expect": {
+    "ok": false,
+    "reason": "already-decided",
+    "status": "expired"
+   }
+  },
+  {
+   "status": "expired",
+   "event": "withdraw",
+   "actor": "B",
+   "when": "before",
+   "expect": {
+    "ok": false,
+    "reason": "already-decided",
+    "status": "expired"
+   }
+  },
+  {
+   "status": "expired",
+   "event": "withdraw",
+   "actor": "B",
+   "when": "at",
+   "expect": {
+    "ok": false,
+    "reason": "already-decided",
+    "status": "expired"
+   }
+  },
+  {
+   "status": "expired",
+   "event": "withdraw",
+   "actor": "B",
+   "when": "after",
+   "expect": {
+    "ok": false,
+    "reason": "already-decided",
+    "status": "expired"
+   }
+  },
+  {
+   "status": "expired",
+   "event": "withdraw",
+   "actor": "C",
+   "when": "before",
+   "expect": {
+    "ok": false,
+    "reason": "already-decided",
+    "status": "expired"
+   }
+  },
+  {
+   "status": "expired",
+   "event": "withdraw",
+   "actor": "C",
+   "when": "at",
+   "expect": {
+    "ok": false,
+    "reason": "already-decided",
+    "status": "expired"
+   }
+  },
+  {
+   "status": "expired",
+   "event": "withdraw",
+   "actor": "C",
+   "when": "after",
+   "expect": {
+    "ok": false,
+    "reason": "already-decided",
+    "status": "expired"
+   }
+  },
+  {
+   "status": "expired",
+   "event": "withdraw",
+   "actor": "H",
+   "when": "before",
+   "expect": {
+    "ok": false,
+    "reason": "already-decided",
+    "status": "expired"
+   }
+  },
+  {
+   "status": "expired",
+   "event": "withdraw",
+   "actor": "H",
+   "when": "at",
+   "expect": {
+    "ok": false,
+    "reason": "already-decided",
+    "status": "expired"
+   }
+  },
+  {
+   "status": "expired",
+   "event": "withdraw",
+   "actor": "H",
+   "when": "after",
+   "expect": {
+    "ok": false,
+    "reason": "already-decided",
+    "status": "expired"
+   }
+  },
+  {
+   "status": "expired",
+   "event": "expire",
+   "actor": "A",
+   "when": "before",
+   "expect": {
+    "ok": false,
+    "reason": "already-decided",
+    "status": "expired"
+   }
+  },
+  {
+   "status": "expired",
+   "event": "expire",
+   "actor": "A",
+   "when": "at",
+   "expect": {
+    "ok": false,
+    "reason": "already-decided",
+    "status": "expired"
+   }
+  },
+  {
+   "status": "expired",
+   "event": "expire",
+   "actor": "A",
+   "when": "after",
+   "expect": {
+    "ok": false,
+    "reason": "already-decided",
+    "status": "expired"
+   }
+  },
+  {
+   "status": "expired",
+   "event": "expire",
+   "actor": "B",
+   "when": "before",
+   "expect": {
+    "ok": false,
+    "reason": "already-decided",
+    "status": "expired"
+   }
+  },
+  {
+   "status": "expired",
+   "event": "expire",
+   "actor": "B",
+   "when": "at",
+   "expect": {
+    "ok": false,
+    "reason": "already-decided",
+    "status": "expired"
+   }
+  },
+  {
+   "status": "expired",
+   "event": "expire",
+   "actor": "B",
+   "when": "after",
+   "expect": {
+    "ok": false,
+    "reason": "already-decided",
+    "status": "expired"
+   }
+  },
+  {
+   "status": "expired",
+   "event": "expire",
+   "actor": "C",
+   "when": "before",
+   "expect": {
+    "ok": false,
+    "reason": "already-decided",
+    "status": "expired"
+   }
+  },
+  {
+   "status": "expired",
+   "event": "expire",
+   "actor": "C",
+   "when": "at",
+   "expect": {
+    "ok": false,
+    "reason": "already-decided",
+    "status": "expired"
+   }
+  },
+  {
+   "status": "expired",
+   "event": "expire",
+   "actor": "C",
+   "when": "after",
+   "expect": {
+    "ok": false,
+    "reason": "already-decided",
+    "status": "expired"
+   }
+  },
+  {
+   "status": "expired",
+   "event": "expire",
+   "actor": "H",
+   "when": "before",
+   "expect": {
+    "ok": false,
+    "reason": "already-decided",
+    "status": "expired"
+   }
+  },
+  {
+   "status": "expired",
+   "event": "expire",
+   "actor": "H",
+   "when": "at",
+   "expect": {
+    "ok": false,
+    "reason": "already-decided",
+    "status": "expired"
+   }
+  },
+  {
+   "status": "expired",
+   "event": "expire",
+   "actor": "H",
+   "when": "after",
+   "expect": {
+    "ok": false,
+    "reason": "already-decided",
+    "status": "expired"
+   }
+  }
+ ]
+}

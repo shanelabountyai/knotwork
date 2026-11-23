@@ -53,3 +53,21 @@ def test_fingerprint_is_sixteen_hex():
             fp = fx["move"]["expect"]["fingerprint"]
             assert len(fp) == 16 and int(fp, 16) >= 0
     assert json.dumps({"ok": True})
+
+
+# --- consent state machine -------------------------------------------------------------------------------------------
+import consent_table
+
+
+def test_consent_table_is_the_committed_fixture():
+    assert consent_table.OUT.read_text() == consent_table.dump()
+
+
+def test_consent_table_shape():
+    cases = consent_table.table()
+    assert len(cases) == 5 * 4 * 4 * 3
+    approved = [c for c in cases if c["expect"] == {"ok": True, "status": "approved"}]
+    # Only a different partner, on a pending request, before expiry, can turn the second key.
+    assert sorted((c["actor"], c["when"], c["status"], c["event"]) for c in approved) == [("B", "before", "pending", "approve"), ("C", "before", "pending", "approve")]
+    assert not [c for c in cases if c["expect"]["ok"] and c["actor"] == "A" and c["event"] in ("approve", "decline")]
+    assert not [c for c in cases if c["expect"]["ok"] and c["status"] != "pending"]
