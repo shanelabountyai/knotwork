@@ -1,0 +1,178 @@
+{
+  "name": "10-move-earlier",
+  "note": "Moving the wedding earlier: one task becomes late, one becomes impossible, two were impossible already.",
+  "weddingDate": "2027-03-20",
+  "today": "2026-11-23",
+  "tasks": [
+    {
+      "id": "book-photographer",
+      "title": "Book photographer",
+      "leadDays": 14,
+      "bufferDays": 30,
+      "dependsOn": [],
+      "done": false
+    },
+    {
+      "id": "engrave-rings",
+      "title": "Engrave rings",
+      "leadDays": 60,
+      "bufferDays": 60,
+      "dependsOn": [],
+      "done": false
+    },
+    {
+      "id": "order-dress",
+      "title": "Order dress",
+      "leadDays": 100,
+      "bufferDays": 20,
+      "dependsOn": [],
+      "done": false
+    },
+    {
+      "id": "alterations",
+      "title": "Alterations",
+      "leadDays": 30,
+      "bufferDays": 7,
+      "dependsOn": [
+        "order-dress"
+      ],
+      "done": false
+    },
+    {
+      "id": "write-vows",
+      "title": "Write vows",
+      "leadDays": 3,
+      "bufferDays": 1,
+      "dependsOn": [],
+      "done": false
+    },
+    {
+      "id": "book-venue",
+      "title": "Book venue",
+      "leadDays": 10,
+      "bufferDays": 200,
+      "dependsOn": [],
+      "done": true
+    }
+  ],
+  "expect": {
+    "invalid": null,
+    "tasks": {
+      "book-photographer": {
+        "due": "2027-02-18",
+        "startBy": "2027-02-04",
+        "earliestStart": "2026-11-23",
+        "slackDays": 73,
+        "needDays": 44,
+        "state": "ok"
+      },
+      "engrave-rings": {
+        "due": "2027-01-19",
+        "startBy": "2026-11-20",
+        "earliestStart": "2026-11-23",
+        "slackDays": -3,
+        "needDays": 120,
+        "state": "impossible"
+      },
+      "order-dress": {
+        "due": "2027-02-11",
+        "startBy": "2026-11-03",
+        "earliestStart": "2026-11-23",
+        "slackDays": -20,
+        "needDays": 137,
+        "state": "impossible"
+      },
+      "alterations": {
+        "due": "2027-03-13",
+        "startBy": "2027-02-11",
+        "earliestStart": "2027-03-03",
+        "slackDays": -20,
+        "needDays": 37,
+        "state": "impossible"
+      },
+      "write-vows": {
+        "due": "2027-03-19",
+        "startBy": "2027-03-16",
+        "earliestStart": "2026-11-23",
+        "slackDays": 113,
+        "needDays": 4,
+        "state": "ok"
+      },
+      "book-venue": {
+        "due": "2026-09-01",
+        "startBy": "2026-08-22",
+        "earliestStart": null,
+        "slackDays": null,
+        "needDays": null,
+        "state": "done"
+      }
+    },
+    "criticalPath": [
+      "order-dress",
+      "alterations"
+    ],
+    "runwayDays": 137,
+    "marginDays": -20
+  },
+  "move": {
+    "to": "2027-01-02",
+    "expect": {
+      "deltaDays": -77,
+      "tasks": {
+        "alterations": {
+          "due": "2026-12-26",
+          "startBy": "2026-11-26",
+          "state": "impossible"
+        },
+        "book-photographer": {
+          "due": "2026-12-03",
+          "startBy": "2026-11-19",
+          "state": "impossible"
+        },
+        "book-venue": {
+          "due": "2026-06-16",
+          "startBy": "2026-06-06",
+          "state": "done"
+        },
+        "engrave-rings": {
+          "due": "2026-11-03",
+          "startBy": "2026-09-04",
+          "state": "late"
+        },
+        "order-dress": {
+          "due": "2026-11-26",
+          "startBy": "2026-08-18",
+          "state": "impossible"
+        },
+        "write-vows": {
+          "due": "2027-01-01",
+          "startBy": "2026-12-29",
+          "state": "ok"
+        }
+      },
+      "late": [
+        {
+          "id": "engrave-rings",
+          "isNew": true
+        }
+      ],
+      "impossible": [
+        {
+          "id": "alterations",
+          "isNew": false
+        },
+        {
+          "id": "book-photographer",
+          "isNew": true
+        },
+        {
+          "id": "order-dress",
+          "isNew": false
+        }
+      ],
+      "resolved": [],
+      "marginDays": -97,
+      "fingerprint": "b2d63f618a9f4049"
+    }
+  }
+}

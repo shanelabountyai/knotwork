@@ -1,0 +1,34 @@
+{
+  "name": "01-single-task",
+  "note": "One task: due = wedding - buffer, start-by = due - lead. Worked by hand in the test file.",
+  "weddingDate": "2027-10-09",
+  "today": "2026-11-23",
+  "tasks": [
+    {
+      "id": "book-band",
+      "title": "Book band",
+      "leadDays": 30,
+      "bufferDays": 14,
+      "dependsOn": [],
+      "done": false
+    }
+  ],
+  "expect": {
+    "invalid": null,
+    "tasks": {
+      "book-band": {
+        "due": "2027-09-25",
+        "startBy": "2027-08-26",
+        "earliestStart": "2026-11-23",
+        "slackDays": 276,
+        "needDays": 44,
+        "state": "ok"
+      }
+    },
+    "criticalPath": [
+      "book-band"
+    ],
+    "runwayDays": 44,
+    "marginDays": 276
+  }
+}

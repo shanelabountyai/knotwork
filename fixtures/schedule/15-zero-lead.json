@@ -1,0 +1,69 @@
+{
+  "name": "15-zero-lead",
+  "note": "Lead 0 and buffer 0: due on the wedding day itself.",
+  "weddingDate": "2027-10-09",
+  "today": "2026-11-23",
+  "tasks": [
+    {
+      "id": "get-married",
+      "title": "Get married",
+      "leadDays": 0,
+      "bufferDays": 0,
+      "dependsOn": [],
+      "done": false
+    },
+    {
+      "id": "pack-bags",
+      "title": "Pack bags",
+      "leadDays": 1,
+      "bufferDays": 0,
+      "dependsOn": [],
+      "done": false
+    },
+    {
+      "id": "leave-for-venue",
+      "title": "Leave for venue",
+      "leadDays": 0,
+      "bufferDays": 0,
+      "dependsOn": [
+        "pack-bags"
+      ],
+      "done": false
+    }
+  ],
+  "expect": {
+    "invalid": null,
+    "tasks": {
+      "get-married": {
+        "due": "2027-10-09",
+        "startBy": "2027-10-09",
+        "earliestStart": "2026-11-23",
+        "slackDays": 320,
+        "needDays": 0,
+        "state": "ok"
+      },
+      "pack-bags": {
+        "due": "2027-10-09",
+        "startBy": "2027-10-08",
+        "earliestStart": "2026-11-23",
+        "slackDays": 319,
+        "needDays": 1,
+        "state": "ok"
+      },
+      "leave-for-venue": {
+        "due": "2027-10-09",
+        "startBy": "2027-10-09",
+        "earliestStart": "2026-11-24",
+        "slackDays": 319,
+        "needDays": 0,
+        "state": "ok"
+      }
+    },
+    "criticalPath": [
+      "pack-bags",
+      "leave-for-venue"
+    ],
+    "runwayDays": 1,
+    "marginDays": 319
+  }
+}
