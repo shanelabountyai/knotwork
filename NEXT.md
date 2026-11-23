@@ -23,6 +23,8 @@ Unattended run Shane asked for on 2026-11-23. Plan: `docs/knotwork/PHASE-1-PLAN.
   of those, `tests/knotwork` is 440 in 12 files; build OK; `foundation:drift` clean against v1.7.0;
   `foundation:check-modules` OK; Playwright 18/18 (5 are Knotwork's demo story); pytest 25 passed;
   `fixtures:check` 17 of 17 the same.
+- **GitHub CI on PR #1 at 2c2daf8:** `ci (off)` success (including `prisma migrate deploy`, "Migrations match the
+  schema", vitest and Playwright with the real Prisma engine), `modules-removed` success, `oracles` success.
 - **Phase 1 acceptance: 10 of 12 items met, 2 partial.** Partial: P0-7 contract **attachments** (no upload exists;
   needs a storage decision, D-17) and P0-7 brief content that depends on the guest engine (counts, do-not-play list:
   Phase 2 data; the brief says so instead of inventing it).
