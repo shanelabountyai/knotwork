@@ -153,8 +153,13 @@ def dump(fx: dict) -> str:
     return json.dumps(fx, indent=2) + "\n"
 
 
-if __name__ == "__main__":  # python3 tools/schedule_oracle.py --write  rewrites every fixture's expect blocks
+if __name__ == "__main__":  # --write rewrites every fixture's expect blocks; --stdin answers a JSON list of plans
     import sys
+
+    if "--stdin" in sys.argv:
+        plans = json.load(sys.stdin)
+        print(json.dumps([{"expect": compute(p["tasks"], p["weddingDate"], p["today"]), "move": preview_move(p["tasks"], p["weddingDate"], p["to"], p["today"])} for p in plans]))
+        sys.exit(0)
 
     for path, fx in load():
         text = dump(expected(fx))
