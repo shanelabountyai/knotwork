@@ -105,13 +105,14 @@ Designated kinds in Phase 1: `book_vendor`, `sign_contract`, `spend` (amount str
 | 14 | missing-dependency | refused |
 | 15 | zero-lead | lead 0, buffer 0: due on the wedding day |
 | 16 | critical-tie | equal chains: the tie-break is stable |
+| 17 | move-resolves | a later date resolves what was late or impossible |
 
 `fixtures/consent/transitions.json`: every (state, event, actor, time) with the expected state or refusal.
 `fixtures/vendors/scope-changes.json`: before and after for each scope field and each non-scope field, with the fields
 that must flag. `fixtures/budget/rollup.json`: categories and expenses with hand-added totals.
 
-Expected values in the schedule fixtures are produced by `scripts/knotwork/gen-fixtures.ts` from the TypeScript engine
-and then checked by the Python oracle, which shares no code with it (D-23). Fixtures 01, 02 and 07 are small enough
+Expected values in the schedule fixtures were written first by the Python oracle and must be reproduced byte for byte
+by `scripts/knotwork/gen-fixtures.ts` from the TypeScript engine, which shares no code with it (D-23, revised by D-25). Fixtures 01, 02 and 07 are small enough
 that their expected dates are also worked by hand in the test file.
 
 ## 4. Oracles (`tools/`, Python standard library only)

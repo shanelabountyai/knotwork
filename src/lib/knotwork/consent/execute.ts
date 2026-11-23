@@ -8,7 +8,7 @@
 //   change_date      Wedding.date, via commitMove      (Wedding_guard)
 //   change_settings  the three wedding settings        (Wedding_guard)
 //
-// tests/knotwork/consent-only.test.ts scans src/ for any other writer.
+// tests/knotwork/structure.test.ts scans src/ for any other writer.
 import { z } from 'zod';
 import { inOrg } from '@/core/authz/guards';
 import type { Tx } from '@/core/db/rls';

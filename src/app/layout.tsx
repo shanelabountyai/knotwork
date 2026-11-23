@@ -1,5 +1,6 @@
 // public: the root shell; renders no data
-export const metadata = { title: 'SaaS Foundation' };
+import './ui/knotwork.css';
+export const metadata = { title: 'Knotwork' };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (

@@ -1,8 +1,48 @@
 # NEXT
 
-## ▶ 2026-11-23: Knotwork Phase 1 (branch `kickoff`, one draft PR, not merged)
-In progress in an unattended run. This section is completed at hand-off with what was built, the gate results, the
-decision rows, what was not verified and the "You:" steps. Plan: `docs/knotwork/PHASE-1-PLAN.md`.
+## ▶ 2026-11-23: Knotwork Phase 1 built (branch `kickoff`, one draft PR, not merged, not deployed)
+Unattended run Shane asked for on 2026-11-23. Plan: `docs/knotwork/PHASE-1-PLAN.md`. Decisions: `docs/knotwork/decisions.md`
+(D-01 to D-32). Stopped at the Phase 1 gate; Phase 2 is not started.
+
+- **Phase 0:** saas-foundation v1.7.0 merged with shared history, `new-project knotwork 8400`, `billing` removed (D-03).
+- **Docs:** PRD v1.1 (house patterns and reuse lines mapped to file paths, Questions for Shane), `CLAUDE.md`,
+  `WRITEUP.md`, this file, the plan.
+- **P0-1 scheduler:** pure engine `src/lib/knotwork/schedule/engine.ts` (dates derived, never stored; critical path;
+  late vs impossible; move preview with a fingerprint), default template, derived RSVP deadline, atomic `commitMove`.
+  17 fixtures in `fixtures/schedule/`, each checked by an independent Python oracle (`tools/schedule_oracle.py`), plus
+  300 seeded random plans compared across the two languages.
+- **P0-2 two-key ownership:** state machine with expiry (240-case table), one executor of designated actions, database
+  triggers that refuse a single key (D-27), change log on the template's append-only audit log, vendor re-confirmation
+  flags, scoped helper grants.
+- **P0-7 budget and vendor book:** categories, spends in integer cents, snapshots, vendors, scheduled payments as tasks,
+  regenerable briefs filtered by vendor category.
+- **App:** 13 tables in `prisma/schema/knotwork.prisma` (RLS policies, export hooks, harness rows), 24 server actions,
+  9 pages under `/o/[org]/wedding` plus the workspace home, `npm run seed:couple` (one synthetic couple).
+- **Gate (cloud sandbox, 2026-11-23; exact commands in the PR):** lint 0 problems; typecheck clean; vitest
+  825 passed / 33 skipped (RLS off) and 857 passed / 1 skipped (RLS enforce, run locally as the `app_rw` role);
+  of those, `tests/knotwork` is 440 in 12 files; build OK; `foundation:drift` clean against v1.7.0;
+  `foundation:check-modules` OK; Playwright 18/18 (5 are Knotwork's demo story); pytest 25 passed;
+  `fixtures:check` 17 of 17 the same.
+- **Phase 1 acceptance: 10 of 12 items met, 2 partial.** Partial: P0-7 contract **attachments** (no upload exists;
+  needs a storage decision, D-17) and P0-7 brief content that depends on the guest engine (counts, do-not-play list:
+  Phase 2 data; the brief says so instead of inventing it).
+- **Not verified here:** `prisma migrate deploy` and `prisma migrate diff` (Prisma's schema engine cannot be downloaded
+  in the sandbox, D-04): the migrations were applied by a stand-in and compared with the schema by a sandbox script;
+  **CI's "Migrations match the schema" step is the proof.** `npm run db:setup` as written (same reason). Postgres was
+  17.12 from an npm package, not a system install (D-05). `foundation:check-modules` ran with a tar stand-in for rsync
+  (D-32). A `pg` deprecation warning ("client.query() when the client is already executing a query") still prints once
+  during the e2e run; its source was not found. Nothing was checked on a phone-sized screen or with a screen reader.
+  No real couple has used any of this.
+- **You:**
+  1. Read the draft PR; its "Questions for Shane" are the ten in PRD v1.1. Decide Question 1 first (may a solo
+     partner act alone until the second joins): it changes what a new user can do on day one.
+  2. Look at CI on the PR, the "Migrations match the schema" step above all.
+  3. To run it: `npm ci && npm run db:setup && npm run seed:couple && npm run dev`, open `http://localhost:8400/demo`,
+     sign in as `juniper@knotwork.demo.test`, and in a second browser as `rowan@knotwork.demo.test`.
+  4. `git remote add template https://github.com/shanelabountyai/saas-foundation` in your clone, so
+     `npm run foundation:drift` finds `v1.7.0` and later releases merge.
+  5. If you keep it: add the `CLONES.md` row from the PR body to saas-foundation, and port 8400 to your port table.
+  6. Merge or not; then say "Phase 2" to start the guest engine.
 
 Everything below this section is the template's own NEXT.md, kept for its history; it is not Knotwork's to-do list.
 

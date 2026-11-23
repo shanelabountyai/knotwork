@@ -31,10 +31,9 @@ export async function createExpense(tx: Tx, ctx: Ctx, wedding: WeddingRow, input
 }
 
 export async function loadBudget(tx: Tx, ctx: { orgId: string }): Promise<Rollup> {
-  const [categories, expenses] = await Promise.all([
-    tx.budgetCategory.findMany({ where: inOrg(ctx), select: { id: true, name: true, estimateCents: true } }),
-    tx.expense.findMany({ where: inOrg(ctx), select: { categoryId: true, amountCents: true } }),
-  ]);
+  // One at a time: a transaction has one connection.
+  const categories = await tx.budgetCategory.findMany({ where: inOrg(ctx), select: { id: true, name: true, estimateCents: true } });
+  const expenses = await tx.expense.findMany({ where: inOrg(ctx), select: { categoryId: true, amountCents: true } });
   return rollup(categories, expenses);
 }
 

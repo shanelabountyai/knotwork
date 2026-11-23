@@ -32,7 +32,9 @@
     "foundation:status": "tsx scripts/foundation-status.ts",
     "foundation:check-modules": "tsx scripts/foundation-check-modules.ts",
     "fixtures:check": "tsx scripts/knotwork/gen-fixtures.ts",
-    "oracles": "python3 -m pytest tools -q"
+    "oracles": "python3 -m pytest tools -q",
+    "seed:couple": "dotenv -e .env.local -- tsx scripts/knotwork/seed-couple.ts",
+    "seed:couple:test": "dotenv -e .env.test -e .env.local -- tsx scripts/knotwork/seed-couple.ts"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.10.1",

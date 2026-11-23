@@ -4,7 +4,7 @@
 who are equals, and the expensive mistakes are the ones one of them makes alone: a vendor booked, a contract signed, a
 large spend, the date moved. Knotwork makes those actions need both partners, and logs everything else.
 
-Status on 2026-11-23: Phase 1 of 4 built on branch `kickoff`, not merged, not deployed, synthetic data only. Entries
+Status on 2026-11-23: Phase 1 of 4 built on branch `kickoff` (gate results in `NEXT.md`), not merged, not deployed, synthetic data only. Entries
 are added as each artifact lands. Every number in this file comes from a file in the repo or a command that was run;
 none is a benchmark or a user result, because there are no users.
 
@@ -23,8 +23,9 @@ withdrawn by its proposer, or expire.
 
 1. One function, `executeApproved`, is the only code that writes a designated field. A test scans the source for any
    other writer.
-2. The database refuses the shortcut: a booked vendor row must name the request that booked it, and a request cannot
-   be marked approved with the proposer as the approver (CHECK constraints).
+2. The database refuses the shortcut, past all application code: triggers reject a booked or signed vendor, a moved
+   date, changed rules or an over-threshold expense unless the row names an approved request of the right kind for
+   that very thing, and a CHECK rejects a request whose approver is its proposer. The tests run raw SQL to prove it.
 3. Every designated action is attacked at the action layer as a single partner; the test asserts no row changed.
 
 The spend threshold is itself two-key. Otherwise one partner raises it and the claim is empty.
@@ -44,6 +45,12 @@ plan changed in between.
 
 **Why it holds.** No table has a due-date column (a test scans the schema). The cascade and the critical path are
 checked against an independent Python implementation in `tools/` on every fixture.
+
+**What the build taught.** The template's action harness, which feeds every server action generated input, found a
+real bug on its first run: a task made to depend on itself reached a database CHECK and came back as a server error
+instead of a refusal. The plan is now validated in memory before anything is written. Two mutation checks were run by
+hand before hand-off (deleting one change-log call; deleting the "not your own request" rule): the scripted-session
+test and eight two-key tests went red, then the code was restored.
 
 ## Phase gates (the meta-story)
 

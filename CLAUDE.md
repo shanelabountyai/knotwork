@@ -8,12 +8,12 @@ where they differ. Current phase plan: `docs/knotwork/PHASE-1-PLAN.md`. Session 
 
 1. **All deadlines derive from the anchor.** The wedding date is the only stored deadline. A task stores `leadDays`,
    `bufferDays` and its dependencies; its dates are computed on read by `src/lib/knotwork/schedule/`. No model may gain
-   a due-date column (`tests/knotwork/no-free-dates.test.ts` scans the schema). A date of fact (paid on, completed on,
+   a due-date column (`tests/knotwork/structure.test.ts` scans the schema). A date of fact (paid on, completed on,
    signed on) is not a deadline and may be stored.
 2. **Designated actions only through the consent module.** Booking a vendor, signing a contract, spending over the
    threshold, changing the wedding date, changing the consent settings (and, from Phase 2, removing a guest) happen
    only inside `executeApproved` in `src/lib/knotwork/consent/execute.ts`, after a second owner approves. No action
-   file writes those fields itself (`tests/knotwork/consent-only.test.ts` scans for it; the database also checks it).
+   file writes those fields itself (`tests/knotwork/structure.test.ts` scans for it; the database also checks it).
 3. **Guest-facing surfaces never leak wave data.** No Phase 1 surface is guest-facing. From Phase 2, every
    guest-visible response is an explicit projection and is swept by a fixture.
 4. **Uploads are hostile input: strip, validate, cap.** Phase 1 accepts no uploads. Nothing that takes a file ships

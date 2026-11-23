@@ -7,6 +7,10 @@ date, and both partners are equal owners (designated actions need both keys). Bu
 
 - Spec: `docs/prds/prd-knotwork-wedding.md`. Plan and decisions: `docs/knotwork/`. Where things stand: `NEXT.md`.
 - **Not deployed. Synthetic data only; no real people.** Email is captured in the database, money is mock and ledgered.
+- Run it: `npm ci && npm run db:setup && npm run seed:couple && npm run dev`, then `http://localhost:8400/demo`.
+  Sign in as `juniper@knotwork.demo.test` and, in another browser, `rowan@knotwork.demo.test` (the two partners).
+- Check it: `npm run lint`, `npm run typecheck`, `npm test`, `npm run test:e2e`, `npm run oracles` (pytest),
+  `npm run fixtures:check`, `npm run foundation:drift`.
 - The `billing` module is removed (decisions D-03). Everything below this line is the template's own README.
 
 ---

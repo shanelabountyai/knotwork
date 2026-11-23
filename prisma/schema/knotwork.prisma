@@ -3,7 +3,7 @@
 // all thirteen in the data export (src/app/export-hooks.ts, INV-34), harness rows in tests/fixtures/app.ts.
 //
 // RULE 1 (CLAUDE.md): the only stored deadline is Wedding.date. A task stores leadDays, bufferDays and dependencies;
-// its dates are derived on read (src/lib/knotwork/schedule/engine.ts). tests/knotwork/no-free-dates.test.ts scans this
+// its dates are derived on read (src/lib/knotwork/schedule/engine.ts). tests/knotwork/structure.test.ts scans this
 // file: a new date column fails until it is named there as a date of fact.
 // RULE 2: the fields marked "designated" are written only by src/lib/knotwork/consent/execute.ts, and the database
 // refuses them without an approved request (triggers in 20261123000001_knotwork_phase1).

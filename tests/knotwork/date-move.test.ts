@@ -174,7 +174,8 @@ describe('a move that breaks things', () => {
 
 describe('editing the plan', () => {
   it('refuses a dependency circle by name and writes nothing', async () => {
-    const [a, b] = await Promise.all(['book-venue', 'book-caterer'].map((key) => db.task.findFirstOrThrow({ where: { orgId: c.orgId, key } })));
+    const a = await db.task.findFirstOrThrow({ where: { orgId: c.orgId, key: 'book-venue' } });
+    const b = await db.task.findFirstOrThrow({ where: { orgId: c.orgId, key: 'book-caterer' } });
     const before = await snapshot();
     // book-caterer already depends on book-venue; making book-venue depend on book-caterer closes a circle.
     await refused(updateTask(c.slug, { id: a.id, title: a.title, leadDays: a.leadDays, bufferDays: a.bufferDays, assigneeId: '', dependsOn: [b.id] }), /circle: Book the venue, Book the caterer|circle: Book the caterer, Book the venue/);
