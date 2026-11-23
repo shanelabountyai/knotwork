@@ -1,4 +1,15 @@
-# SaaS Foundation
+# knotwork
+
+> Cloned from saas-foundation v1.7.0. Port 8400. Upgrade with `npm run foundation:status`; template-owned paths are listed in the template's plan §3.2.
+
+Knotwork is a wedding-planning app for one couple and their circle: every deadline derives backward from the wedding
+date, and both partners are equal owners (designated actions need both keys). Build-log #12.
+
+- Spec: `docs/prds/prd-knotwork-wedding.md`. Plan and decisions: `docs/knotwork/`. Where things stand: `NEXT.md`.
+- **Not deployed. Synthetic data only; no real people.** Email is captured in the database, money is mock and ledgered.
+- The `billing` module is removed (decisions D-03). Everything below this line is the template's own README.
+
+---
 
 A Next.js 16 + Prisma 7 + Postgres template with the parts every multi-tenant app rebuilds: magic-link sign-in with TOTP,
 orgs and roles, one authorization path, an append-only audit log, share links, cron, and optional billing (Stripe) and

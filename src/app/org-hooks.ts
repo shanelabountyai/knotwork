@@ -1,4 +1,3 @@
-import { cancelOrgSubscription } from '@/modules/billing/provider'; // billing
 import { endCredentialsOf } from '@/modules/apikeys/keys'; // apikeys
 import type { ListedOrg } from '@/core/tenancy/listed';
 import type { MembershipEnded, RoleChanged } from '@/core/tenancy/orgs';
@@ -6,9 +5,7 @@ import type { MembershipEnded, RoleChanged } from '@/core/tenancy/orgs';
 // Clone-owned, like cron-jobs.ts: what must happen before an org is deleted. Throwing stops the
 // deletion. Removing the billing module deletes the lines marked `// billing`.
 // FR-05: a deleted org must not keep charging.
-export async function beforeOrgDelete(orgId: string): Promise<void> {
-  await cancelOrgSubscription(orgId); // billing
-}
+export async function beforeOrgDelete(_orgId: string): Promise<void> {}
 
 // Clone-owned (v1.4.0): which of a user's orgs the template's org lists show — `/onboarding`, where every
 // sign-in lands, and each account on `/demo`. Return the ones to show; the default shows them all. A clone
