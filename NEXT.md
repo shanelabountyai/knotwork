@@ -1,5 +1,11 @@
 # NEXT
 
+## ▶ 2026-11-23: Knotwork Phase 1 (branch `kickoff`, one draft PR, not merged)
+In progress in an unattended run. This section is completed at hand-off with what was built, the gate results, the
+decision rows, what was not verified and the "You:" steps. Plan: `docs/knotwork/PHASE-1-PLAN.md`.
+
+Everything below this section is the template's own NEXT.md, kept for its history; it is not Knotwork's to-do list.
+
 ## ▶ 2026-11-17: v1.7.0 PR open (branch `security/v1.7.0`): A-04, A-08 (owner decisions 2026-11-17)
 Webhook endpoints are disabled with their creator's membership; a demotion below `apikeys.manage` revokes keys and disables
 endpoints. One migration (guarded; backfills creators from the audit log and disables orphans), one breaking change
