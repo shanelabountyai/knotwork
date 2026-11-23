@@ -31,6 +31,8 @@ model User {
   loginTokens      LoginToken[]
   recoveryCodes    RecoveryCode[]
   ssoSubjects      SsoSubject[] // sso
+  assignedTasks    Task[] // app
+  helperGrants     HelperGrant[] // app
 }
 
 /// Magic-link token. Only sha256 stored; single use; 15 min.
@@ -104,6 +106,19 @@ model Org {
   apiKeys        ApiKey[] // apikeys
   webhookEndpoints WebhookEndpoint[] // apikeys
   webhookDeliveries WebhookDelivery[] // apikeys
+  wedding Wedding? // app
+  tasks Task[] // app
+  taskDependencies TaskDependency[] // app
+  scheduleBaselines ScheduleBaseline[] // app
+  budgetCategories BudgetCategory[] // app
+  expenses Expense[] // app
+  budgetSnapshots BudgetSnapshot[] // app
+  vendors Vendor[] // app
+  vendorPayments VendorPayment[] // app
+  vendorFlags VendorFlag[] // app
+  vendorBriefs VendorBrief[] // app
+  consentRequests ConsentRequest[] // app
+  helperGrants HelperGrant[] // app
 }
 
 model Membership {

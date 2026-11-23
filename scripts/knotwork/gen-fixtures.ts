@@ -21,7 +21,8 @@ export const TEMPLATE_FIXTURE: Fx = {
 };
 
 export function regenerate(fx: Fx): string {
-  const { expect: _e, move, ...rest } = fx;
+  const { move } = fx;
+  const rest = { name: fx.name, note: fx.note, weddingDate: fx.weddingDate, today: fx.today, tasks: fx.tasks };
   const expect = computeSchedule(fx.tasks, fx.weddingDate, fx.today);
   const full: Record<string, unknown> = { ...rest, expect: expect.invalid ? { invalid: expect.invalid } : expect };
   if (move) full.move = { to: move.to, expect: previewMove(fx.tasks, fx.weddingDate, move.to, fx.today) };

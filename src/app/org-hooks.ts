@@ -1,11 +1,14 @@
 import { endCredentialsOf } from '@/modules/apikeys/keys'; // apikeys
 import type { ListedOrg } from '@/core/tenancy/listed';
+import { endHelper } from '@/lib/knotwork/context';
 import type { MembershipEnded, RoleChanged } from '@/core/tenancy/orgs';
 
 // Clone-owned, like cron-jobs.ts: what must happen before an org is deleted. Throwing stops the
 // deletion. Removing the billing module deletes the lines marked `// billing`.
 // FR-05: a deleted org must not keep charging.
-export async function beforeOrgDelete(_orgId: string): Promise<void> {}
+export async function beforeOrgDelete(orgId: string): Promise<void> {
+  void orgId; // Knotwork has nothing outside the database to stop: the wedding's rows cascade with the org
+}
 
 // Clone-owned (v1.4.0): which of a user's orgs the template's org lists show — `/onboarding`, where every
 // sign-in lands, and each account on `/demo`. Return the ones to show; the default shows them all. A clone
@@ -22,6 +25,7 @@ export async function filterListedOrgs(_userId: string, orgs: readonly ListedOrg
 // stops the removal.
 export const onMembershipEnded: MembershipEnded = async (tx, orgId, userId) => {
   await endCredentialsOf(tx, orgId, userId, null); // apikeys
+  await endHelper(tx, orgId, userId); // Knotwork: their helper grants go, and their tasks become unassigned
 };
 
 // Clone-owned (v1.7.0): what follows a role change, in the same transaction (audit A-08). The template ends the API keys and
