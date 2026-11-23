@@ -71,3 +71,17 @@ def test_consent_table_shape():
     assert sorted((c["actor"], c["when"], c["status"], c["event"]) for c in approved) == [("B", "before", "pending", "approve"), ("C", "before", "pending", "approve")]
     assert not [c for c in cases if c["expect"]["ok"] and c["actor"] == "A" and c["event"] in ("approve", "decline")]
     assert not [c for c in cases if c["expect"]["ok"] and c["status"] != "pending"]
+
+
+# --- budget rollup ---------------------------------------------------------------------------------------------------
+import budget_oracle
+
+BUDGET = oracle.FIXTURES.parent / "budget" / "rollup.json"
+
+
+def test_budget_rollup_matches_the_oracle_and_the_hand_sums():
+    fx = json.loads(BUDGET.read_text())
+    assert budget_oracle.rollup(fx["categories"], fx["expenses"]) == fx["expect"]
+    assert fx["expect"]["actualCents"] == 600000 + 250000 + 1250050 + 80000 + 1 == 2180051
+    assert fx["expect"]["estimateCents"] == 900000 + 1200000 + 300000 + 150000 == 2550000
+    assert all(isinstance(e["amountCents"], int) for e in fx["expenses"])
