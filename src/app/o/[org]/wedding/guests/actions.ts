@@ -194,12 +194,13 @@ export const closeBList = orgAction(null, z.object({}), async (ctx) => {
 
 // ---- import (validated, previewed, all or nothing)
 
-export const importGuests = orgAction(null, z.object({ csv: z.string().max(200_001, 'That text is too large (200,000 characters at most).'), confirm: checkbox }), async (ctx, i) => {
+export const importGuests = orgAction(null, z.object({ csv: z.string().max(200_000, 'That text is too large (200,000 characters at most).'), confirm: checkbox }), async (ctx, i) => {
+  // Who is asking comes before the text is read at all: parsing is work, and a member with no guest-list grant gets none of it.
+  await withOrg(ctx, async (tx) => need(await loadWho(tx, ctx), 'guests.edit'));
   const parsed = parseGuestCsv(i.csv);
   if (parsed.errors.length) throw new Refused(`${parsed.errors.slice(0, 8).map((e) => e.message).join(' ')}${parsed.errors.length > 8 ? ` And ${parsed.errors.length - 8} more.` : ''} Nothing was imported.`);
   const guests = parsed.households.reduce((n, h) => n + h.guests.length, 0);
   if (!i.confirm) {
-    await withOrg(ctx, async (tx) => need(await loadWho(tx, ctx), 'guests.edit'));
     return { notice: `That would add ${parsed.households.length} households and ${guests} guests (${parsed.households.filter((h) => h.list === 'B').length} households on the B list). Nothing is saved yet: tick the box and import to add them.` };
   }
   await withOrg(ctx, async (tx) => {

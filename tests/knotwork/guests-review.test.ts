@@ -5,6 +5,7 @@ import { POST as respond } from '@/app/r/[token]/respond/route';
 import { now } from '@/core/clock';
 import { withOrg } from '@/core/db/rls';
 import { addDays, todayIn } from '@/lib/knotwork/days';
+import { parseGuestCsv } from '@/lib/knotwork/guests/csv';
 import { isRsvpProblem, problemCodeOf, RSVP_PROBLEM } from '@/lib/knotwork/guests/projection';
 import { submitRsvp } from '@/lib/knotwork/guests/public';
 import { loadGuestState } from '@/lib/knotwork/guests/store';
@@ -198,5 +199,26 @@ describe('S8: a plus-one comes with their host or not at all', () => {
     expect(await snapshot()).toBe(before);
     expect(await submitRsvp(token, IP, { responses: [reply(priya, false), reply(robin, false)], plusOneName: '' })).toEqual({ ok: true });
     expect((await state()).cap.held).toBe(6); // Lindqvists 2, Sterns 2, Vales 2
+  });
+});
+
+describe('S5: the import holds up at its own limits', () => {
+  it('parses the largest text it accepts in well under a second, however many commas', () => {
+    const t = performance.now();
+    expect(parseGuestCsv(`household,name\n${','.repeat(199_000)}`).errors[0]!.message).toMatch(/too many fields/);
+    expect(performance.now() - t).toBeLessThan(1000);
+  });
+  it('checks who is asking before it reads the text', async () => {
+    const helper = await db.membership.findFirstOrThrow({ where: { orgId: c.orgId, role: 'member' } });
+    await as(helper.userId); // a helper with no guest-list grant
+    await refused(importGuests(c.slug, { csv: 'household,name,list\nThe Nguyens,An,C\n', confirm: 'on' }), /do not have access/);
+    await refused(importGuests(c.slug, { csv: 'household,name\nThe Nguyens,An Nguyen\n' }), /do not have access/);
+  });
+  it('imports the 2,000 rows it says it accepts, in one transaction', async () => {
+    const rows = Array.from({ length: 2000 }, (_, i) => `Household ${i},Guest ${i},B`).join('\n');
+    await ok(importGuests(c.slug, { csv: `household,name,list\n${rows}\n`, confirm: 'on' }));
+    expect(await db.household.count({ where: { orgId: c.orgId } })).toBe(2007);
+    expect(await db.guest.count({ where: { orgId: c.orgId } })).toBe(2012);
+    expect((await state()).cap.held).toBe(8); // queued households hold nothing
   });
 });

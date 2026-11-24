@@ -1,6 +1,7 @@
 // The guest list in the database (PRD P0-3, P0-4): households, guests, responses, invite waves, import, chasing.
 // Every write here takes the wedding lock first and ends with assertWithinCap: held seats never pass the cap, whatever
 // was edited. Removal of a guest is designated and is NOT here (consent/execute.ts).
+import { randomUUID } from 'node:crypto';
 import { openSecret, sealSecret } from '@/core/auth/secret-box';
 import { inOrg } from '@/core/authz/guards';
 import { now } from '@/core/clock';
@@ -251,13 +252,11 @@ export async function importHouseholds(tx: Tx, ctx: Ctx, parsed: ImportHousehold
   const existing = new Set((await tx.household.findMany({ where: inOrg(ctx), select: { name: true } })).map((h) => h.name.toLowerCase()));
   const clash = parsed.filter((h) => existing.has(h.name.toLowerCase())).map((h) => h.name);
   if (clash.length) throw new Refused(`Already on the guest list: ${clash.slice(0, 5).join(', ')}${clash.length > 5 ? ` and ${clash.length - 5} more` : ''}. Nothing was imported.`);
-  let guests = 0;
-  for (const h of parsed) {
-    const { guests: people, ...fields } = h;
-    const row = await tx.household.create({ data: { orgId: ctx.orgId, ...fields } });
-    await tx.guest.createMany({ data: people.map((g) => ({ orgId: ctx.orgId, householdId: row.id, ...g, dietary: [], accessibility: [] })) });
-    guests += people.length;
-  }
+  // Two statements for the whole file, not two per household: 2,000 rows must fit inside one transaction's time.
+  const rows = parsed.map(({ guests: people, ...fields }) => ({ id: randomUUID(), fields, people }));
+  await tx.household.createMany({ data: rows.map((r) => ({ id: r.id, orgId: ctx.orgId, ...r.fields })) });
+  await tx.guest.createMany({ data: rows.flatMap((r) => r.people.map((g) => ({ orgId: ctx.orgId, householdId: r.id, ...g, dietary: [], accessibility: [] }))) });
+  const guests = rows.reduce((n, r) => n + r.people.length, 0);
   await logChange(tx, ctx, 'household', 'imported', ctx.orgId, `${parsed.length} households`, null, { households: parsed.length, guests });
   return { households: parsed.length, guests };
 }

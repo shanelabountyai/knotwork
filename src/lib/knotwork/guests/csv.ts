@@ -5,6 +5,8 @@
 export const MAX_CHARS = 200_000;
 export const MAX_ROWS = 2000;
 export const MAX_FIELD = 200;
+/** No line may have more fields than this; the real limit is the header's own length, checked per row. */
+export const MAX_COLUMNS = 64;
 const COLUMNS = ['household', 'name', 'email', 'phone', 'list', 'priority', 'age_group', 'partner_status', 'wedding_party', 'address1', 'city', 'region', 'postal'] as const;
 type Column = (typeof COLUMNS)[number];
 
@@ -27,7 +29,12 @@ function records(text: string): { rows: { line: number; fields: string[] }[]; er
       continue;
     }
     if (c === '"' && field === '') [quoted, any] = [true, true];
-    else if (c === ',') [fields, field, any] = [[...fields, field], '', true];
+    else if (c === ',') {
+      // push, not a copy: copying the row on every comma made a line of 200,000 commas cost minutes of CPU (review 2026-11-24, S5)
+      fields.push(field);
+      [field, any] = ['', true];
+      if (fields.length > MAX_COLUMNS) return { rows, error: { line: start, message: `Line ${start}: too many fields.` } };
+    }
     else if (c === '\n') {
       if (any || field !== '') rows.push({ line: start, fields: [...fields, field] });
       [field, fields, any, line] = ['', [], false, line + 1];
