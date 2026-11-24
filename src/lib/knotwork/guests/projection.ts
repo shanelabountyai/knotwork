@@ -87,7 +87,7 @@ const ONE_LINE = /^[^\u0000-\u001f\u007f-\u009f\u2028\u2029\u202a-\u202e\u2066-\
 type Coded = Extract<CheckedRsvp, { ok: true }> | { ok: false; code: RsvpProblem; who?: string };
 
 /** Validates what a guest sent against what that guest was shown. Nothing outside the view can be touched. */
-function check(view: RsvpView, s: RsvpSubmission): Coded {
+function check(view: RsvpView, s: RsvpSubmission, hostRule = false): Coded {
   const no = (code: RsvpProblem, who?: string): Coded => ({ ok: false, code, who });
   if (!s.responses.length) return no('empty');
   const byId = new Map(view.guests.map((g) => [g.id, g]));
@@ -103,6 +103,11 @@ function check(view: RsvpView, s: RsvpSubmission): Coded {
     if (wantsMeal && !view.mealOptions.includes(r.meal)) return no('meal', g.name);
     out.push({ guestId: g.id, attending: r.attending, meal: wantsMeal ? r.meal : null, dietary: r.attending ? [...new Set(r.dietary)].sort() : [], accessibility: r.attending ? [...new Set(r.accessibility)].sort() : [], songRequest: r.attending ? song : '' });
   }
+  // A named plus-one comes with their host or not at all: once this reply is applied, a plus-one may be attending
+  // only if an invited adult is (review 2026-11-24, S8). The couple's own entry form answers one person at a time and
+  // is not held to this.
+  const coming = (g: RsvpView['guests'][number]) => out.find((r) => r.guestId === g.id)?.attending ?? g.rsvp === 'attending';
+  if (hostRule && view.guests.some((g) => g.isPlusOne && coming(g)) && !view.guests.some((g) => !g.isPlusOne && g.ageGroup === 'adult' && coming(g))) return no('host');
   const name = s.plusOneName.trim();
   if (name && !view.plusOneNamed) {
     if (!view.plusOneAllowed) return no('no-guest');
@@ -123,6 +128,6 @@ export function checkRsvp(view: RsvpView, s: RsvpSubmission): CheckedRsvp {
 
 /** For the guest's link: the same check, answered only with one of the fixed sentences. */
 export function checkGuestReply(view: RsvpView, s: RsvpSubmission): CheckedRsvp {
-  const r = check(view, s);
+  const r = check(view, s, true);
   return r.ok ? r : { ok: false, message: RSVP_PROBLEM[r.code] };
 }

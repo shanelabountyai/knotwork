@@ -185,3 +185,18 @@ describe('S2: what a guest types is one line of plain text', () => {
     expect(await line({ songRequest: 'Señorita (remix) — 12" version' }, "Robin O'Rao-Núñez")).toEqual({ ok: true });
   });
 });
+
+describe('S8: a plus-one comes with their host or not at all', () => {
+  it('once the guest is named, a reply where the host declines and the guest still attends is refused', async () => {
+    const priya = (await household('Priya Rao')).guests[0]!;
+    const token = await tokenOf('Priya Rao');
+    expect(await submitRsvp(token, IP, { responses: [reply(priya, true)], plusOneName: 'Robin Rao' })).toEqual({ ok: true });
+    const robin = await guest('Robin Rao');
+    const before = await snapshot();
+    expect(await submitRsvp(token, IP, { responses: [reply(priya, false), reply(robin, true)], plusOneName: '' })).toEqual({ ok: false, message: RSVP_PROBLEM.host });
+    expect(await submitRsvp(token, IP, { responses: [reply(priya, false)], plusOneName: '' })).toEqual({ ok: false, message: RSVP_PROBLEM.host }); // Robin's earlier yes would be left standing
+    expect(await snapshot()).toBe(before);
+    expect(await submitRsvp(token, IP, { responses: [reply(priya, false), reply(robin, false)], plusOneName: '' })).toEqual({ ok: true });
+    expect((await state()).cap.held).toBe(6); // Lindqvists 2, Sterns 2, Vales 2
+  });
+});
