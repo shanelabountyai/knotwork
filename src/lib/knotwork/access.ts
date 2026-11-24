@@ -13,13 +13,14 @@ export const SCOPE_LABEL: Record<GrantScope, string> = {
   budget_edit: 'Edit the budget',
   vendors_view: 'See vendors',
   vendors_edit: 'Edit vendors',
-  guests_edit: 'Edit the guest list (Phase 2)',
+  guests_edit: 'See and edit the guest list',
 };
 
 export type Capability =
   | 'schedule.view' | 'schedule.edit'
   | 'budget.view' | 'budget.edit'
   | 'vendors.view' | 'vendors.edit'
+  | 'guests.view' | 'guests.edit'
   | 'consent.view' | 'consent.propose' | 'consent.decide'
   | 'activity.view' | 'helpers.manage' | 'wedding.create';
 
@@ -35,6 +36,8 @@ const HELPER: Record<Capability, (g: readonly GrantScope[]) => boolean> = {
   'budget.edit': (g) => g.includes('budget_edit'),
   'vendors.view': (g) => g.includes('vendors_view') || g.includes('vendors_edit'),
   'vendors.edit': (g) => g.includes('vendors_edit'),
+  'guests.view': (g) => g.includes('guests_edit'),
+  'guests.edit': (g) => g.includes('guests_edit'),
   'consent.view': () => false,
   'consent.propose': () => false,
   'consent.decide': () => false,
@@ -51,6 +54,7 @@ const ENTITY_CAP: Record<string, Capability> = {
   category: 'budget.view', expense: 'budget.view', snapshot: 'budget.view',
   vendor: 'vendors.view', payment: 'vendors.view', flag: 'vendors.view', brief: 'vendors.view',
   request: 'consent.view', grant: 'helpers.manage',
+  household: 'guests.view', guest: 'guests.view', wave: 'guests.view', guestplan: 'guests.view', song: 'guests.view',
 };
 export const canSeeEntity = (who: Who, entity: string): boolean => {
   const cap = ENTITY_CAP[entity];

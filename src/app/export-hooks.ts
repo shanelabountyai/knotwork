@@ -5,7 +5,7 @@ import type { ExportTable } from '@/core/tenancy/export';
 // (addendum §5). Add one entry per org-owned table, selecting only columns that are safe to hand over: never a
 // sealed column, token hash or recovery code (INV-34 scans the output). Every query runs inside withOrg.
 //   { name: 'Booking', rows: (tx, orgId) => tx.booking.findMany({ where: { orgId }, select: { id: true, startsAt: true } }) },
-// Knotwork (Phase 1): all thirteen org-owned tables, whole rows. None holds a sealed secret, a token or a token hash;
+// Knotwork: all twenty org-owned tables. None of the Phase 1 thirteen holds a sealed secret, a token or a token hash;
 // the two hash-like columns (ScheduleBaseline.fingerprint, VendorBrief.inputsHash) are 16 hex characters of a preview
 // or a brief body, not credentials, and short enough that the INV-34 scan for 64-hex strings stays meaningful (D-15).
 const whole = (name: string, rows: ExportTable['rows']): ExportTable => ({ name, rows });
@@ -24,6 +24,14 @@ export const exportTables: readonly ExportTable[] = [
   whole('VendorBrief', (tx, orgId) => tx.vendorBrief.findMany({ where: { orgId }, orderBy: { generatedAt: 'asc' } })),
   whole('ConsentRequest', (tx, orgId) => tx.consentRequest.findMany({ where: { orgId }, orderBy: { proposedAt: 'asc' } })),
   whole('HelperGrant', (tx, orgId) => tx.helperGrant.findMany({ where: { orgId } })),
+  // Phase 2. Household is the one table with secrets: the RSVP token's hash and its sealed copy are never selected.
+  whole('GuestPlan', (tx, orgId) => tx.guestPlan.findMany({ where: { orgId } })),
+  whole('Household', (tx, orgId) => tx.household.findMany({ where: { orgId }, omit: { rsvpTokenHash: true, rsvpTokenSealed: true }, orderBy: { name: 'asc' } })),
+  whole('Guest', (tx, orgId) => tx.guest.findMany({ where: { orgId }, orderBy: { createdAt: 'asc' } })),
+  whole('InviteWave', (tx, orgId) => tx.inviteWave.findMany({ where: { orgId }, orderBy: { number: 'asc' } })),
+  whole('HeadcountDelta', (tx, orgId) => tx.headcountDelta.findMany({ where: { orgId }, orderBy: { at: 'asc' } })),
+  whole('ChaseEvent', (tx, orgId) => tx.chaseEvent.findMany({ where: { orgId }, orderBy: { at: 'asc' } })),
+  whole('DoNotPlay', (tx, orgId) => tx.doNotPlay.findMany({ where: { orgId }, orderBy: { title: 'asc' } })),
 ];
 
 // An org-owned table left out on purpose, with the reason. INV-34 fails on any model with an orgId column that is in

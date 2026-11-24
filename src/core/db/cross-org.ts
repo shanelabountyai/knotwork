@@ -17,4 +17,5 @@ export const CROSS_ORG_FILES: Readonly<Record<string, string>> = {
   'src/modules/apikeys/keys.ts': 'an API key names its org: the hashed-key lookup runs before any org is known', // apikeys
   'src/modules/apikeys/webhooks.ts': 'webhook fan-out and delivery: the cron sweep crosses every org', // apikeys
   // clone entries below
+  'src/lib/knotwork/guests/public.ts': 'an RSVP link names its household: the hashed-token lookup runs before any org is known', // app
 };

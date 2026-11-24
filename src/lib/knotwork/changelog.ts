@@ -9,7 +9,7 @@ import type { Tx } from '@/core/db/rls';
 import type { Prisma } from '@/generated/prisma/client';
 import { diff, type Plain } from './changelog-diff';
 
-export const ENTITIES = ['wedding', 'task', 'baseline', 'category', 'expense', 'snapshot', 'vendor', 'payment', 'flag', 'brief', 'request', 'grant'] as const;
+export const ENTITIES = ['wedding', 'task', 'baseline', 'category', 'expense', 'snapshot', 'vendor', 'payment', 'flag', 'brief', 'request', 'grant', 'household', 'guest', 'wave', 'guestplan', 'song'] as const;
 export type Entity = (typeof ENTITIES)[number];
 export const PREFIX = 'knotwork.';
 

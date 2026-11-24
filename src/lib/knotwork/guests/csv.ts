@@ -63,7 +63,6 @@ export function parseGuestCsv(text: string): ImportResult {
     const v = Object.fromEntries(header.map((h, i) => [h, fields[i]!.trim()])) as Partial<Record<Column, string>>;
     const before = errors.length;
     for (const c of header as Column[]) {
-      // eslint-disable-next-line no-control-regex
       if (/[\u0000-\u0008\u000b-\u001f\u007f]/.test(v[c]!)) err(line, `${c} has a character that cannot be stored.`);
       else if (v[c]!.length > MAX_FIELD) err(line, `${c} is longer than ${MAX_FIELD} characters.`);
     }

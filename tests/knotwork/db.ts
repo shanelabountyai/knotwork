@@ -23,6 +23,7 @@ export async function outcome(p: Promise<unknown>): Promise<{ result?: unknown; 
 export async function ok(p: Promise<unknown>) {
   const o = await outcome(p);
   expect(o, JSON.stringify(o)).toMatchObject({ nav: 'redirect' });
+  expect(o.to, 'the session had expired: sign in again after advancing the clock').not.toMatch(/^\/login/);
   return o.to!;
 }
 /** The action was refused with a message matching `re`. */

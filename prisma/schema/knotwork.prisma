@@ -334,6 +334,7 @@ model ConsentRequest {
   signedVendors   Vendor[]           @relation("vendorContract")
   expenses        Expense[]
   baselines       ScheduleBaseline[]
+  removedGuests   Guest[]
 
   @@index([orgId, status])
 }
@@ -350,4 +351,191 @@ model HelperGrant {
   createdAt   DateTime   @default(now()) @db.Timestamptz(6)
 
   @@unique([orgId, userId, scope])
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
+// Phase 2 (PRD P0-3 guest engine, P0-4 tiered backfill). RULE 3: nothing in Household.list, priority, state, invitedOn,
+// waveId or createdAt may reach a guest; src/lib/knotwork/guests/projection.ts is the only guest-facing shape.
+
+enum GuestList {
+  A
+  B
+}
+
+enum HouseholdState {
+  queued
+  invited
+  regrets
+}
+
+enum AgeGroup {
+  adult
+  child
+  infant
+}
+
+enum PartnerStatus {
+  none
+  dating
+  long_distance
+  engaged
+  married
+}
+
+enum RsvpStatus {
+  pending
+  attending
+  declined
+}
+
+enum PlusOneOverride {
+  grant
+  deny
+}
+
+enum ChaseKind {
+  reminder
+  call
+}
+
+/// One per org: the cap the invite waves run against, the venue's limits and the per-head prices.
+model GuestPlan {
+  id              String   @id @default(uuid()) @db.Uuid
+  orgId           String   @unique @db.Uuid
+  org             Org      @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  cap             Int      @default(100)
+  venueMin        Int?
+  venueMax        Int?
+  perHeadCents    Int      @default(0)
+  kidsMealCents   Int      @default(0)
+  vendorMealCents Int      @default(0)
+  /// No B wave inside this many days of the wedding; remaining B households become regrets.
+  lockoutDays     Int      @default(42)
+  /// A B wave releases at least this many seats, unless it is everything left.
+  minBatchSeats   Int      @default(4)
+  mealOptions     String[]
+  updatedAt       DateTime @updatedAt @db.Timestamptz(6)
+}
+
+/// The invitation unit.
+model Household {
+  id                String           @id @default(uuid()) @db.Uuid
+  orgId             String           @db.Uuid
+  org               Org              @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  name              String
+  email             String           @default("")
+  phone             String           @default("")
+  address1          String           @default("")
+  city              String           @default("")
+  region            String           @default("")
+  postal            String           @default("")
+  list              GuestList        @default(A)
+  priority          Int              @default(100)
+  state             HouseholdState   @default(queued)
+  /// A date of fact: the day the invitation was released. Never shown to a guest.
+  invitedOn         DateTime?        @db.Date
+  waveId            String?          @db.Uuid
+  wave              InviteWave?      @relation(fields: [waveId], references: [id], onDelete: SetNull)
+  /// A date of fact, recorded by hand.
+  saveTheDateSentOn DateTime?        @db.Date
+  plusOneOverride   PlusOneOverride?
+  plusOneNote       String           @default("")
+  /// sha256 of the RSVP link token (INV-07), and a sealed copy so a reminder can carry the same link. Never exported.
+  rsvpTokenHash     String?          @unique
+  rsvpTokenSealed   String?
+  createdAt         DateTime         @default(now()) @db.Timestamptz(6)
+  guests            Guest[]
+  chaseEvents       ChaseEvent[]
+
+  @@unique([orgId, name])
+}
+
+/// The response unit. Never deleted: removed only by an approved remove_guest request (rule 2).
+model Guest {
+  id               String          @id @default(uuid()) @db.Uuid
+  orgId            String          @db.Uuid
+  org              Org             @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  householdId      String          @db.Uuid
+  household        Household       @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  name             String
+  ageGroup         AgeGroup        @default(adult)
+  partnerStatus    PartnerStatus   @default(none)
+  inWeddingParty   Boolean         @default(false)
+  isPlusOne        Boolean         @default(false)
+  rsvp             RsvpStatus      @default(pending)
+  meal             String?
+  dietary          String[]
+  accessibility    String[]
+  songRequest      String          @default("")
+  /// The couple's own note. Never guest-facing, never vendor-facing.
+  privateNote      String          @default("")
+  respondedAt      DateTime?       @db.Timestamptz(6)
+  /// Designated: set only with an approved remove_guest request (removedRequestId). A date of fact.
+  removedAt        DateTime?       @db.Timestamptz(6)
+  removedRequestId String?         @db.Uuid
+  removedRequest   ConsentRequest? @relation(fields: [removedRequestId], references: [id], onDelete: NoAction)
+  createdAt        DateTime        @default(now()) @db.Timestamptz(6)
+
+  @@index([orgId])
+  @@index([householdId])
+}
+
+/// One row per release of invitations.
+model InviteWave {
+  id             String      @id @default(uuid()) @db.Uuid
+  orgId          String      @db.Uuid
+  org            Org         @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  number         Int
+  list           GuestList
+  releasedAt     DateTime    @default(now()) @db.Timestamptz(6)
+  releasedById   String?     @db.Uuid
+  householdCount Int
+  seatCount      Int
+  households     Household[]
+
+  @@unique([orgId, number])
+}
+
+/// The delta feed: "Linda declined: −$87.00".
+model HeadcountDelta {
+  id             String   @id @default(uuid()) @db.Uuid
+  orgId          String   @db.Uuid
+  org            Org      @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  label          String
+  deltaSeats     Int
+  deltaCents     Int
+  attendingAfter Int
+  costAfterCents Int
+  at             DateTime @default(now()) @db.Timestamptz(6)
+
+  @@index([orgId, at])
+}
+
+/// A reminder sent or a personal call made, so the cadence never repeats a step.
+model ChaseEvent {
+  id          String    @id @default(uuid()) @db.Uuid
+  orgId       String    @db.Uuid
+  org         Org       @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  householdId String    @db.Uuid
+  household   Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  kind        ChaseKind
+  step        Int
+  byId        String?   @db.Uuid
+  at          DateTime  @default(now()) @db.Timestamptz(6)
+
+  @@unique([householdId, kind, step])
+  @@index([orgId])
+}
+
+/// The couple's do-not-play list; rides onto the DJ's brief.
+model DoNotPlay {
+  id        String   @id @default(uuid()) @db.Uuid
+  orgId     String   @db.Uuid
+  org       Org      @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  title     String
+  artist    String   @default("")
+  addedById String?  @db.Uuid
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+
+  @@unique([orgId, title, artist])
 }

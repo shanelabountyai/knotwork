@@ -66,7 +66,7 @@ export function checkRsvp(view: RsvpView, s: RsvpSubmission): CheckedRsvp {
   if (!s.responses.length) return no('Tell us whether each person is coming.');
   const byId = new Map(view.guests.map((g) => [g.id, g]));
   if (new Set(s.responses.map((r) => r.guestId)).size !== s.responses.length || s.responses.some((r) => !byId.has(r.guestId))) return no('That reply names someone who is not on this invitation.');
-  const out = [];
+  const out: Extract<CheckedRsvp, { ok: true }>['responses'] = [];
   for (const r of s.responses) {
     const g = byId.get(r.guestId)!;
     if (r.dietary.some((d) => !(DIETARY as readonly string[]).includes(d)) || r.accessibility.some((a) => !(ACCESSIBILITY as readonly string[]).includes(a))) return no('Pick dietary and access needs from the list.');
