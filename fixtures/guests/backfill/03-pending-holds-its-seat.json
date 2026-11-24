@@ -1,0 +1,224 @@
+{
+ "name": "03-pending-holds-its-seat",
+ "note": "The overbooking case: pending invites hold seats, so a B release cannot count on them.",
+ "lockoutDays": 42,
+ "minBatchSeats": 2,
+ "daysToWedding": 200,
+ "cap": 8,
+ "list": "B",
+ "households": [
+  {
+   "id": "a1",
+   "name": "a1",
+   "list": "A",
+   "state": "invited",
+   "priority": 0,
+   "plusOneOverride": null,
+   "guests": [
+    {
+     "id": "a1x",
+     "name": "a1x",
+     "ageGroup": "adult",
+     "partnerStatus": "none",
+     "inWeddingParty": false,
+     "isPlusOne": false,
+     "rsvp": "attending",
+     "removed": false
+    },
+    {
+     "id": "a1y",
+     "name": "a1y",
+     "ageGroup": "adult",
+     "partnerStatus": "none",
+     "inWeddingParty": false,
+     "isPlusOne": false,
+     "rsvp": "attending",
+     "removed": false
+    }
+   ]
+  },
+  {
+   "id": "a2",
+   "name": "a2",
+   "list": "A",
+   "state": "invited",
+   "priority": 0,
+   "plusOneOverride": null,
+   "guests": [
+    {
+     "id": "a2x",
+     "name": "a2x",
+     "ageGroup": "adult",
+     "partnerStatus": "none",
+     "inWeddingParty": false,
+     "isPlusOne": false,
+     "rsvp": "pending",
+     "removed": false
+    },
+    {
+     "id": "a2y",
+     "name": "a2y",
+     "ageGroup": "adult",
+     "partnerStatus": "none",
+     "inWeddingParty": false,
+     "isPlusOne": false,
+     "rsvp": "pending",
+     "removed": false
+    }
+   ]
+  },
+  {
+   "id": "a3",
+   "name": "a3",
+   "list": "A",
+   "state": "invited",
+   "priority": 0,
+   "plusOneOverride": null,
+   "guests": [
+    {
+     "id": "a3x",
+     "name": "a3x",
+     "ageGroup": "adult",
+     "partnerStatus": "none",
+     "inWeddingParty": false,
+     "isPlusOne": false,
+     "rsvp": "declined",
+     "removed": false
+    },
+    {
+     "id": "a3y",
+     "name": "a3y",
+     "ageGroup": "adult",
+     "partnerStatus": "none",
+     "inWeddingParty": false,
+     "isPlusOne": false,
+     "rsvp": "declined",
+     "removed": false
+    }
+   ]
+  },
+  {
+   "id": "b1",
+   "name": "b1",
+   "list": "B",
+   "state": "queued",
+   "priority": 1,
+   "plusOneOverride": null,
+   "guests": [
+    {
+     "id": "b1x",
+     "name": "b1x",
+     "ageGroup": "adult",
+     "partnerStatus": "none",
+     "inWeddingParty": false,
+     "isPlusOne": false,
+     "rsvp": "pending",
+     "removed": false
+    },
+    {
+     "id": "b1y",
+     "name": "b1y",
+     "ageGroup": "adult",
+     "partnerStatus": "none",
+     "inWeddingParty": false,
+     "isPlusOne": false,
+     "rsvp": "pending",
+     "removed": false
+    }
+   ]
+  },
+  {
+   "id": "b2",
+   "name": "b2",
+   "list": "B",
+   "state": "queued",
+   "priority": 2,
+   "plusOneOverride": null,
+   "guests": [
+    {
+     "id": "b2x",
+     "name": "b2x",
+     "ageGroup": "adult",
+     "partnerStatus": "none",
+     "inWeddingParty": false,
+     "isPlusOne": false,
+     "rsvp": "pending",
+     "removed": false
+    },
+    {
+     "id": "b2y",
+     "name": "b2y",
+     "ageGroup": "adult",
+     "partnerStatus": "none",
+     "inWeddingParty": false,
+     "isPlusOne": false,
+     "rsvp": "pending",
+     "removed": false
+    }
+   ]
+  },
+  {
+   "id": "b3",
+   "name": "b3",
+   "list": "B",
+   "state": "queued",
+   "priority": 3,
+   "plusOneOverride": null,
+   "guests": [
+    {
+     "id": "b3x",
+     "name": "b3x",
+     "ageGroup": "adult",
+     "partnerStatus": "none",
+     "inWeddingParty": false,
+     "isPlusOne": false,
+     "rsvp": "pending",
+     "removed": false
+    }
+   ]
+  }
+ ],
+ "expect": {
+  "entitled": {
+   "a1": false,
+   "a2": false,
+   "a3": false,
+   "b1": false,
+   "b2": false,
+   "b3": false
+  },
+  "held": {
+   "a1": 2,
+   "a2": 2,
+   "a3": 0,
+   "b1": 0,
+   "b2": 0,
+   "b3": 0
+  },
+  "needed": {
+   "a1": 2,
+   "a2": 2,
+   "a3": 2,
+   "b1": 2,
+   "b2": 2,
+   "b3": 1
+  },
+  "state": {
+   "cap": 8,
+   "held": 4,
+   "attending": 2,
+   "pending": 2,
+   "declined": 2,
+   "available": 4
+  },
+  "release": {
+   "ids": [
+    "b1",
+    "b2"
+   ],
+   "seats": 4,
+   "reason": "ok"
+  },
+  "regrets": []
+ }
+}

@@ -85,3 +85,35 @@ def test_budget_rollup_matches_the_oracle_and_the_hand_sums():
     assert fx["expect"]["actualCents"] == 600000 + 250000 + 1250050 + 80000 + 1 == 2180051
     assert fx["expect"]["estimateCents"] == 900000 + 1200000 + 300000 + 150000 == 2550000
     assert all(isinstance(e["amountCents"], int) for e in fx["expenses"])
+
+
+# --- guests: backfill cap math and headcount cost -----------------------------------------------------------------
+import guest_oracle
+
+BACKFILL = guest_oracle.load_backfill()
+
+
+def test_there_are_backfill_fixtures():
+    assert len(BACKFILL) >= 12
+
+
+@pytest.mark.parametrize("path,fx", BACKFILL, ids=[p.stem for p, _ in BACKFILL])
+def test_backfill_expectations_match_the_oracle(path, fx):
+    assert fx["expect"] == guest_oracle.expected_backfill(fx)
+    assert path.read_text() == guest_oracle.dump(fx)
+    assert fx["expect"]["state"]["held"] <= fx["cap"], "fixtures start within the cap"
+    # Releasing what the plan says never passes the cap.
+    assert fx["expect"]["state"]["held"] + fx["expect"]["release"]["seats"] <= fx["cap"]
+
+
+def test_overbooking_case_by_hand():
+    # Cap 8. Invited: 2 attending, 2 pending (they hold their seats), 2 declined. Held 4, so 4 free, not 6.
+    fx = next(f for p, f in BACKFILL if p.stem == "03-pending-holds-its-seat")
+    assert fx["expect"]["state"] == {"cap": 8, "held": 4, "attending": 2, "pending": 2, "declined": 2, "available": 4}
+    assert fx["expect"]["release"] == {"ids": ["b1", "b2"], "seats": 4, "reason": "ok"}
+
+
+def test_headcount_matches_the_oracle_and_the_hand_math():
+    fx = json.loads((guest_oracle.ROOT / "headcount.json").read_text())
+    assert guest_oracle.headcount(fx) == fx["expect"]
+    assert fx["expect"]["costCents"] == 4 * 8700 + 2 * 3500 + 2 * 4000 == 49800

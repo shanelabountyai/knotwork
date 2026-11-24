@@ -4,7 +4,7 @@ import { dbSystem as db } from '@/core/db/system';
 // CLONE-OWNED. The INV-01..04 harness seeds these rows in both fixture orgs, so it can drive
 // actions whose inputs use ref('<model>') for the clone's own tables. Return { model: id } for
 // one row of each model, owned by `org.orgId`. INV-29 (RLS enforce) calls it too, so every org-owned clone table has rows to scope.
-// Knotwork: one row in each of the thirteen Phase 1 tables. Fixed ids: the harness re-seeds before every call, and a
+// Knotwork: one row in each of the thirteen Phase 1 tables and the seven Phase 2 tables. Fixed ids: the harness re-seeds before every call, and a
 // ref minted once must still resolve. The wedding is far in the future so nothing in the harness plan is late.
 const id = (key: 'a' | 'b', n: number) => `00000000-0000-4000-8000-${String((key === 'a' ? 7000 : 7500) + n).padStart(12, '0')}`;
 
@@ -28,9 +28,19 @@ export async function seedApp(org: { orgId: string; userId: string }, key: 'a' |
     data: { id: id(key, 14), orgId, kind: 'book_vendor', payload: { vendorId: vendor.id }, summary: `Book harness vendor ${key}`, proposerId: id(key, 99), proposedAt: now(), expiresAt: new Date(now().getTime() + 86_400_000) },
   });
   const grant = await db.helperGrant.create({ data: { id: id(key, 15), orgId, userId: org.userId, scope: 'budget_view' } });
+  // Phase 2: one row in each of the seven guest tables. The household is queued (never invited), so the harness can
+  // drive every guest action without a cap or an RSVP link in the way.
+  const guestPlan = await db.guestPlan.create({ data: { id: id(key, 16), orgId, cap: 50, mealOptions: ['Chicken'] } });
+  const wave = await db.inviteWave.create({ data: { id: id(key, 17), orgId, number: 1, list: 'A', householdCount: 0, seatCount: 0 } });
+  const household = await db.household.create({ data: { id: id(key, 18), orgId, name: `harness household ${key}`, email: `household-${key}@example.test` } });
+  const guest = await db.guest.create({ data: { id: id(key, 19), orgId, householdId: household.id, name: `harness guest ${key}`, dietary: [], accessibility: [] } });
+  const delta = await db.headcountDelta.create({ data: { id: id(key, 20), orgId, label: 'harness', deltaSeats: 0, deltaCents: 0, attendingAfter: 0, costAfterCents: 0 } });
+  const chase = await db.chaseEvent.create({ data: { id: id(key, 21), orgId, householdId: household.id, kind: 'reminder', step: 21 } });
+  const song = await db.doNotPlay.create({ data: { id: id(key, 22), orgId, title: `harness song ${key}` } });
   return {
     wedding: wedding.id, task: task.id, taskDependency: dependency.id, scheduleBaseline: baseline.id, budgetCategory: category.id, expense: expense.id, budgetSnapshot: snapshot.id,
     vendor: vendor.id, vendorPayment: payment.id, vendorFlag: flag.id, vendorBrief: brief.id, consentRequest: request.id, helperGrant: grant.id,
+    guestPlan: guestPlan.id, inviteWave: wave.id, household: household.id, guest: guest.id, headcountDelta: delta.id, chaseEvent: chase.id, doNotPlay: song.id,
   };
 }
 

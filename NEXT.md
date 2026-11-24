@@ -1,5 +1,64 @@
 # NEXT
 
+## ▶ 2026-11-24 (later): independent review of PR #2 and PR #3; fixes pushed; Phase 3 NOT started
+Unattended run Shane asked for in chat on 2026-11-24. Two review agents that had not seen the author's reasoning read
+each PR; every finding was then reproduced with a failing test or traced before anything was changed. Decisions D-55
+to D-61. The full account is the "Independent review (2026-11-24)" comment on each PR.
+
+- **PR #2 (solo mode): 1 must-fix, 4 should-fix, all fixed** on `solo-partner` and merged into `phase-2`. The solo
+  migration left already-paired weddings unpaired (backfill migration `20261124000003`); the pairing latch is now set
+  by the database when the second partner joins (`20261124000004`), not by the next page load; a solo action is logged
+  as solo, not as two keys.
+- **PR #3 (Phase 2): 4 must-fix, 9 should-fix.** Fixed: a full room crashed a guest's reply (500); several replies at
+  once could add several plus-ones; an approved removal could push held seats past the cap; a rule-2 structure test
+  had been narrowed; the reply redirect carried free text and names; dietary-only changes were not logged; guest text
+  could forge lines on the DJ's brief; a plus-one could attend without their host; the CSV parser took 186 seconds on
+  one hostile line and ran before the access check; a link could not be revoked and was silently replaced after a
+  secret rotation; RSVP messages were not announced. Tests: `tests/knotwork/guests-review.test.ts` (17) and additions
+  to `solo.test.ts` (7), `structure.test.ts`, `guests-db.test.ts`, `e2e/guests.spec.ts`.
+- **Left for Shane (product calls, not fixed):** the plus-one seat rule (D-60), whether a removal re-entitles (D-58),
+  RSVP link expiry (D-59), whether closing the B list or a lockout to regrets should be undoable or need both keys
+  (D-50), two wordings ("you can change it here until the RSVP date" against D-51; "Needs both of you" shown in solo
+  mode), and keeping what a guest typed when a reply is refused.
+- **Why Phase 3 was not started:** the run's rule was "only if the review ends clean", and clean excluded any open
+  product call that changes the RSVP projection or the Phase 2 data model. D-60 option (b) changes what the RSVP page
+  offers, and D-59 option (b) adds a column; both are open. Phase 3's photo-upload links also copy whatever D-59
+  settles.
+- **Gate and CI:** in the PR comments, per check.
+- **You:** read the two review comments; answer D-60 and D-59 (a line each is enough); merge #2, then #3; then say
+  "Phase 3".
+
+## ▶ 2026-11-24: Knotwork Phase 2 built (branch `phase-2`, draft PR against main, not merged, not deployed)
+Shane asked for it in chat ("Merge, then Phase 2"). Plan: `docs/knotwork/PHASE-2-PLAN.md`. Stacked on `solo-partner`
+(PR #2), so merge #2 first. Stopped at the Phase 2 gate; Phase 3 is not started. Shane's ten answers to the PRD v1.1
+questions are rows D-34 to D-43; this phase's judgment calls are D-44 to D-54.
+
+- **P0-3 guest engine:** households invited, individuals answer through one tokenized link per household (`/r/[token]`,
+  the first guest-facing surface); plus-one rules as data with logged overrides; headcount and cost recomputed on every
+  reply with a delta feed; kids and vendor meals; rollups for vendors as counts, never names; validated CSV import
+  (pasted text, preview, all or nothing); reminder cadence into the outbox and a call-personally worklist; do-not-play
+  list and song requests on the DJ's brief.
+- **P0-4 tiered backfill:** cap math where a pending invitation holds its seat; A before B; batches, not drips; lockout
+  to regrets; a release is one transaction under the wedding lock. Guest removal is designated (two keys, or solo).
+- **Rule 3:** one projection is the only guest-facing shape; the sweep compares an A household with a B household on
+  the projection, on real database responses, on reminder text, and on the served HTML and headers.
+- **App:** 7 more tables (20 in all), 16 guest actions, 6 couple pages, the public RSVP page and route, seed extended.
+- **Gate (cloud sandbox, 2026-11-24):** lint 0 problems; typecheck clean; vitest 930 passed / 40 skipped (RLS off) and
+  969 passed / 1 skipped (RLS enforce); `tests/knotwork` 545 in 15 files; build OK; `foundation:drift` clean;
+  `foundation:check-modules` OK (notifications now required and left in place); Playwright 25/25 (7 in
+  `e2e/guests.spec.ts`); pytest 40 passed; `fixtures:check` 17 of 17.
+- **Phase 2 acceptance: 11 of 11 PRD items met** (table in the PR). Limits worth knowing: nothing is really sent (the
+  outbox captures); reminders are queued by a button, not a cron; save-the-dates are a date you record, not something
+  the app sends; one RSVP link per household, not per guest.
+- **Not verified here:** `prisma migrate deploy` / `migrate diff` (D-04; CI's "Migrations match the schema" is the
+  proof for the two new migrations). The RSVP page on a phone or with a screen reader. Old browsers that send neither
+  `Sec-Fetch-Site` nor a usable `Origin` are let in by design (D-45), untested. The `pg` "already executing a query"
+  warning still prints once; it appears on the first page whose query includes several relations, which points at the
+  Prisma adapter inside a transaction, not confirmed.
+- **You:** merge PR #2 (solo mode), then review this PR. Things to look at first: D-45 (the same-site check on RSVP
+  posts), D-47 (guests are never deleted), D-50 (B-wave rules). Then "Phase 3" starts gifts and the photo wall, where
+  the one upload pipeline you asked for (D-39) gets built.
+
 ## ▶ 2026-11-24: PR #1 merged; solo mode (branch `solo-partner`, draft PR #2)
 Shane approved PR #1 in chat on 2026-11-24 and asked for it merged (merge commit 9f2c532, not a squash, so v1.7.0 stays
 an ancestor), then Phase 2. He also answered Question 1: a solo partner may act alone until the second joins. That is

@@ -34,10 +34,12 @@ export async function propose(tx: Tx, ctx: Ctx, wedding: WeddingRow, kind: Conse
   return { ...r, executed: true };
 }
 
-/** True when a pending request of this kind already names this vendor (or, with no vendor, exists at all). */
-export async function hasPending(tx: Tx, ctx: { orgId: string }, kind: ConsentKind, vendorId?: string): Promise<boolean> {
+/** True when a pending request of this kind already names this vendor or guest (or, with neither, exists at all). */
+export async function hasPending(tx: Tx, ctx: { orgId: string }, kind: ConsentKind, vendorId?: string, guestId?: string): Promise<boolean> {
   const rows = await tx.consentRequest.findMany({ where: { ...inOrg(ctx), kind, status: 'pending', expiresAt: { gt: now() } }, select: { payload: true } });
-  return vendorId ? rows.some((r) => (r.payload as { vendorId?: string }).vendorId === vendorId) : rows.length > 0;
+  if (vendorId) return rows.some((r) => (r.payload as { vendorId?: string }).vendorId === vendorId);
+  if (guestId) return rows.some((r) => ((r.payload as { guestIds?: string[] }).guestIds ?? []).includes(guestId));
+  return rows.length > 0;
 }
 
 /** Marks every overdue pending request of the org expired (the lazy sweep; pages call it before listing). */

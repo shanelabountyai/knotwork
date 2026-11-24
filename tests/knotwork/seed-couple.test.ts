@@ -4,6 +4,7 @@ import { now } from '@/core/clock';
 import { withOrg } from '@/core/db/rls';
 import { dbSystem as db } from '@/core/db/system';
 import { loadBudget } from '@/lib/knotwork/budget-store';
+import { loadGuestState } from '@/lib/knotwork/guests/store';
 import { addDays, dayOfDb, todayIn } from '@/lib/knotwork/days';
 import { loadSchedule } from '@/lib/knotwork/schedule/store';
 import { COUPLE, seedCouple } from '../../scripts/knotwork/seed-couple';
@@ -66,6 +67,16 @@ describe('seed:couple', () => {
     expect(b.estimateCents).toBe(950_000 + 1_200_000 + 300_000 + 250_000 + 400_000);
     expect(b.actualCents).toBe(200_000 + 15_000);
     expect(b.lines.map((l) => l.name)).toEqual(['Attire', 'Catering', 'Flowers', 'Music', 'Venue']);
+  });
+
+  it('the guest list fills the cap exactly, with the B list waiting, and costs $423.00 so far', async () => {
+    const s = await withOrg({ orgId }, (tx) => loadGuestState(tx, { orgId }));
+    expect(s.cap).toEqual({ cap: 12, held: 12, attending: 5, pending: 7, declined: 0, available: 0 });
+    expect(s.count).toMatchObject({ attending: 5, adults: 4, kids: 1, vendorMeals: 1, catererMeals: 6, invited: 10, responded: 5, responseRatePct: 50 });
+    expect(s.costCents).toBe(4 * 8700 + 3500 + 4000);
+    expect(s.rows.filter((h) => h.list === 'B').map((h) => h.state)).toEqual(['queued', 'queued', 'queued']);
+    for (const h of s.rows.filter((x) => x.state === 'invited')) expect(h.rsvpTokenHash).toMatch(/^[0-9a-f]{64}$/);
+    for (const h of s.rows) for (const g of h.guests) expect(g.name).not.toMatch(/@/);
   });
 
   it('no vendor needs re-confirmation at the start, each has a brief, and the helper has one grant', async () => {

@@ -24,6 +24,15 @@ const config: NextConfig = {
         { key: 'Cache-Control', value: 'private, no-store, max-age=0' },
       ],
     },
+    // Knotwork RSVP links (rule 3, INV-07): the same three headers, for the same reason: the token is in the URL.
+    {
+      source: '/r/:path*',
+      headers: [
+        { key: 'Referrer-Policy', value: 'no-referrer' },
+        { key: 'X-Robots-Tag', value: 'noindex, nofollow' },
+        { key: 'Cache-Control', value: 'private, no-store, max-age=0' },
+      ],
+    },
   ],
 };
 

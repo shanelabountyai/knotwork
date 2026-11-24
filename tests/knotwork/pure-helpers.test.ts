@@ -12,7 +12,7 @@ import { readJson, ROOT } from './fixtures';
 
 describe('the pure files stay pure', () => {
   // Engines import nothing from the database, the template's core, or Next; so they run anywhere and test without Postgres.
-  const PURE = ['days.ts', 'money.ts', 'budget.ts', 'access.ts', 'changelog-diff.ts', 'schedule/engine.ts', 'schedule/template.ts', 'schedule/rsvp.ts', 'consent/machine.ts', 'vendors/scope.ts', 'vendors/brief.ts'];
+  const PURE = ['days.ts', 'money.ts', 'budget.ts', 'access.ts', 'changelog-diff.ts', 'schedule/engine.ts', 'schedule/template.ts', 'schedule/rsvp.ts', 'consent/machine.ts', 'vendors/scope.ts', 'vendors/brief.ts', 'guests/plus-one.ts', 'guests/backfill.ts', 'guests/headcount.ts', 'guests/chase.ts', 'guests/csv.ts', 'guests/projection.ts'];
   it.each(PURE)('%s', (f) => {
     const src = readFileSync(join(ROOT, 'src/lib/knotwork', f), 'utf8');
     const imports = [...src.matchAll(/from '([^']+)'/g)].map((m) => m[1]!);
@@ -21,7 +21,7 @@ describe('the pure files stay pure', () => {
   });
   it('every file in src/lib/knotwork is either on the pure list or a store', () => {
     const all = globSync('**/*.ts', { cwd: join(ROOT, 'src/lib/knotwork') }).sort();
-    const stores = ['changelog.ts', 'consent/execute.ts', 'consent/store.ts', 'schedule/store.ts', 'vendors/store.ts', 'context.ts', 'budget-store.ts'];
+    const stores = ['changelog.ts', 'consent/execute.ts', 'consent/store.ts', 'schedule/store.ts', 'vendors/store.ts', 'context.ts', 'budget-store.ts', 'guests/store.ts', 'guests/public.ts'];
     expect(all.filter((f) => !PURE.includes(f) && !stores.includes(f))).toEqual([]);
   });
 });
@@ -116,7 +116,7 @@ describe('change-log diff', () => {
 });
 
 describe('access: partners and scoped helper grants (PRD P0-2)', () => {
-  const caps: Capability[] = ['schedule.view', 'schedule.edit', 'budget.view', 'budget.edit', 'vendors.view', 'vendors.edit', 'consent.view', 'consent.propose', 'consent.decide', 'activity.view', 'helpers.manage', 'wedding.create'];
+  const caps: Capability[] = ['schedule.view', 'schedule.edit', 'budget.view', 'budget.edit', 'vendors.view', 'vendors.edit', 'guests.view', 'guests.edit', 'consent.view', 'consent.propose', 'consent.decide', 'activity.view', 'helpers.manage', 'wedding.create'];
   const helper = (...grants: GrantScope[]) => ({ role: 'member', grants });
   it('a partner can do everything; only owner is a partner', () => {
     for (const c of caps) expect(allows({ role: 'owner', grants: [] }, c), c).toBe(true);

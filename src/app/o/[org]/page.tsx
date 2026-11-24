@@ -4,6 +4,7 @@ import { now } from '@/core/clock';
 import { ActionForm } from '@/core/ui/action-form';
 import { allows, isPartner } from '@/lib/knotwork/access';
 import { diffDays, showDay } from '@/lib/knotwork/days';
+import { loadGuestState } from '@/lib/knotwork/guests/store';
 import { loadSchedule } from '@/lib/knotwork/schedule/store';
 import { flagText } from '@/lib/knotwork/vendors/store';
 import { createWedding } from './wedding/actions';
@@ -21,7 +22,8 @@ export default async function OrgHome({ params }: { params: Promise<{ org: strin
     // One at a time: these share the transaction's single connection.
     const waiting = await tx.consentRequest.count({ where: { ...inOrg(ctx), status: 'pending', expiresAt: { gt: now() }, proposerId: { not: ctx.userId } } });
     const flags = allows(v.who, 'vendors.view') ? await tx.vendorFlag.findMany({ where: { ...inOrg(ctx), ackAt: null }, include: { vendor: { select: { id: true, name: true } } }, orderBy: { raisedAt: 'asc' } }) : [];
-    return { schedule, plan, waiting, flags };
+    const guests = allows(v.who, 'guests.view') ? await loadGuestState(tx, ctx) : null;
+    return { schedule, plan, waiting, flags, guests };
   });
 
   if (!data) {
@@ -46,7 +48,7 @@ export default async function OrgHome({ params }: { params: Promise<{ org: strin
     );
   }
 
-  const { v, schedule, plan, waiting, flags } = data;
+  const { v, schedule, plan, waiting, flags, guests } = data;
   const states = Object.values(schedule.tasks);
   const [late, impossible] = [states.filter((t) => t.state === 'late').length, states.filter((t) => t.state === 'impossible').length];
   const daysToGo = diffDays(v.date, v.today);
@@ -63,6 +65,7 @@ export default async function OrgHome({ params }: { params: Promise<{ org: strin
         <li><Link href={`/o/${ctx.slug}/wedding/schedule`}>{plan.filter((t) => !t.done).length} open tasks</Link>: {late} late, {impossible} impossible</li>
         {partner && <li><Link href={`/o/${ctx.slug}/wedding/approvals`}>{waiting} waiting for your approval</Link></li>}
         {allows(v.who, 'vendors.view') && <li><Link href={`/o/${ctx.slug}/wedding/flags`}>{flags.length} vendors need re-confirmation</Link></li>}
+        {guests && guests.rows.length > 0 && <li><Link href={`/o/${ctx.slug}/wedding/guests`}>{guests.count.attending} guests attending</Link>, {guests.count.pending} not answered; {guests.cap.held} of {guests.plan.cap} seats held</li>}
         {schedule.marginDays !== null && <li>{schedule.marginDays >= 0 ? `${schedule.marginDays} days of margin on the longest chain of tasks` : `${-schedule.marginDays} days short on the longest chain of tasks`}</li>}
       </ul>
       {flags.length > 0 && (

@@ -119,6 +119,13 @@ model Org {
   vendorBriefs VendorBrief[] // app
   consentRequests ConsentRequest[] // app
   helperGrants HelperGrant[] // app
+  guestPlan GuestPlan? // app
+  households Household[] // app
+  guests Guest[] // app
+  inviteWaves InviteWave[] // app
+  headcountDeltas HeadcountDelta[] // app
+  chaseEvents ChaseEvent[] // app
+  doNotPlay DoNotPlay[] // app
 }
 
 model Membership {

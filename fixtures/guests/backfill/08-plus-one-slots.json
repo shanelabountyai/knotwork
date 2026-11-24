@@ -1,0 +1,181 @@
+{
+ "name": "08-plus-one-slots",
+ "note": "An entitled, still-pending guest holds a second seat; once they answer, an unused plus-one is released.",
+ "lockoutDays": 42,
+ "minBatchSeats": 1,
+ "daysToWedding": 200,
+ "cap": 7,
+ "list": "B",
+ "households": [
+  {
+   "id": "solo-pending",
+   "name": "solo-pending",
+   "list": "A",
+   "state": "invited",
+   "priority": 0,
+   "plusOneOverride": null,
+   "guests": [
+    {
+     "id": "p1",
+     "name": "p1",
+     "ageGroup": "adult",
+     "partnerStatus": "engaged",
+     "inWeddingParty": false,
+     "isPlusOne": false,
+     "rsvp": "pending",
+     "removed": false
+    }
+   ]
+  },
+  {
+   "id": "solo-yes",
+   "name": "solo-yes",
+   "list": "A",
+   "state": "invited",
+   "priority": 0,
+   "plusOneOverride": null,
+   "guests": [
+    {
+     "id": "p2",
+     "name": "p2",
+     "ageGroup": "adult",
+     "partnerStatus": "married",
+     "inWeddingParty": false,
+     "isPlusOne": false,
+     "rsvp": "attending",
+     "removed": false
+    }
+   ]
+  },
+  {
+   "id": "solo-brought",
+   "name": "solo-brought",
+   "list": "A",
+   "state": "invited",
+   "priority": 0,
+   "plusOneOverride": null,
+   "guests": [
+    {
+     "id": "p3",
+     "name": "p3",
+     "ageGroup": "adult",
+     "partnerStatus": "none",
+     "inWeddingParty": true,
+     "isPlusOne": false,
+     "rsvp": "attending",
+     "removed": false
+    },
+    {
+     "id": "p3-guest",
+     "name": "p3-guest",
+     "ageGroup": "adult",
+     "partnerStatus": "none",
+     "inWeddingParty": false,
+     "isPlusOne": true,
+     "rsvp": "attending",
+     "removed": false
+    }
+   ]
+  },
+  {
+   "id": "override",
+   "name": "override",
+   "list": "A",
+   "state": "invited",
+   "priority": 0,
+   "plusOneOverride": "grant",
+   "guests": [
+    {
+     "id": "p4",
+     "name": "p4",
+     "ageGroup": "adult",
+     "partnerStatus": "none",
+     "inWeddingParty": false,
+     "isPlusOne": false,
+     "rsvp": "pending",
+     "removed": false
+    }
+   ]
+  },
+  {
+   "id": "b1",
+   "name": "b1",
+   "list": "B",
+   "state": "queued",
+   "priority": 1,
+   "plusOneOverride": null,
+   "guests": [
+    {
+     "id": "b1x",
+     "name": "b1x",
+     "ageGroup": "adult",
+     "partnerStatus": "long_distance",
+     "inWeddingParty": false,
+     "isPlusOne": false,
+     "rsvp": "pending",
+     "removed": false
+    }
+   ]
+  },
+  {
+   "id": "b2",
+   "name": "b2",
+   "list": "B",
+   "state": "queued",
+   "priority": 2,
+   "plusOneOverride": null,
+   "guests": [
+    {
+     "id": "b2x",
+     "name": "b2x",
+     "ageGroup": "adult",
+     "partnerStatus": "none",
+     "inWeddingParty": false,
+     "isPlusOne": false,
+     "rsvp": "pending",
+     "removed": false
+    }
+   ]
+  }
+ ],
+ "expect": {
+  "entitled": {
+   "solo-pending": true,
+   "solo-yes": true,
+   "solo-brought": true,
+   "override": true,
+   "b1": true,
+   "b2": false
+  },
+  "held": {
+   "solo-pending": 2,
+   "solo-yes": 1,
+   "solo-brought": 2,
+   "override": 2,
+   "b1": 0,
+   "b2": 0
+  },
+  "needed": {
+   "solo-pending": 2,
+   "solo-yes": 2,
+   "solo-brought": 3,
+   "override": 2,
+   "b1": 2,
+   "b2": 1
+  },
+  "state": {
+   "cap": 7,
+   "held": 7,
+   "attending": 3,
+   "pending": 4,
+   "declined": 0,
+   "available": 0
+  },
+  "release": {
+   "ids": [],
+   "seats": 0,
+   "reason": "no-room"
+  },
+  "regrets": []
+ }
+}

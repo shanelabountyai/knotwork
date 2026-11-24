@@ -16,9 +16,13 @@ where they differ. Current phase plan: `docs/knotwork/PHASE-1-PLAN.md`. Session 
    file writes those fields itself (`tests/knotwork/structure.test.ts` scans for it; the database also checks it).
    One exception, by owner decision (D-33): while a workspace has one partner and has never had two, that partner's
    requests are approved at once, marked `solo`, through the same `executeApproved`.
-3. **Guest-facing surfaces never leak wave data.** No Phase 1 surface is guest-facing. From Phase 2, every
-   guest-visible response is an explicit projection and is swept by a fixture.
-4. **Uploads are hostile input: strip, validate, cap.** Phase 1 accepts no uploads. Nothing that takes a file ships
+3. **Guest-facing surfaces never leak wave data.** The only guest-facing surface is `/r/[token]` (page and
+   `respond` route). Everything it returns is built by `src/lib/knotwork/guests/projection.ts`, which has no list,
+   wave, priority, invite date, creation time or state in it. Add a field there deliberately or not at all. The sweep
+   (`tests/knotwork/guests-pure.test.ts`, `guests-db.test.ts`, `e2e/guests.spec.ts`) compares an A household with a B
+   household. A guest is never deleted, only removed by an approved request.
+4. **Uploads are hostile input: strip, validate, cap.** No phase so far accepts a file (the guest import is pasted
+   text, capped and validated line by line; file uploads arrive in Phase 3, D-39). Nothing that takes a file ships
    without an allowlist, a size cap and metadata stripping, each with a test.
 
 ## Foundation rules (the template's, unchanged)

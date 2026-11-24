@@ -7,17 +7,21 @@
 //   spend            an Expense over the threshold     (Expense_guard)
 //   change_date      Wedding.date, via commitMove      (Wedding_guard)
 //   change_settings  the three wedding settings        (Wedding_guard)
+//   remove_guest     Guest.removedAt                   (Guest_guard)
 //
 // tests/knotwork/structure.test.ts scans src/ for any other writer.
 import { z } from 'zod';
 import { inOrg } from '@/core/authz/guards';
+import { now } from '@/core/clock';
 import type { Tx } from '@/core/db/rls';
 import { Refused } from '@/core/errors';
 import { createExpense } from '../budget-store';
 import { logChange } from '../changelog';
 import { requireWedding, todayOf } from '../context';
 import { dbOfDay, isRealDay } from '../days';
-import { commitMove, syncRsvpTask } from '../schedule/store';
+import { deltaFor } from '../guests/headcount';
+import { assertWithinCap, loadGuestState } from '../guests/store';
+import { commitMove, lockWedding, syncRsvpTask } from '../schedule/store';
 import type { ConsentKind } from './machine';
 
 const day = z.string().refine(isRealDay);
@@ -27,6 +31,7 @@ export const PAYLOAD = {
   spend: z.object({ categoryId: z.uuid(), vendorId: z.uuid().nullable(), description: z.string().min(1), amountCents: z.number().int().positive(), paidOn: day, paymentId: z.uuid().nullable() }),
   change_date: z.object({ from: day, to: day }),
   change_settings: z.object({ spendThresholdCents: z.number().int().min(0), consentExpiryDays: z.number().int().min(1), chaseBufferDays: z.number().int().min(0) }),
+  remove_guest: z.object({ guestIds: z.array(z.uuid()).min(1).max(50) }),
 } as const;
 export type Payload<K extends keyof typeof PAYLOAD> = z.infer<(typeof PAYLOAD)[K]>;
 
@@ -89,7 +94,27 @@ export async function executeApproved(tx: Tx, ctx: Ctx, r: Approved, seen: { fin
       await syncRsvpTask(tx, ctx); // the chase buffer moves the RSVP deadline
       return;
     }
-    case 'remove_guest':
-      throw new Refused('Guest removals arrive with the guest list in Phase 2.');
+    case 'remove_guest': {
+      const p = PAYLOAD.remove_guest.parse(r.payload);
+      await lockWedding(tx, ctx.orgId);
+      const guests = await tx.guest.findMany({ where: { id: { in: p.guestIds }, ...inOrg(ctx) }, include: { household: { select: { name: true } } } });
+      if (guests.length !== p.guestIds.length) throw new Refused('Someone on that request is no longer on the guest list.');
+      if (guests.some((g) => g.removedAt)) throw new Refused('Someone on that request was already removed.');
+      const before = await loadGuestState(tx, ctx);
+      const t = now();
+      for (const g of guests) {
+        await tx.guest.update({ where: { id: g.id }, data: { removedAt: t, removedRequestId: r.id } });
+        await logChange(tx, ctx, 'guest', 'deleted', g.id, `${g.name} (${g.household.name})`, { name: g.name, rsvp: g.rsvp, removed: false }, null, mark);
+      }
+      // Held seats never pass the cap, on this path too. A removal can RAISE the count: the plus-one rule is re-read
+      // (D-47), so a spouse left alone on an invitation becomes entitled to a guest and holds a seat for one. Throwing
+      // here rolls back the removal and the approval with it (review 2026-11-24, M3; D-58).
+      const after = await assertWithinCap(tx, ctx, 'That removal leaves someone alone on their invitation, who may then bring a guest. It');
+      if (after.count.attending !== before.count.attending) {
+        const d = deltaFor(guests.length === 1 ? guests[0]!.name.split(/\s+/)[0]! : `${guests.length} guests`, 'removed', before.count, after.count, after.prices);
+        await tx.headcountDelta.create({ data: { orgId: ctx.orgId, label: d.label, deltaSeats: d.deltaSeats, deltaCents: d.deltaCents, attendingAfter: after.count.attending, costAfterCents: after.costCents } });
+      }
+      return;
+    }
   }
 }

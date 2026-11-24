@@ -1,0 +1,125 @@
+{
+ "name": "11-priority-ties",
+ "note": "Equal priority falls back to the household name, then the id.",
+ "lockoutDays": 42,
+ "minBatchSeats": 4,
+ "daysToWedding": 200,
+ "cap": 3,
+ "list": "A",
+ "households": [
+  {
+   "id": "zeta",
+   "name": "zeta",
+   "list": "A",
+   "state": "queued",
+   "priority": 1,
+   "plusOneOverride": null,
+   "guests": [
+    {
+     "id": "z1",
+     "name": "z1",
+     "ageGroup": "adult",
+     "partnerStatus": "none",
+     "inWeddingParty": false,
+     "isPlusOne": false,
+     "rsvp": "pending",
+     "removed": false
+    },
+    {
+     "id": "z2",
+     "name": "z2",
+     "ageGroup": "adult",
+     "partnerStatus": "none",
+     "inWeddingParty": false,
+     "isPlusOne": false,
+     "rsvp": "pending",
+     "removed": false
+    }
+   ]
+  },
+  {
+   "id": "alpha",
+   "name": "alpha",
+   "list": "A",
+   "state": "queued",
+   "priority": 1,
+   "plusOneOverride": null,
+   "guests": [
+    {
+     "id": "al1",
+     "name": "al1",
+     "ageGroup": "adult",
+     "partnerStatus": "none",
+     "inWeddingParty": false,
+     "isPlusOne": false,
+     "rsvp": "pending",
+     "removed": false
+    },
+    {
+     "id": "al2",
+     "name": "al2",
+     "ageGroup": "adult",
+     "partnerStatus": "none",
+     "inWeddingParty": false,
+     "isPlusOne": false,
+     "rsvp": "pending",
+     "removed": false
+    }
+   ]
+  },
+  {
+   "id": "mid",
+   "name": "mid",
+   "list": "A",
+   "state": "queued",
+   "priority": 1,
+   "plusOneOverride": null,
+   "guests": [
+    {
+     "id": "m1",
+     "name": "m1",
+     "ageGroup": "adult",
+     "partnerStatus": "none",
+     "inWeddingParty": false,
+     "isPlusOne": false,
+     "rsvp": "pending",
+     "removed": false
+    }
+   ]
+  }
+ ],
+ "expect": {
+  "entitled": {
+   "zeta": false,
+   "alpha": false,
+   "mid": false
+  },
+  "held": {
+   "zeta": 0,
+   "alpha": 0,
+   "mid": 0
+  },
+  "needed": {
+   "zeta": 2,
+   "alpha": 2,
+   "mid": 1
+  },
+  "state": {
+   "cap": 3,
+   "held": 0,
+   "attending": 0,
+   "pending": 0,
+   "declined": 0,
+   "available": 3
+  },
+  "release": {
+   "ids": [
+    "alpha",
+    "mid"
+   ],
+   "seats": 3,
+   "reason": "ok"
+  },
+  "regrets": []
+ }
+}

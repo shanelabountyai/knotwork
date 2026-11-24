@@ -9,6 +9,8 @@ import { logChange } from '../changelog';
 import { requireWedding, weddingDay } from '../context';
 import { addDays, dayOfDb, showDay } from '../days';
 import { loadSchedule, syncRsvpTask } from '../schedule/store';
+import { rollups } from '../guests/headcount';
+import { loadGuestState } from '../guests/store';
 import { renderBrief, type BriefInput, type VendorCategory } from './brief';
 import { flagForScopeChange, hhmm, scopeChanges, type ScopeChange, type VendorScope } from './scope';
 
@@ -68,6 +70,10 @@ export async function briefInput(tx: Tx, ctx: { orgId: string }, vendorId: strin
   const v = await tx.vendor.findFirstOrThrow({ where: { id: vendorId, ...inOrg(ctx) }, include: { payments: true, flags: { where: { ackAt: null }, orderBy: { raisedAt: 'asc' } } } });
   const { rows, schedule } = await loadSchedule(tx, ctx, wedding);
   const date = weddingDay(wedding);
+  // Phase 2: counts from the guest engine, only once there is a guest list. Counts and song titles, never a name.
+  const gs = await loadGuestState(tx, ctx);
+  const roll = rollups(gs.households);
+  const doNotPlay = await tx.doNotPlay.findMany({ where: inOrg(ctx), select: { title: true, artist: true }, orderBy: [{ title: 'asc' }, { artist: 'asc' }] });
   return {
     wedding: { title: wedding.title, date },
     vendor: {
@@ -78,6 +84,7 @@ export async function briefInput(tx: Tx, ctx: { orgId: string }, vendorId: strin
     payments: v.payments.map((p) => ({ label: p.label, amountCents: p.amountCents, due: addDays(date, -p.dueDaysBefore), paidOn: p.paidOn ? dayOfDb(p.paidOn) : null })),
     tasks: rows.filter((t) => t.vendorId === vendorId && t.kind !== 'payment').map((t) => ({ title: t.title, due: schedule.tasks[t.id]!.due, state: schedule.tasks[t.id]!.state })),
     openFlags: v.flags.map((f) => ({ reason: f.reason, raisedOn: todayOfDate(f.raisedAt, wedding.timeZone), text: flagText(f.reason, f.detail) })),
+    ...(gs.rows.length || doNotPlay.length ? { guests: { attending: gs.count.attending, adults: gs.count.adults, kids: gs.count.kids, infants: gs.count.infants, vendorMeals: gs.count.vendorMeals, catererMeals: gs.count.catererMeals, meals: roll.meals, dietary: roll.dietary, accessibility: roll.accessibility, songs: roll.songs, doNotPlay } } : {}),
   };
 }
 const todayOfDate = (at: Date, timeZone: string) => new Intl.DateTimeFormat('en-CA', { timeZone, year: 'numeric', month: '2-digit', day: '2-digit' }).format(at);

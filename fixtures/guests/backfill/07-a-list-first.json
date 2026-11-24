@@ -1,0 +1,109 @@
+{
+ "name": "07-a-list-first",
+ "note": "No B wave while an A household is still waiting.",
+ "lockoutDays": 42,
+ "minBatchSeats": 4,
+ "daysToWedding": 200,
+ "cap": 20,
+ "list": "B",
+ "households": [
+  {
+   "id": "a1",
+   "name": "a1",
+   "list": "A",
+   "state": "queued",
+   "priority": 1,
+   "plusOneOverride": null,
+   "guests": [
+    {
+     "id": "a1x",
+     "name": "a1x",
+     "ageGroup": "adult",
+     "partnerStatus": "none",
+     "inWeddingParty": false,
+     "isPlusOne": false,
+     "rsvp": "pending",
+     "removed": false
+    }
+   ]
+  },
+  {
+   "id": "b1",
+   "name": "b1",
+   "list": "B",
+   "state": "queued",
+   "priority": 1,
+   "plusOneOverride": null,
+   "guests": [
+    {
+     "id": "b1x",
+     "name": "b1x",
+     "ageGroup": "adult",
+     "partnerStatus": "none",
+     "inWeddingParty": false,
+     "isPlusOne": false,
+     "rsvp": "pending",
+     "removed": false
+    },
+    {
+     "id": "b1y",
+     "name": "b1y",
+     "ageGroup": "adult",
+     "partnerStatus": "none",
+     "inWeddingParty": false,
+     "isPlusOne": false,
+     "rsvp": "pending",
+     "removed": false
+    },
+    {
+     "id": "b1z",
+     "name": "b1z",
+     "ageGroup": "adult",
+     "partnerStatus": "none",
+     "inWeddingParty": false,
+     "isPlusOne": false,
+     "rsvp": "pending",
+     "removed": false
+    },
+    {
+     "id": "b1w",
+     "name": "b1w",
+     "ageGroup": "adult",
+     "partnerStatus": "none",
+     "inWeddingParty": false,
+     "isPlusOne": false,
+     "rsvp": "pending",
+     "removed": false
+    }
+   ]
+  }
+ ],
+ "expect": {
+  "entitled": {
+   "a1": false,
+   "b1": false
+  },
+  "held": {
+   "a1": 0,
+   "b1": 0
+  },
+  "needed": {
+   "a1": 1,
+   "b1": 4
+  },
+  "state": {
+   "cap": 20,
+   "held": 0,
+   "attending": 0,
+   "pending": 0,
+   "declined": 0,
+   "available": 20
+  },
+  "release": {
+   "ids": [],
+   "seats": 0,
+   "reason": "a-list-waiting"
+  },
+  "regrets": []
+ }
+}

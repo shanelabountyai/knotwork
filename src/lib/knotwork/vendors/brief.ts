@@ -38,6 +38,12 @@ export type BriefInput = {
   payments: { label: string; amountCents: number; due: Day; paidOn: Day | null }[];
   tasks: { title: string; due: Day; state: string }[];
   openFlags: { reason: 'date_moved' | 'scope_changed'; raisedOn: Day; text: string }[];
+  /** Phase 2: counts from the guest engine. COUNTS, never names (PRD P0-3). Absent until there is a guest list. */
+  guests?: {
+    attending: number; adults: number; kids: number; infants: number; vendorMeals: number; catererMeals: number;
+    meals: Record<string, number>; dietary: Record<string, number>; accessibility: Record<string, number>;
+    songs: string[]; doNotPlay: { title: string; artist: string }[];
+  };
 };
 
 export function renderBrief(i: BriefInput): { body: string; inputsHash: string } {
@@ -55,9 +61,23 @@ export function renderBrief(i: BriefInput): { body: string; inputsHash: string }
   if (has('counts')) {
     L.push('COUNTS', `- Estimate: ${v.countEstimate ?? 'not set'}`);
     L.push(v.countDue ? `- Final count due: ${showDay(v.countDue)} (${v.countDueDaysBefore} days before)` : '- Final count due: not set');
-    L.push('- Confirmed headcount, meal counts, dietary and accessibility rollups: arrive with the guest engine (Phase 2).', '');
+    const g = i.guests;
+    if (!g) L.push('- Confirmed headcount, meal counts, dietary and accessibility rollups: arrive with the guest engine (Phase 2).', '');
+    else {
+      const list = (o: Record<string, number>) => Object.keys(o).sort().map((k) => `${k.replaceAll('_', ' ')} ${o[k]}`).join(', ') || 'none';
+      L.push(`- Confirmed so far: ${g.attending} attending (${g.adults} adults, ${g.kids} children, ${g.infants} infants)`);
+      L.push(`- Meals: ${g.catererMeals} (${g.adults} adult, ${g.kids} kids, ${g.vendorMeals} vendor)`, `- Adult meal choices: ${list(g.meals)}`, `- Dietary: ${list(g.dietary)}`, `- Access: ${list(g.accessibility)}`, '');
+    }
   }
-  if (has('music')) L.push('MUSIC', '- Song requests and the do-not-play list: arrive with the guest engine (Phase 2).', '');
+  if (has('music')) {
+    L.push('MUSIC');
+    if (!i.guests) L.push('- Song requests and the do-not-play list: arrive with the guest engine (Phase 2).');
+    else {
+      L.push('Requests:', ...(i.guests.songs.length ? i.guests.songs.map((x) => `- ${x}`) : ['- none yet']));
+      L.push('Do not play:', ...(i.guests.doNotPlay.length ? i.guests.doNotPlay.map((x) => `- ${x.title}${x.artist ? ` (${x.artist})` : ''}`) : ['- nothing listed']));
+    }
+    L.push('');
+  }
   if (has('timeline')) {
     L.push('TIMELINE');
     if (!i.tasks.length) L.push('- No tasks are linked to this vendor.');

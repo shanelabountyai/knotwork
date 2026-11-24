@@ -30,10 +30,15 @@ describe('rule 1: all deadlines derive from the anchor (no free-floating dates)'
     'ConsentRequest.proposedAt': 'row timestamp', 'ConsentRequest.expiresAt': 'when the request lapses: proposedAt + consentExpiryDays, not a plan deadline',
     'ConsentRequest.decidedAt': 'a date of fact', 'ConsentRequest.executedAt': 'a date of fact',
     'HelperGrant.createdAt': 'row timestamp',
+    'GuestPlan.updatedAt': 'row timestamp',
+    'Household.invitedOn': 'a date of fact: when the invitation was released (never guest-facing, rule 3)', 'Household.saveTheDateSentOn': 'a date of fact', 'Household.createdAt': 'row timestamp',
+    'Guest.respondedAt': 'a date of fact', 'Guest.removedAt': 'a date of fact: when both approved the removal', 'Guest.createdAt': 'row timestamp',
+    'InviteWave.releasedAt': 'a date of fact', 'HeadcountDelta.at': 'row timestamp', 'ChaseEvent.at': 'a date of fact: when the reminder went or the call was made',
+    'DoNotPlay.createdAt': 'row timestamp',
   };
 
-  it('finds the clone\'s thirteen models', () => {
-    expect(models.map((m) => m.name)).toHaveLength(13);
+  it('finds the clone\'s twenty models', () => {
+    expect(models.map((m) => m.name)).toHaveLength(20);
   });
   it('every date column is on the list with its reason; a new one fails until someone decides what it is', () => {
     expect(dateFields.sort()).toEqual(Object.keys(ALLOWED).sort());
@@ -67,7 +72,22 @@ describe('rule 2: designated actions only through the consent module', () => {
     expect(filesWith(/contractRequestId:\s*(?!true)/)).toEqual([EXECUTE]);
     expect(filesWith(/data:\s*\{[^}]*contractSignedOn/)).toEqual([EXECUTE]); // elsewhere it is only read (the brief, the pages)
     expect(read('src/lib/knotwork/vendors/store.ts')).not.toMatch(/status:\s*'booked'/);
-    expect(filesWith(/status:\s*'booked'/).filter((f) => !/vendors\/(scope|store)\.ts$/.test(f))).toEqual([EXECUTE, 'src/lib/knotwork/schedule/store.ts']); // store: a read filter in syncRsvpTask
+    // The two files besides the executor that say status: 'booked' only read it: syncRsvpTask in the schedule store, and
+    // the on-site vendor count in the guest store. (Review 2026-11-24, M4: this list had been replaced by the narrower
+    // `data: {…}` check below, which a write built in a variable would slip past. Both checks now hold.)
+    const READS_BOOKED = ['src/lib/knotwork/guests/store.ts', 'src/lib/knotwork/schedule/store.ts'];
+    expect(filesWith(/status:\s*'booked'/).filter((f) => !/vendors\/(scope|store)\.ts$/.test(f))).toEqual([EXECUTE, ...READS_BOOKED]);
+    for (const f of READS_BOOKED) expect(read(f).match(/status:\s*'booked'/g)).toHaveLength(1);
+    expect(read('src/lib/knotwork/guests/store.ts')).toMatch(/tx\.vendor\.count\(\{ where: \{ \.\.\.inOrg\(ctx\), status: 'booked', onSite: true \} \}\)/);
+    expect(read('src/lib/knotwork/guests/store.ts')).not.toMatch(/\.vendor\.(create|createMany|update|updateMany|upsert|delete|deleteMany)\(/);
+    expect(filesWith(/data:\s*\{[^}]*status:\s*'booked'/)).toEqual([EXECUTE]);
+  });
+  it('only the executor removes a guest, and nothing ever deletes a guest or a household', () => {
+    expect(filesWith(/data:\s*\{[^}]*removedAt/)).toEqual([EXECUTE]);
+    expect(filesWith(/removedRequestId:\s*(?!true)/)).toEqual([EXECUTE]);
+    expect(filesWith(/\.(guest|household)\.(delete|deleteMany)\(/)).toEqual([]);
+    const sql = read('prisma/migrations/20261124000001_knotwork_phase2/migration.sql');
+    for (const t of ['Guest_guard', 'Household_guard']) expect(sql).toContain(`CREATE TRIGGER "${t}"`);
   });
   it('only the budget store creates an expense, and it refuses one over the threshold without a request', () => {
     expect(filesWith(/\.expense\.(create|createMany|update|updateMany|upsert)\(/)).toEqual(['src/lib/knotwork/budget-store.ts']);

@@ -1,0 +1,56 @@
+{
+ "name": "12-nothing-queued",
+ "note": "Nothing queued on the list.",
+ "lockoutDays": 42,
+ "minBatchSeats": 4,
+ "daysToWedding": 200,
+ "cap": 10,
+ "list": "B",
+ "households": [
+  {
+   "id": "a1",
+   "name": "a1",
+   "list": "A",
+   "state": "invited",
+   "priority": 0,
+   "plusOneOverride": null,
+   "guests": [
+    {
+     "id": "a1x",
+     "name": "a1x",
+     "ageGroup": "adult",
+     "partnerStatus": "none",
+     "inWeddingParty": false,
+     "isPlusOne": false,
+     "rsvp": "pending",
+     "removed": false
+    }
+   ]
+  }
+ ],
+ "expect": {
+  "entitled": {
+   "a1": false
+  },
+  "held": {
+   "a1": 1
+  },
+  "needed": {
+   "a1": 1
+  },
+  "state": {
+   "cap": 10,
+   "held": 1,
+   "attending": 0,
+   "pending": 1,
+   "declined": 0,
+   "available": 9
+  },
+  "release": {
+   "ids": [],
+   "seats": 0,
+   "reason": "nothing-queued"
+  },
+  "regrets": []
+ }
+}

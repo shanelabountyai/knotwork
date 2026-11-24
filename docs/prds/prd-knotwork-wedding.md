@@ -19,7 +19,7 @@ not decided here.
   The `billing` module is removed (decisions D-03); `notifications`, `sso` and `apikeys` are still installed.
 - **Port 8400** (`package.json`, `playwright.config.ts`, `.github/workflows/ci.yml`). It was free in the template's
   `CLONES.md` on 2026-11-23.
-- **Build status:** Phase 1 is built on branch `kickoff` (see `NEXT.md` for the gate results). Phases 2 to 4 are not started.
+- **Build status (updated 2026-11-24):** Phase 1 is merged. Phase 2 is built on branch `phase-2` (see `NEXT.md`). Phases 3 and 4 are not started. The Questions below were answered by Shane on 2026-11-24: decisions D-34 to D-43.
 
 ### House patterns → saas-foundation v1.7.0
 
