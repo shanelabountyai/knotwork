@@ -1,0 +1,110 @@
+{
+  "name": "01-pledged-received-spent",
+  "note": "One funder pledges toward the venue, pays it in two parts, and both parts are spent on the venue deposit and balance: pledged, then partly received, then received, then spent.",
+  "steps": [
+    {
+      "op": "expense",
+      "id": "e-deposit",
+      "category": "c-venue",
+      "amountCents": 400000
+    },
+    {
+      "op": "expense",
+      "id": "e-balance",
+      "category": "c-venue",
+      "amountCents": 800000
+    },
+    {
+      "op": "pledge",
+      "id": "p-vale-venue",
+      "funder": "f-vale",
+      "category": "c-venue",
+      "amountCents": 500000
+    },
+    {
+      "op": "receive",
+      "id": "r1",
+      "pledge": "p-vale-venue",
+      "amountCents": 200000
+    },
+    {
+      "op": "spend",
+      "id": "a1",
+      "pledge": "p-vale-venue",
+      "expense": "e-deposit",
+      "amountCents": 200000
+    },
+    {
+      "op": "receive",
+      "id": "r2",
+      "pledge": "p-vale-venue",
+      "amountCents": 300000
+    },
+    {
+      "op": "spend",
+      "id": "a2",
+      "pledge": "p-vale-venue",
+      "expense": "e-balance",
+      "amountCents": 300000
+    }
+  ],
+  "expect": {
+    "steps": [
+      {
+        "ok": true
+      },
+      {
+        "ok": true
+      },
+      {
+        "ok": true
+      },
+      {
+        "ok": true
+      },
+      {
+        "ok": true
+      },
+      {
+        "ok": true
+      },
+      {
+        "ok": true
+      }
+    ],
+    "pledges": [
+      {
+        "pledgeId": "p-vale-venue",
+        "funderId": "f-vale",
+        "categoryId": "c-venue",
+        "pledgedCents": 500000,
+        "receivedCents": 500000,
+        "spentCents": 500000,
+        "outstandingCents": 0,
+        "unspentCents": 0,
+        "stage": "spent"
+      }
+    ],
+    "categories": [
+      {
+        "categoryId": "c-venue",
+        "pledgedCents": 500000,
+        "receivedCents": 500000,
+        "spentCents": 500000,
+        "pledges": [
+          {
+            "pledgeId": "p-vale-venue",
+            "funderId": "f-vale",
+            "categoryId": "c-venue",
+            "pledgedCents": 500000,
+            "receivedCents": 500000,
+            "spentCents": 500000,
+            "outstandingCents": 0,
+            "unspentCents": 0,
+            "stage": "spent"
+          }
+        ]
+      }
+    ]
+  }
+}

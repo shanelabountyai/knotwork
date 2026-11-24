@@ -1,0 +1,184 @@
+{
+  "name": "09-odd-cents",
+  "note": "Odd cents stay exact: no rounding anywhere.",
+  "steps": [
+    {
+      "op": "expense",
+      "id": "e1",
+      "category": "c-cake",
+      "amountCents": 33333
+    },
+    {
+      "op": "pledge",
+      "id": "p1",
+      "funder": "f-a",
+      "category": "c-cake",
+      "amountCents": 10001
+    },
+    {
+      "op": "pledge",
+      "id": "p2",
+      "funder": "f-b",
+      "category": "c-cake",
+      "amountCents": 10001
+    },
+    {
+      "op": "pledge",
+      "id": "p3",
+      "funder": "f-c",
+      "category": "c-cake",
+      "amountCents": 13331
+    },
+    {
+      "op": "receive",
+      "id": "r1",
+      "pledge": "p1",
+      "amountCents": 10001
+    },
+    {
+      "op": "receive",
+      "id": "r2",
+      "pledge": "p2",
+      "amountCents": 10001
+    },
+    {
+      "op": "receive",
+      "id": "r3",
+      "pledge": "p3",
+      "amountCents": 13331
+    },
+    {
+      "op": "spend",
+      "id": "a1",
+      "pledge": "p1",
+      "expense": "e1",
+      "amountCents": 10001
+    },
+    {
+      "op": "spend",
+      "id": "a2",
+      "pledge": "p2",
+      "expense": "e1",
+      "amountCents": 10001
+    },
+    {
+      "op": "spend",
+      "id": "a3",
+      "pledge": "p3",
+      "expense": "e1",
+      "amountCents": 13331
+    }
+  ],
+  "expect": {
+    "steps": [
+      {
+        "ok": true
+      },
+      {
+        "ok": true
+      },
+      {
+        "ok": true
+      },
+      {
+        "ok": true
+      },
+      {
+        "ok": true
+      },
+      {
+        "ok": true
+      },
+      {
+        "ok": true
+      },
+      {
+        "ok": true
+      },
+      {
+        "ok": true
+      },
+      {
+        "ok": true
+      }
+    ],
+    "pledges": [
+      {
+        "pledgeId": "p1",
+        "funderId": "f-a",
+        "categoryId": "c-cake",
+        "pledgedCents": 10001,
+        "receivedCents": 10001,
+        "spentCents": 10001,
+        "outstandingCents": 0,
+        "unspentCents": 0,
+        "stage": "spent"
+      },
+      {
+        "pledgeId": "p2",
+        "funderId": "f-b",
+        "categoryId": "c-cake",
+        "pledgedCents": 10001,
+        "receivedCents": 10001,
+        "spentCents": 10001,
+        "outstandingCents": 0,
+        "unspentCents": 0,
+        "stage": "spent"
+      },
+      {
+        "pledgeId": "p3",
+        "funderId": "f-c",
+        "categoryId": "c-cake",
+        "pledgedCents": 13331,
+        "receivedCents": 13331,
+        "spentCents": 13331,
+        "outstandingCents": 0,
+        "unspentCents": 0,
+        "stage": "spent"
+      }
+    ],
+    "categories": [
+      {
+        "categoryId": "c-cake",
+        "pledgedCents": 33333,
+        "receivedCents": 33333,
+        "spentCents": 33333,
+        "pledges": [
+          {
+            "pledgeId": "p1",
+            "funderId": "f-a",
+            "categoryId": "c-cake",
+            "pledgedCents": 10001,
+            "receivedCents": 10001,
+            "spentCents": 10001,
+            "outstandingCents": 0,
+            "unspentCents": 0,
+            "stage": "spent"
+          },
+          {
+            "pledgeId": "p2",
+            "funderId": "f-b",
+            "categoryId": "c-cake",
+            "pledgedCents": 10001,
+            "receivedCents": 10001,
+            "spentCents": 10001,
+            "outstandingCents": 0,
+            "unspentCents": 0,
+            "stage": "spent"
+          },
+          {
+            "pledgeId": "p3",
+            "funderId": "f-c",
+            "categoryId": "c-cake",
+            "pledgedCents": 13331,
+            "receivedCents": 13331,
+            "spentCents": 13331,
+            "outstandingCents": 0,
+            "unspentCents": 0,
+            "stage": "spent"
+          }
+        ]
+      }
+    ]
+  }
+}

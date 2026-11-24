@@ -1,0 +1,147 @@
+{
+  "name": "08-bounds-and-duplicates",
+  "note": "Amounts are $1.00 to $1,000,000.00 in whole cents; one pledge per funder and category; one payment per pledge and spend.",
+  "steps": [
+    {
+      "op": "expense",
+      "id": "e1",
+      "category": "c-venue",
+      "amountCents": 50000
+    },
+    {
+      "op": "pledge",
+      "id": "p0",
+      "funder": "f-vale",
+      "category": "c-venue",
+      "amountCents": 99
+    },
+    {
+      "op": "pledge",
+      "id": "p1",
+      "funder": "f-vale",
+      "category": "c-venue",
+      "amountCents": 100000001
+    },
+    {
+      "op": "pledge",
+      "id": "p2",
+      "funder": "f-vale",
+      "category": "c-venue",
+      "amountCents": 100000000
+    },
+    {
+      "op": "pledge",
+      "id": "p3",
+      "funder": "f-vale",
+      "category": "c-venue",
+      "amountCents": 100
+    },
+    {
+      "op": "receive",
+      "id": "r0",
+      "pledge": "p2",
+      "amountCents": 0
+    },
+    {
+      "op": "receive",
+      "id": "r1",
+      "pledge": "p2",
+      "amountCents": 50000
+    },
+    {
+      "op": "spend",
+      "id": "a1",
+      "pledge": "p2",
+      "expense": "e1",
+      "amountCents": 10000
+    },
+    {
+      "op": "spend",
+      "id": "a2",
+      "pledge": "p2",
+      "expense": "e1",
+      "amountCents": 10000
+    },
+    {
+      "op": "spend",
+      "id": "a3",
+      "pledge": "p2",
+      "expense": "e-none",
+      "amountCents": 10000
+    }
+  ],
+  "expect": {
+    "steps": [
+      {
+        "ok": true
+      },
+      {
+        "ok": false,
+        "code": "amount"
+      },
+      {
+        "ok": false,
+        "code": "amount"
+      },
+      {
+        "ok": true
+      },
+      {
+        "ok": false,
+        "code": "duplicate"
+      },
+      {
+        "ok": false,
+        "code": "amount"
+      },
+      {
+        "ok": true
+      },
+      {
+        "ok": true
+      },
+      {
+        "ok": false,
+        "code": "duplicate"
+      },
+      {
+        "ok": false,
+        "code": "unknown"
+      }
+    ],
+    "pledges": [
+      {
+        "pledgeId": "p2",
+        "funderId": "f-vale",
+        "categoryId": "c-venue",
+        "pledgedCents": 100000000,
+        "receivedCents": 50000,
+        "spentCents": 10000,
+        "outstandingCents": 99950000,
+        "unspentCents": 40000,
+        "stage": "partly_received"
+      }
+    ],
+    "categories": [
+      {
+        "categoryId": "c-venue",
+        "pledgedCents": 100000000,
+        "receivedCents": 50000,
+        "spentCents": 10000,
+        "pledges": [
+          {
+            "pledgeId": "p2",
+            "funderId": "f-vale",
+            "categoryId": "c-venue",
+            "pledgedCents": 100000000,
+            "receivedCents": 50000,
+            "spentCents": 10000,
+            "outstandingCents": 99950000,
+            "unspentCents": 40000,
+            "stage": "partly_received"
+          }
+        ]
+      }
+    ]
+  }
+}

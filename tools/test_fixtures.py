@@ -236,3 +236,40 @@ def test_photo_moderation_table_matches_the_oracle():
         s = {"status": state[0], "removedFrom": state[1]}
         down = photo_limits.move(s, first, False)["next"]
         assert down["status"] == "removed" and photo_limits.move(down, "undo", False)["next"] == s
+
+
+# --- funding: the multi-funder family budget (P1-2) --------------------------------------------------------------------
+import funding_oracle
+
+FUNDING = funding_oracle.load()
+
+
+def test_there_are_funding_fixtures():
+    assert len(FUNDING) >= 9
+    codes = {s.get("code") for _, fx in FUNDING for s in fx["expect"]["steps"]}
+    # Every refusal the engine has is exercised by some fixture.
+    assert codes >= {"amount", "duplicate", "unknown", "below-received", "over-pledge", "spent", "wrong-category", "over-received", "over-expense"}
+
+
+@pytest.mark.parametrize("path,fx", FUNDING, ids=[p.stem for p, _ in FUNDING])
+def test_funding_expectations_match_the_oracle(path, fx):
+    assert fx["expect"] == funding_oracle.expected(fx)
+    assert path.read_text() == funding_oracle.dump(fx), "fixture is not in canonical JSON form"
+    # The invariants, whatever the story: integer cents, pledged >= received >= spent >= 0, and a category's mix is the
+    # sum of its pledges.
+    for p in fx["expect"]["pledges"]:
+        assert all(type(p[k]) is int for k in ("pledgedCents", "receivedCents", "spentCents", "outstandingCents", "unspentCents"))
+        assert p["pledgedCents"] >= p["receivedCents"] >= p["spentCents"] >= 0
+        assert p["outstandingCents"] == p["pledgedCents"] - p["receivedCents"]
+        assert p["unspentCents"] == p["receivedCents"] - p["spentCents"]
+    for c in fx["expect"]["categories"]:
+        for k in ("pledgedCents", "receivedCents", "spentCents"):
+            assert c[k] == sum(p[k] for p in c["pledges"])
+
+
+def test_funding_two_funders_by_hand():
+    # A $10,000.00 venue spend: the Vales pay $7,000.00, the Ashbys $3,000.00 (a cent more is refused); the couple pays nothing more.
+    fx = next(f for p, f in FUNDING if p.stem == "05-two-funders-one-spend")
+    assert [s.get("code", "ok") for s in fx["expect"]["steps"]][-2:] == ["over-expense", "ok"]
+    venue = fx["expect"]["categories"][0]
+    assert (venue["pledgedCents"], venue["receivedCents"], venue["spentCents"]) == (1_200_000, 1_200_000, 1_000_000)

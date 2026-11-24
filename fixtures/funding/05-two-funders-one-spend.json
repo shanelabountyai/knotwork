@@ -1,0 +1,144 @@
+{
+  "name": "05-two-funders-one-spend",
+  "note": "Two funders share one spend; together they cannot pay more than the spend itself, and the couple pays the rest.",
+  "steps": [
+    {
+      "op": "expense",
+      "id": "e1",
+      "category": "c-venue",
+      "amountCents": 1000000
+    },
+    {
+      "op": "pledge",
+      "id": "p-vale",
+      "funder": "f-vale",
+      "category": "c-venue",
+      "amountCents": 700000
+    },
+    {
+      "op": "pledge",
+      "id": "p-ashby",
+      "funder": "f-ashby",
+      "category": "c-venue",
+      "amountCents": 500000
+    },
+    {
+      "op": "receive",
+      "id": "r1",
+      "pledge": "p-vale",
+      "amountCents": 700000
+    },
+    {
+      "op": "receive",
+      "id": "r2",
+      "pledge": "p-ashby",
+      "amountCents": 500000
+    },
+    {
+      "op": "spend",
+      "id": "a1",
+      "pledge": "p-vale",
+      "expense": "e1",
+      "amountCents": 700000
+    },
+    {
+      "op": "spend",
+      "id": "a2",
+      "pledge": "p-ashby",
+      "expense": "e1",
+      "amountCents": 300001
+    },
+    {
+      "op": "spend",
+      "id": "a3",
+      "pledge": "p-ashby",
+      "expense": "e1",
+      "amountCents": 300000
+    }
+  ],
+  "expect": {
+    "steps": [
+      {
+        "ok": true
+      },
+      {
+        "ok": true
+      },
+      {
+        "ok": true
+      },
+      {
+        "ok": true
+      },
+      {
+        "ok": true
+      },
+      {
+        "ok": true
+      },
+      {
+        "ok": false,
+        "code": "over-expense"
+      },
+      {
+        "ok": true
+      }
+    ],
+    "pledges": [
+      {
+        "pledgeId": "p-ashby",
+        "funderId": "f-ashby",
+        "categoryId": "c-venue",
+        "pledgedCents": 500000,
+        "receivedCents": 500000,
+        "spentCents": 300000,
+        "outstandingCents": 0,
+        "unspentCents": 200000,
+        "stage": "received"
+      },
+      {
+        "pledgeId": "p-vale",
+        "funderId": "f-vale",
+        "categoryId": "c-venue",
+        "pledgedCents": 700000,
+        "receivedCents": 700000,
+        "spentCents": 700000,
+        "outstandingCents": 0,
+        "unspentCents": 0,
+        "stage": "spent"
+      }
+    ],
+    "categories": [
+      {
+        "categoryId": "c-venue",
+        "pledgedCents": 1200000,
+        "receivedCents": 1200000,
+        "spentCents": 1000000,
+        "pledges": [
+          {
+            "pledgeId": "p-ashby",
+            "funderId": "f-ashby",
+            "categoryId": "c-venue",
+            "pledgedCents": 500000,
+            "receivedCents": 500000,
+            "spentCents": 300000,
+            "outstandingCents": 0,
+            "unspentCents": 200000,
+            "stage": "received"
+          },
+          {
+            "pledgeId": "p-vale",
+            "funderId": "f-vale",
+            "categoryId": "c-venue",
+            "pledgedCents": 700000,
+            "receivedCents": 700000,
+            "spentCents": 700000,
+            "outstandingCents": 0,
+            "unspentCents": 0,
+            "stage": "spent"
+          }
+        ]
+      }
+    ]
+  }
+}

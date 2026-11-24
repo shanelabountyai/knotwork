@@ -1,0 +1,83 @@
+{
+  "name": "04-own-category-only",
+  "note": "A pledge toward catering cannot pay a flowers spend.",
+  "steps": [
+    {
+      "op": "expense",
+      "id": "e-flowers",
+      "category": "c-flowers",
+      "amountCents": 40000
+    },
+    {
+      "op": "pledge",
+      "id": "p1",
+      "funder": "f-vale",
+      "category": "c-catering",
+      "amountCents": 100000
+    },
+    {
+      "op": "receive",
+      "id": "r1",
+      "pledge": "p1",
+      "amountCents": 100000
+    },
+    {
+      "op": "spend",
+      "id": "a1",
+      "pledge": "p1",
+      "expense": "e-flowers",
+      "amountCents": 40000
+    }
+  ],
+  "expect": {
+    "steps": [
+      {
+        "ok": true
+      },
+      {
+        "ok": true
+      },
+      {
+        "ok": true
+      },
+      {
+        "ok": false,
+        "code": "wrong-category"
+      }
+    ],
+    "pledges": [
+      {
+        "pledgeId": "p1",
+        "funderId": "f-vale",
+        "categoryId": "c-catering",
+        "pledgedCents": 100000,
+        "receivedCents": 100000,
+        "spentCents": 0,
+        "outstandingCents": 0,
+        "unspentCents": 100000,
+        "stage": "received"
+      }
+    ],
+    "categories": [
+      {
+        "categoryId": "c-catering",
+        "pledgedCents": 100000,
+        "receivedCents": 100000,
+        "spentCents": 0,
+        "pledges": [
+          {
+            "pledgeId": "p1",
+            "funderId": "f-vale",
+            "categoryId": "c-catering",
+            "pledgedCents": 100000,
+            "receivedCents": 100000,
+            "spentCents": 0,
+            "outstandingCents": 0,
+            "unspentCents": 100000,
+            "stage": "received"
+          }
+        ]
+      }
+    ]
+  }
+}
