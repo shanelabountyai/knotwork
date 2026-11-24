@@ -15,6 +15,9 @@ import { applyRsvp, importHouseholds, releaseWave, savePlan } from '@/lib/knotwo
 import { addPhoto, createEvent, moderatePhoto } from '@/lib/knotwork/photos/store';
 import { addLink, claim } from '@/lib/knotwork/registry/store';
 import { acknowledgeGift, logGift } from '@/lib/knotwork/thanks/store';
+import { STARTERS } from '@/lib/knotwork/contingency/schema';
+import { createPlan } from '@/lib/knotwork/contingency/store';
+import { moveNameChange, startNameChange } from '@/lib/knotwork/namechange/store';
 import { processUpload, type Processed } from '@/lib/knotwork/uploads/process';
 import { hashToken } from '@/core/tokens';
 import { createWedding } from '@/lib/knotwork/schedule/store';
@@ -25,7 +28,8 @@ import { DEMO_TOTP_SECRET } from '../seed-demo';
 // ONE SYNTHETIC COUPLE. Every person, vendor, address and amount here is invented; none is a real person or business.
 //   Juniper Vale and Rowan Ashby: the two partners (both owners).  Maple Okafor: a helper who can see the budget.
 //   Hazel Vale (Phase 4, P1-2): Juniper's mother, a helper linked to the funder "Hazel & Oren Vale"; she sees only what
-//   that pledge paid for. Juniper also keeps one spend private until the wedding day (P1-1).
+//   that pledge paid for. Juniper also keeps one spend private until the wedding day (P1-1), and has begun her name
+//   change, private to her (P1-4). A rain plan waits, not yet put into action (P1-6).
 //   The wedding is 330 days from today (America/Chicago), from the default template, so the demo move of six weeks
 //   has room. Venue and caterer are booked, each by a real two-key request (Juniper proposes, Rowan approves); the
 //   florist is still being considered.
@@ -216,6 +220,14 @@ export async function seedCouple(opts: { today?: Day } = {}): Promise<string[]> 
     await logGift(tx, b, { householdId: await household('The Lindqvists'), giverName: '', what: 'a set of copper mugs', receivedOn: addDays(today, -24) });
     const print = await logGift(tx, a, { householdId: null, giverName: 'Uncle Bram', what: 'a framed print of the river', receivedOn: addDays(today, -40) });
     await acknowledgeGift(tx, b, print.id);
+  });
+
+  // Phase 4, P1-6: a rain plan from the starter, not put into action (the demo runs it). P1-4: Juniper has begun her
+  // name change. Tulsa is in a state Knotwork has no file for, so it follows the generic fallback; private to her.
+  await withOrg({ orgId }, async (tx) => {
+    await createPlan(tx, a, 'Rain plan', STARTERS.rain.tree);
+    await startNameChange(tx, a, 'generic');
+    await moveNameChange(tx, a, { op: 'hold', key: 'proof-of-identity' });
   });
 
   // Phase 3: the photo wall. One event, "Reception", where each photo waits for approval (the demo story: a guest's

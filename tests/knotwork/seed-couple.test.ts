@@ -143,4 +143,15 @@ describe('seed:couple', () => {
     ]);
     expect(funders[1]!.userId).toBe((await db.user.findUniqueOrThrow({ where: { email: 'hazel@knotwork.demo.test' } })).id);
   });
+
+  it('Phase 4: a rain plan waits, not put into action; Juniper\'s name change follows the generic rules, private to her', async () => {
+    const plans = await db.contingencyPlan.findMany({ where: { orgId }, include: { run: true } });
+    expect(plans.map((p) => [p.title, p.run])).toEqual([['Rain plan', null]]);
+    const juniper = (await db.user.findUniqueOrThrow({ where: { email: 'juniper@knotwork.demo.test' } })).id;
+    const nc = await db.nameChange.findFirstOrThrow({ where: { orgId }, include: { steps: true, artifacts: true } });
+    expect([nc.userId, nc.jurisdiction, nc.shared, nc.steps.length, nc.artifacts.map((a) => a.artifact)]).toEqual([juniper, 'generic', false, 0, ['proof-of-identity']]);
+    const entries = (await db.auditEvent.findMany({ where: { orgId, action: { startsWith: 'knotwork.namechange.' } } })).map((e) => e.data);
+    expect(entries).toHaveLength(2);
+    for (const d of entries) expect(d).toMatchObject({ label: 'a private item', private: true });
+  });
 });

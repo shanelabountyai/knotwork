@@ -67,7 +67,8 @@ describe('the gift log: a gift from a household or a named person, received on a
     const theirs = await db.giftLog.create({ data: { orgId: other.id, giverName: 'Someone', what: 'a thing', receivedOn: new Date('2026-11-01T00:00:00Z') } });
     const before = await snapshot();
     expect((await outcome(logReceivedGift(c.slug, { householdId: stranger.id, giverName: 'both, to tempt a refusal', what: 'x', receivedOn: '' }))).nav).toBe('notFound');
-    for (const p of [removeReceivedGift(c.slug, { id: theirs.id }), acknowledgeReceivedGift(c.slug, { id: theirs.id })]) expect((await outcome(p)).nav).toBe('notFound');
+    // One at a time (each started only when the last has settled), so no refusal is left unhandled while another runs.
+    for (const p of [() => removeReceivedGift(c.slug, { id: theirs.id }), () => acknowledgeReceivedGift(c.slug, { id: theirs.id })]) expect((await outcome(p())).nav).toBe('notFound');
     expect(await snapshot()).toBe(before);
     // And the database refuses a logged gift naming another workspace's household, or no giver at all.
     await expect(db.giftLog.create({ data: { orgId: c.orgId, householdId: stranger.id, what: 'x', receivedOn: new Date() } })).rejects.toThrow(/same workspace/);

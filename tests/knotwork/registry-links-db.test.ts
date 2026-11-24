@@ -107,7 +107,8 @@ describe('the couple adds store items; the URL is hostile input', () => {
     // Another workspace's item: not found, before any rule is looked at.
     const other = await db.org.create({ data: { slug: 'other-couple', name: 'Other' } });
     const theirs = (await db.registryLink.create({ data: { orgId: other.id, title: 'Theirs', store: 'S', url: 'https://www.example.com/theirs', quantityWanted: 1 } })).id;
-    for (const p of [updateRegistryLink(c.slug, { id: theirs, ...SKILLET, url: 'javascript:x' }), removeRegistryLink(c.slug, { id: theirs })]) expect((await outcome(p)).nav).toBe('notFound');
+    // One at a time (each started only when the last has settled), so no refusal is left unhandled while another runs.
+    for (const p of [() => updateRegistryLink(c.slug, { id: theirs, ...SKILLET, url: 'javascript:x' }), () => removeRegistryLink(c.slug, { id: theirs })]) expect((await outcome(p())).nav).toBe('notFound');
   });
 
   it('a helper, with every grant there is, can neither see nor touch store items', async () => {
