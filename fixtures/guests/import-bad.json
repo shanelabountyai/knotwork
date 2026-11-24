@@ -1,0 +1,89 @@
+{
+ "cases": [
+  {
+   "name": "no header",
+   "csv": "Linda,Lindqvist\n",
+   "errors": [
+    "Line 1: the first line must name the columns, and include household and name."
+   ]
+  },
+  {
+   "name": "unknown column",
+   "csv": "household,name,shoe_size\nA,B,9\n",
+   "errors": [
+    "Line 1: unknown column shoe_size."
+   ]
+  },
+  {
+   "name": "missing name",
+   "csv": "household,name\nThe Raos,\n",
+   "errors": [
+    "Line 2: name is required."
+   ]
+  },
+  {
+   "name": "bad list and age",
+   "csv": "household,name,list,age_group\nThe Raos,Priya,C,teen\n",
+   "errors": [
+    "Line 2: list must be A or B.",
+    "Line 2: age_group must be adult, child or infant."
+   ]
+  },
+  {
+   "name": "a household on two lists",
+   "csv": "household,name,list\nThe Raos,Priya,A\nThe Raos,Tom,B\n",
+   "errors": [
+    "Line 3: The Raos is on list A on line 2 and list B here."
+   ]
+  },
+  {
+   "name": "the same guest twice",
+   "csv": "household,name\nThe Raos,Priya\nThe Raos,priya\n",
+   "errors": [
+    "Line 3: priya is already in The Raos (line 2)."
+   ]
+  },
+  {
+   "name": "unclosed quote",
+   "csv": "household,name\n\"The Raos,Priya\n",
+   "errors": [
+    "Line 2: a quoted field is never closed."
+   ]
+  },
+  {
+   "name": "wrong number of fields",
+   "csv": "household,name\nThe Raos,Priya,extra\n",
+   "errors": [
+    "Line 2: expected 2 fields, found 3."
+   ]
+  },
+  {
+   "name": "control characters",
+   "csv": "household,name\nThe Raos,Pri\u0007ya\n",
+   "errors": [
+    "Line 2: name has a character that cannot be stored."
+   ]
+  },
+  {
+   "name": "a field too long",
+   "csv": "household,name\nThe Raos,xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\n",
+   "errors": [
+    "Line 2: name is longer than 200 characters."
+   ]
+  },
+  {
+   "name": "bad email",
+   "csv": "household,name,email\nThe Raos,Priya,not-an-email\n",
+   "errors": [
+    "Line 2: email does not look like an address."
+   ]
+  },
+  {
+   "name": "empty",
+   "csv": "household,name\n",
+   "errors": [
+    "There are no guests in that text."
+   ]
+  }
+ ]
+}

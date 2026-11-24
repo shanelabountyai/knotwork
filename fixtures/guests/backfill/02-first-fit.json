@@ -1,0 +1,145 @@
+{
+ "name": "02-first-fit",
+ "note": "A household that does not fit is skipped; a smaller one after it still goes.",
+ "lockoutDays": 42,
+ "minBatchSeats": 4,
+ "daysToWedding": 200,
+ "cap": 5,
+ "list": "A",
+ "households": [
+  {
+   "id": "a1",
+   "name": "a1",
+   "list": "A",
+   "state": "queued",
+   "priority": 1,
+   "plusOneOverride": null,
+   "guests": [
+    {
+     "id": "a1x",
+     "name": "a1x",
+     "ageGroup": "adult",
+     "partnerStatus": "none",
+     "inWeddingParty": false,
+     "isPlusOne": false,
+     "rsvp": "pending",
+     "removed": false
+    },
+    {
+     "id": "a1y",
+     "name": "a1y",
+     "ageGroup": "adult",
+     "partnerStatus": "none",
+     "inWeddingParty": false,
+     "isPlusOne": false,
+     "rsvp": "pending",
+     "removed": false
+    }
+   ]
+  },
+  {
+   "id": "big",
+   "name": "big",
+   "list": "A",
+   "state": "queued",
+   "priority": 2,
+   "plusOneOverride": null,
+   "guests": [
+    {
+     "id": "b1",
+     "name": "b1",
+     "ageGroup": "adult",
+     "partnerStatus": "none",
+     "inWeddingParty": false,
+     "isPlusOne": false,
+     "rsvp": "pending",
+     "removed": false
+    },
+    {
+     "id": "b2",
+     "name": "b2",
+     "ageGroup": "adult",
+     "partnerStatus": "none",
+     "inWeddingParty": false,
+     "isPlusOne": false,
+     "rsvp": "pending",
+     "removed": false
+    },
+    {
+     "id": "b3",
+     "name": "b3",
+     "ageGroup": "adult",
+     "partnerStatus": "none",
+     "inWeddingParty": false,
+     "isPlusOne": false,
+     "rsvp": "pending",
+     "removed": false
+    },
+    {
+     "id": "b4",
+     "name": "b4",
+     "ageGroup": "adult",
+     "partnerStatus": "none",
+     "inWeddingParty": false,
+     "isPlusOne": false,
+     "rsvp": "pending",
+     "removed": false
+    }
+   ]
+  },
+  {
+   "id": "a3",
+   "name": "a3",
+   "list": "A",
+   "state": "queued",
+   "priority": 3,
+   "plusOneOverride": null,
+   "guests": [
+    {
+     "id": "a3x",
+     "name": "a3x",
+     "ageGroup": "adult",
+     "partnerStatus": "none",
+     "inWeddingParty": false,
+     "isPlusOne": false,
+     "rsvp": "pending",
+     "removed": false
+    }
+   ]
+  }
+ ],
+ "expect": {
+  "entitled": {
+   "a1": false,
+   "big": false,
+   "a3": false
+  },
+  "held": {
+   "a1": 0,
+   "big": 0,
+   "a3": 0
+  },
+  "needed": {
+   "a1": 2,
+   "big": 4,
+   "a3": 1
+  },
+  "state": {
+   "cap": 5,
+   "held": 0,
+   "attending": 0,
+   "pending": 0,
+   "declined": 0,
+   "available": 5
+  },
+  "release": {
+   "ids": [
+    "a1",
+    "a3"
+   ],
+   "seats": 3,
+   "reason": "ok"
+  },
+  "regrets": []
+ }
+}

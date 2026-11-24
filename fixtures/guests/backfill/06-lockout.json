@@ -1,0 +1,135 @@
+{
+ "name": "06-lockout",
+ "note": "Inside the lockout no B wave goes out, whatever is free.",
+ "lockoutDays": 42,
+ "minBatchSeats": 4,
+ "daysToWedding": 41,
+ "cap": 20,
+ "list": "B",
+ "households": [
+  {
+   "id": "a1",
+   "name": "a1",
+   "list": "A",
+   "state": "invited",
+   "priority": 0,
+   "plusOneOverride": null,
+   "guests": [
+    {
+     "id": "a1x",
+     "name": "a1x",
+     "ageGroup": "adult",
+     "partnerStatus": "none",
+     "inWeddingParty": false,
+     "isPlusOne": false,
+     "rsvp": "attending",
+     "removed": false
+    }
+   ]
+  },
+  {
+   "id": "b1",
+   "name": "b1",
+   "list": "B",
+   "state": "queued",
+   "priority": 1,
+   "plusOneOverride": null,
+   "guests": [
+    {
+     "id": "b1x",
+     "name": "b1x",
+     "ageGroup": "adult",
+     "partnerStatus": "none",
+     "inWeddingParty": false,
+     "isPlusOne": false,
+     "rsvp": "pending",
+     "removed": false
+    },
+    {
+     "id": "b1y",
+     "name": "b1y",
+     "ageGroup": "adult",
+     "partnerStatus": "none",
+     "inWeddingParty": false,
+     "isPlusOne": false,
+     "rsvp": "pending",
+     "removed": false
+    },
+    {
+     "id": "b1z",
+     "name": "b1z",
+     "ageGroup": "adult",
+     "partnerStatus": "none",
+     "inWeddingParty": false,
+     "isPlusOne": false,
+     "rsvp": "pending",
+     "removed": false
+    },
+    {
+     "id": "b1w",
+     "name": "b1w",
+     "ageGroup": "adult",
+     "partnerStatus": "none",
+     "inWeddingParty": false,
+     "isPlusOne": false,
+     "rsvp": "pending",
+     "removed": false
+    }
+   ]
+  },
+  {
+   "id": "b2",
+   "name": "b2",
+   "list": "B",
+   "state": "queued",
+   "priority": 2,
+   "plusOneOverride": null,
+   "guests": [
+    {
+     "id": "b2x",
+     "name": "b2x",
+     "ageGroup": "adult",
+     "partnerStatus": "none",
+     "inWeddingParty": false,
+     "isPlusOne": false,
+     "rsvp": "pending",
+     "removed": false
+    }
+   ]
+  }
+ ],
+ "expect": {
+  "entitled": {
+   "a1": false,
+   "b1": false,
+   "b2": false
+  },
+  "held": {
+   "a1": 1,
+   "b1": 0,
+   "b2": 0
+  },
+  "needed": {
+   "a1": 1,
+   "b1": 4,
+   "b2": 1
+  },
+  "state": {
+   "cap": 20,
+   "held": 1,
+   "attending": 1,
+   "pending": 0,
+   "declined": 0,
+   "available": 19
+  },
+  "release": {
+   "ids": [],
+   "seats": 0,
+   "reason": "locked-out"
+  },
+  "regrets": [
+   "b1",
+   "b2"
+  ]
+ }
+}

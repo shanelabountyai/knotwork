@@ -1,0 +1,34 @@
+{
+ "csv": "household,name,email,list,priority,age_group,partner_status,wedding_party,address1,city,region,postal\n\"Lindqvist, Linda & Omar\",Linda Lindqvist,linda@lindqvist.example,A,1,adult,married,no,12 Example Lane,Tulsa,OK,74101\n\"Lindqvist, Linda & Omar\",Omar Lindqvist,,A,1,adult,married,no,,,,\n\"Lindqvist, Linda & Omar\",Wren Lindqvist,,,,child,,,,,,\nPriya Rao,Priya Rao,priya@rao.example,A,2,adult,engaged,yes,,,,\nThe Okoro family,Chidi Okoro,chidi@okoro.example,B,10,adult,married,no,,,,\nThe Okoro family,\"Ngozi \"\"Go\"\" Okoro\",,B,10,adult,married,no,,,,\n",
+ "expect": {
+  "households": 3,
+  "guests": 6,
+  "first": {
+   "name": "Lindqvist, Linda & Omar",
+   "list": "A",
+   "priority": 1,
+   "email": "linda@lindqvist.example",
+   "address1": "12 Example Lane",
+   "guests": [
+    {
+     "name": "Linda Lindqvist",
+     "ageGroup": "adult",
+     "partnerStatus": "married",
+     "inWeddingParty": false
+    },
+    {
+     "name": "Omar Lindqvist",
+     "ageGroup": "adult",
+     "partnerStatus": "married",
+     "inWeddingParty": false
+    },
+    {
+     "name": "Wren Lindqvist",
+     "ageGroup": "child",
+     "partnerStatus": "none",
+     "inWeddingParty": false
+    }
+   ]
+  }
+ }
+}

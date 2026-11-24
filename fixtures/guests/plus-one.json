@@ -1,0 +1,396 @@
+{
+ "note": "Etiquette rules as data (src/lib/knotwork/guests/plus-one.ts). One plus-one per household at most.",
+ "cases": [
+  {
+   "name": "a single guest gets no plus-one",
+   "household": {
+    "id": "h",
+    "name": "h",
+    "list": "A",
+    "state": "queued",
+    "priority": 0,
+    "plusOneOverride": null,
+    "guests": [
+     {
+      "id": "a",
+      "name": "a",
+      "ageGroup": "adult",
+      "partnerStatus": "none",
+      "inWeddingParty": false,
+      "isPlusOne": false,
+      "rsvp": "pending",
+      "removed": false
+     }
+    ]
+   },
+   "expect": {
+    "entitled": false,
+    "rule": "single"
+   }
+  },
+  {
+   "name": "dating is not enough",
+   "household": {
+    "id": "h",
+    "name": "h",
+    "list": "A",
+    "state": "queued",
+    "priority": 0,
+    "plusOneOverride": null,
+    "guests": [
+     {
+      "id": "a",
+      "name": "a",
+      "ageGroup": "adult",
+      "partnerStatus": "dating",
+      "inWeddingParty": false,
+      "isPlusOne": false,
+      "rsvp": "pending",
+      "removed": false
+     }
+    ]
+   },
+   "expect": {
+    "entitled": false,
+    "rule": "dating"
+   }
+  },
+  {
+   "name": "engaged",
+   "household": {
+    "id": "h",
+    "name": "h",
+    "list": "A",
+    "state": "queued",
+    "priority": 0,
+    "plusOneOverride": null,
+    "guests": [
+     {
+      "id": "a",
+      "name": "a",
+      "ageGroup": "adult",
+      "partnerStatus": "engaged",
+      "inWeddingParty": false,
+      "isPlusOne": false,
+      "rsvp": "pending",
+      "removed": false
+     }
+    ]
+   },
+   "expect": {
+    "entitled": true,
+    "rule": "engaged"
+   }
+  },
+  {
+   "name": "married, spouse not on the invitation",
+   "household": {
+    "id": "h",
+    "name": "h",
+    "list": "A",
+    "state": "queued",
+    "priority": 0,
+    "plusOneOverride": null,
+    "guests": [
+     {
+      "id": "a",
+      "name": "a",
+      "ageGroup": "adult",
+      "partnerStatus": "married",
+      "inWeddingParty": false,
+      "isPlusOne": false,
+      "rsvp": "pending",
+      "removed": false
+     }
+    ]
+   },
+   "expect": {
+    "entitled": true,
+    "rule": "married"
+   }
+  },
+  {
+   "name": "long-distance",
+   "household": {
+    "id": "h",
+    "name": "h",
+    "list": "A",
+    "state": "queued",
+    "priority": 0,
+    "plusOneOverride": null,
+    "guests": [
+     {
+      "id": "a",
+      "name": "a",
+      "ageGroup": "adult",
+      "partnerStatus": "long_distance",
+      "inWeddingParty": false,
+      "isPlusOne": false,
+      "rsvp": "pending",
+      "removed": false
+     }
+    ]
+   },
+   "expect": {
+    "entitled": true,
+    "rule": "long_distance"
+   }
+  },
+  {
+   "name": "wedding party",
+   "household": {
+    "id": "h",
+    "name": "h",
+    "list": "A",
+    "state": "queued",
+    "priority": 0,
+    "plusOneOverride": null,
+    "guests": [
+     {
+      "id": "a",
+      "name": "a",
+      "ageGroup": "adult",
+      "partnerStatus": "none",
+      "inWeddingParty": true,
+      "isPlusOne": false,
+      "rsvp": "pending",
+      "removed": false
+     }
+    ]
+   },
+   "expect": {
+    "entitled": true,
+    "rule": "wedding-party"
+   }
+  },
+  {
+   "name": "wedding party outranks single",
+   "household": {
+    "id": "h",
+    "name": "h",
+    "list": "A",
+    "state": "queued",
+    "priority": 0,
+    "plusOneOverride": null,
+    "guests": [
+     {
+      "id": "a",
+      "name": "a",
+      "ageGroup": "adult",
+      "partnerStatus": "none",
+      "inWeddingParty": true,
+      "isPlusOne": false,
+      "rsvp": "pending",
+      "removed": false
+     },
+     {
+      "id": "kid",
+      "name": "kid",
+      "ageGroup": "child",
+      "partnerStatus": "none",
+      "inWeddingParty": false,
+      "isPlusOne": false,
+      "rsvp": "pending",
+      "removed": false
+     }
+    ]
+   },
+   "expect": {
+    "entitled": true,
+    "rule": "wedding-party"
+   }
+  },
+  {
+   "name": "two adults: the partner is already named",
+   "household": {
+    "id": "h",
+    "name": "h",
+    "list": "A",
+    "state": "queued",
+    "priority": 0,
+    "plusOneOverride": null,
+    "guests": [
+     {
+      "id": "a",
+      "name": "a",
+      "ageGroup": "adult",
+      "partnerStatus": "married",
+      "inWeddingParty": false,
+      "isPlusOne": false,
+      "rsvp": "pending",
+      "removed": false
+     },
+     {
+      "id": "b",
+      "name": "b",
+      "ageGroup": "adult",
+      "partnerStatus": "married",
+      "inWeddingParty": false,
+      "isPlusOne": false,
+      "rsvp": "pending",
+      "removed": false
+     }
+    ]
+   },
+   "expect": {
+    "entitled": false,
+    "rule": "partner-named"
+   }
+  },
+  {
+   "name": "a removed second adult does not count",
+   "household": {
+    "id": "h",
+    "name": "h",
+    "list": "A",
+    "state": "queued",
+    "priority": 0,
+    "plusOneOverride": null,
+    "guests": [
+     {
+      "id": "a",
+      "name": "a",
+      "ageGroup": "adult",
+      "partnerStatus": "engaged",
+      "inWeddingParty": false,
+      "isPlusOne": false,
+      "rsvp": "pending",
+      "removed": false
+     },
+     {
+      "id": "b",
+      "name": "b",
+      "ageGroup": "adult",
+      "partnerStatus": "none",
+      "inWeddingParty": false,
+      "isPlusOne": false,
+      "rsvp": "pending",
+      "removed": true
+     }
+    ]
+   },
+   "expect": {
+    "entitled": true,
+    "rule": "engaged"
+   }
+  },
+  {
+   "name": "children only",
+   "household": {
+    "id": "h",
+    "name": "h",
+    "list": "A",
+    "state": "queued",
+    "priority": 0,
+    "plusOneOverride": null,
+    "guests": [
+     {
+      "id": "kid",
+      "name": "kid",
+      "ageGroup": "child",
+      "partnerStatus": "none",
+      "inWeddingParty": false,
+      "isPlusOne": false,
+      "rsvp": "pending",
+      "removed": false
+     }
+    ]
+   },
+   "expect": {
+    "entitled": false,
+    "rule": "no-adult"
+   }
+  },
+  {
+   "name": "override grants",
+   "household": {
+    "id": "h",
+    "name": "h",
+    "list": "A",
+    "state": "queued",
+    "priority": 0,
+    "plusOneOverride": "grant",
+    "guests": [
+     {
+      "id": "a",
+      "name": "a",
+      "ageGroup": "adult",
+      "partnerStatus": "none",
+      "inWeddingParty": false,
+      "isPlusOne": false,
+      "rsvp": "pending",
+      "removed": false
+     }
+    ]
+   },
+   "expect": {
+    "entitled": true,
+    "rule": "override-grant"
+   }
+  },
+  {
+   "name": "override denies",
+   "household": {
+    "id": "h",
+    "name": "h",
+    "list": "A",
+    "state": "queued",
+    "priority": 0,
+    "plusOneOverride": "deny",
+    "guests": [
+     {
+      "id": "a",
+      "name": "a",
+      "ageGroup": "adult",
+      "partnerStatus": "married",
+      "inWeddingParty": false,
+      "isPlusOne": false,
+      "rsvp": "pending",
+      "removed": false
+     }
+    ]
+   },
+   "expect": {
+    "entitled": false,
+    "rule": "override-deny"
+   }
+  },
+  {
+   "name": "override grants even with two adults",
+   "household": {
+    "id": "h",
+    "name": "h",
+    "list": "A",
+    "state": "queued",
+    "priority": 0,
+    "plusOneOverride": "grant",
+    "guests": [
+     {
+      "id": "a",
+      "name": "a",
+      "ageGroup": "adult",
+      "partnerStatus": "none",
+      "inWeddingParty": false,
+      "isPlusOne": false,
+      "rsvp": "pending",
+      "removed": false
+     },
+     {
+      "id": "b",
+      "name": "b",
+      "ageGroup": "adult",
+      "partnerStatus": "none",
+      "inWeddingParty": false,
+      "isPlusOne": false,
+      "rsvp": "pending",
+      "removed": false
+     }
+    ]
+   },
+   "expect": {
+    "entitled": true,
+    "rule": "override-grant"
+   }
+  }
+ ]
+}

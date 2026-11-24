@@ -1,0 +1,89 @@
+{
+ "name": "10-full",
+ "note": "Nothing free: nothing goes.",
+ "lockoutDays": 42,
+ "minBatchSeats": 1,
+ "daysToWedding": 200,
+ "cap": 2,
+ "list": "B",
+ "households": [
+  {
+   "id": "a1",
+   "name": "a1",
+   "list": "A",
+   "state": "invited",
+   "priority": 0,
+   "plusOneOverride": null,
+   "guests": [
+    {
+     "id": "a1x",
+     "name": "a1x",
+     "ageGroup": "adult",
+     "partnerStatus": "none",
+     "inWeddingParty": false,
+     "isPlusOne": false,
+     "rsvp": "attending",
+     "removed": false
+    },
+    {
+     "id": "a1y",
+     "name": "a1y",
+     "ageGroup": "adult",
+     "partnerStatus": "none",
+     "inWeddingParty": false,
+     "isPlusOne": false,
+     "rsvp": "pending",
+     "removed": false
+    }
+   ]
+  },
+  {
+   "id": "b1",
+   "name": "b1",
+   "list": "B",
+   "state": "queued",
+   "priority": 1,
+   "plusOneOverride": null,
+   "guests": [
+    {
+     "id": "b1x",
+     "name": "b1x",
+     "ageGroup": "adult",
+     "partnerStatus": "none",
+     "inWeddingParty": false,
+     "isPlusOne": false,
+     "rsvp": "pending",
+     "removed": false
+    }
+   ]
+  }
+ ],
+ "expect": {
+  "entitled": {
+   "a1": false,
+   "b1": false
+  },
+  "held": {
+   "a1": 2,
+   "b1": 0
+  },
+  "needed": {
+   "a1": 2,
+   "b1": 1
+  },
+  "state": {
+   "cap": 2,
+   "held": 2,
+   "attending": 1,
+   "pending": 1,
+   "declined": 0,
+   "available": 0
+  },
+  "release": {
+   "ids": [],
+   "seats": 0,
+   "reason": "no-room"
+  },
+  "regrets": []
+ }
+}

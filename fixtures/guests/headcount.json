@@ -1,0 +1,299 @@
+{
+ "note": "Hand math. Attending: Linda, Omar, Priya, Tom (adults), Wren and Kit (children), baby Sol (infant) = 7. Declined: Ruth. Pending: Ada, Ben. Removed Max and the queued Okoro household count for nothing. Invited 10, responded 8 = 80%. Two vendors eat on site. Cost: 4 x $87.00 + 2 x $35.00 + 2 x $40.00 = $348 + $70 + $80 = $498.00. Caterer meals: 4 + 2 + 2 = 8 (the infant has no meal).",
+ "prices": {
+  "perHeadCents": 8700,
+  "kidsMealCents": 3500,
+  "vendorMealCents": 4000
+ },
+ "onSiteVendors": 2,
+ "venueMin": 6,
+ "venueMax": 120,
+ "households": [
+  {
+   "id": "lindqvist",
+   "name": "lindqvist",
+   "list": "A",
+   "state": "invited",
+   "priority": 0,
+   "plusOneOverride": null,
+   "guests": [
+    {
+     "id": "Linda",
+     "name": "Linda",
+     "ageGroup": "adult",
+     "partnerStatus": "none",
+     "inWeddingParty": false,
+     "isPlusOne": false,
+     "rsvp": "attending",
+     "removed": false,
+     "meal": "Fish",
+     "dietary": [
+      "gluten_free"
+     ],
+     "accessibility": [],
+     "songRequest": ""
+    },
+    {
+     "id": "Omar",
+     "name": "Omar",
+     "ageGroup": "adult",
+     "partnerStatus": "none",
+     "inWeddingParty": false,
+     "isPlusOne": false,
+     "rsvp": "attending",
+     "removed": false,
+     "meal": "Chicken",
+     "dietary": [],
+     "accessibility": [],
+     "songRequest": ""
+    },
+    {
+     "id": "Wren",
+     "name": "Wren",
+     "ageGroup": "child",
+     "partnerStatus": "none",
+     "inWeddingParty": false,
+     "isPlusOne": false,
+     "rsvp": "attending",
+     "removed": false,
+     "meal": null,
+     "dietary": [
+      "nut_allergy"
+     ],
+     "accessibility": [],
+     "songRequest": ""
+    },
+    {
+     "id": "Sol",
+     "name": "Sol",
+     "ageGroup": "infant",
+     "partnerStatus": "none",
+     "inWeddingParty": false,
+     "isPlusOne": false,
+     "rsvp": "attending",
+     "removed": false,
+     "meal": null,
+     "dietary": [],
+     "accessibility": [],
+     "songRequest": ""
+    }
+   ]
+  },
+  {
+   "id": "rao",
+   "name": "rao",
+   "list": "A",
+   "state": "invited",
+   "priority": 0,
+   "plusOneOverride": null,
+   "guests": [
+    {
+     "id": "Priya",
+     "name": "Priya",
+     "ageGroup": "adult",
+     "partnerStatus": "none",
+     "inWeddingParty": false,
+     "isPlusOne": false,
+     "rsvp": "attending",
+     "removed": false,
+     "meal": "Vegetarian",
+     "dietary": [
+      "vegetarian",
+      "nut_allergy"
+     ],
+     "accessibility": [
+      "step_free"
+     ],
+     "songRequest": "September"
+    },
+    {
+     "id": "Tom",
+     "name": "Tom",
+     "ageGroup": "adult",
+     "partnerStatus": "none",
+     "inWeddingParty": false,
+     "isPlusOne": true,
+     "rsvp": "attending",
+     "removed": false,
+     "meal": "Chicken",
+     "dietary": [],
+     "accessibility": [],
+     "songRequest": "Dancing Queen"
+    },
+    {
+     "id": "Kit",
+     "name": "Kit",
+     "ageGroup": "child",
+     "partnerStatus": "none",
+     "inWeddingParty": false,
+     "isPlusOne": false,
+     "rsvp": "attending",
+     "removed": false,
+     "meal": null,
+     "dietary": [],
+     "accessibility": [],
+     "songRequest": ""
+    }
+   ]
+  },
+  {
+   "id": "stern",
+   "name": "stern",
+   "list": "A",
+   "state": "invited",
+   "priority": 0,
+   "plusOneOverride": null,
+   "guests": [
+    {
+     "id": "Ruth",
+     "name": "Ruth",
+     "ageGroup": "adult",
+     "partnerStatus": "none",
+     "inWeddingParty": false,
+     "isPlusOne": false,
+     "rsvp": "declined",
+     "removed": false,
+     "meal": null,
+     "dietary": [],
+     "accessibility": [],
+     "songRequest": ""
+    },
+    {
+     "id": "Ada",
+     "name": "Ada",
+     "ageGroup": "adult",
+     "partnerStatus": "none",
+     "inWeddingParty": false,
+     "isPlusOne": false,
+     "rsvp": "pending",
+     "removed": false,
+     "meal": null,
+     "dietary": [],
+     "accessibility": [],
+     "songRequest": ""
+    },
+    {
+     "id": "Max",
+     "name": "Max",
+     "ageGroup": "adult",
+     "partnerStatus": "none",
+     "inWeddingParty": false,
+     "isPlusOne": false,
+     "rsvp": "attending",
+     "removed": true,
+     "meal": "Fish",
+     "dietary": [],
+     "accessibility": [],
+     "songRequest": ""
+    }
+   ]
+  },
+  {
+   "id": "vale",
+   "name": "vale",
+   "list": "A",
+   "state": "invited",
+   "priority": 0,
+   "plusOneOverride": null,
+   "guests": [
+    {
+     "id": "Ben",
+     "name": "Ben",
+     "ageGroup": "adult",
+     "partnerStatus": "none",
+     "inWeddingParty": false,
+     "isPlusOne": false,
+     "rsvp": "pending",
+     "removed": false,
+     "meal": null,
+     "dietary": [],
+     "accessibility": [
+      "wheelchair"
+     ],
+     "songRequest": ""
+    }
+   ]
+  },
+  {
+   "id": "okoro",
+   "name": "okoro",
+   "list": "B",
+   "state": "queued",
+   "priority": 0,
+   "plusOneOverride": null,
+   "guests": [
+    {
+     "id": "Chidi",
+     "name": "Chidi",
+     "ageGroup": "adult",
+     "partnerStatus": "none",
+     "inWeddingParty": false,
+     "isPlusOne": false,
+     "rsvp": "attending",
+     "removed": false,
+     "meal": "Fish",
+     "dietary": [],
+     "accessibility": [],
+     "songRequest": ""
+    },
+    {
+     "id": "Ngozi",
+     "name": "Ngozi",
+     "ageGroup": "adult",
+     "partnerStatus": "none",
+     "inWeddingParty": false,
+     "isPlusOne": false,
+     "rsvp": "pending",
+     "removed": false,
+     "meal": null,
+     "dietary": [],
+     "accessibility": [],
+     "songRequest": ""
+    }
+   ]
+  }
+ ],
+ "expect": {
+  "attending": 7,
+  "adults": 4,
+  "kids": 2,
+  "infants": 1,
+  "vendorMeals": 2,
+  "catererMeals": 8,
+  "invited": 10,
+  "responded": 8,
+  "pending": 2,
+  "declined": 1,
+  "responseRatePct": 80,
+  "costCents": 49800
+ },
+ "expectRollups": {
+  "meals": {
+   "Chicken": 2,
+   "Fish": 1,
+   "Vegetarian": 1
+  },
+  "kidsMeals": 2,
+  "dietary": {
+   "gluten_free": 1,
+   "nut_allergy": 2,
+   "vegetarian": 1
+  },
+  "accessibility": {
+   "step_free": 1
+  },
+  "songs": [
+   "Dancing Queen",
+   "September"
+  ]
+ },
+ "expectVenue": "ok",
+ "decline": {
+  "guest": "Linda",
+  "expect": {
+   "label": "Linda declined",
+   "deltaSeats": -1,
+   "deltaCents": -8700
+  }
+ }
+}

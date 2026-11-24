@@ -1,0 +1,190 @@
+{
+ "note": "Households here are invited and still have someone who has not answered. daysLeft is days until the derived RSVP deadline.",
+ "cases": [
+  {
+   "name": "more than three weeks out: nothing yet",
+   "daysLeft": 30,
+   "households": [
+    {
+     "id": "a",
+     "hasEmail": true,
+     "remindersSent": [],
+     "called": false
+    },
+    {
+     "id": "b",
+     "hasEmail": false,
+     "remindersSent": [],
+     "called": false
+    }
+   ],
+   "expect": {
+    "remind": [],
+    "call": []
+   }
+  },
+  {
+   "name": "21 days: first reminder; no email goes straight to the call list",
+   "daysLeft": 21,
+   "households": [
+    {
+     "id": "a",
+     "hasEmail": true,
+     "remindersSent": [],
+     "called": false
+    },
+    {
+     "id": "b",
+     "hasEmail": false,
+     "remindersSent": [],
+     "called": false
+    }
+   ],
+   "expect": {
+    "remind": [
+     {
+      "id": "a",
+      "step": 21
+     }
+    ],
+    "call": [
+     "b"
+    ]
+   }
+  },
+  {
+   "name": "between steps: nothing new once the last step was sent",
+   "daysLeft": 17,
+   "households": [
+    {
+     "id": "a",
+     "hasEmail": true,
+     "remindersSent": [
+      21
+     ],
+     "called": false
+    }
+   ],
+   "expect": {
+    "remind": [],
+    "call": []
+   }
+  },
+  {
+   "name": "a missed step is not sent late twice: only the latest due step",
+   "daysLeft": 6,
+   "households": [
+    {
+     "id": "a",
+     "hasEmail": true,
+     "remindersSent": [],
+     "called": false
+    }
+   ],
+   "expect": {
+    "remind": [
+     {
+      "id": "a",
+      "step": 7
+     }
+    ],
+    "call": []
+   }
+  },
+  {
+   "name": "3 days: last reminder and the call list",
+   "daysLeft": 3,
+   "households": [
+    {
+     "id": "a",
+     "hasEmail": true,
+     "remindersSent": [
+      21,
+      14,
+      7
+     ],
+     "called": false
+    },
+    {
+     "id": "c",
+     "hasEmail": true,
+     "remindersSent": [
+      21,
+      14,
+      7,
+      3
+     ],
+     "called": false
+    }
+   ],
+   "expect": {
+    "remind": [
+     {
+      "id": "a",
+      "step": 3
+     }
+    ],
+    "call": [
+     "a",
+     "c"
+    ]
+   }
+  },
+  {
+   "name": "already called stays off the list",
+   "daysLeft": 2,
+   "households": [
+    {
+     "id": "a",
+     "hasEmail": true,
+     "remindersSent": [
+      21,
+      14,
+      7,
+      3
+     ],
+     "called": true
+    },
+    {
+     "id": "b",
+     "hasEmail": false,
+     "remindersSent": [],
+     "called": false
+    }
+   ],
+   "expect": {
+    "remind": [],
+    "call": [
+     "b"
+    ]
+   }
+  },
+  {
+   "name": "past the deadline: no more reminders, calls only",
+   "daysLeft": -2,
+   "households": [
+    {
+     "id": "a",
+     "hasEmail": true,
+     "remindersSent": [],
+     "called": false
+    },
+    {
+     "id": "b",
+     "hasEmail": true,
+     "remindersSent": [
+      21
+     ],
+     "called": false
+    }
+   ],
+   "expect": {
+    "remind": [],
+    "call": [
+     "a",
+     "b"
+    ]
+   }
+  }
+ ]
+}
