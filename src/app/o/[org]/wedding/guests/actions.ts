@@ -14,7 +14,7 @@ import { parseGuestCsv } from '@/lib/knotwork/guests/csv';
 import { ACCESSIBILITY, checkRsvp, DIETARY, rsvpView } from '@/lib/knotwork/guests/projection';
 import {
   addGuest as addGuestRow, addHousehold as addHouseholdRow, applyLockout, applyRsvp, clearRsvp, importHouseholds, loadPlan, markCalled as markCalledRow, releaseWave as releaseWaveRows,
-  rsvpDeadline, rsvpLink, savePlan, sendDueReminders, updateGuest as updateGuestRow, updateHousehold as updateHouseholdRow,
+  replaceRsvpLink, rsvpDeadline, rsvpLink, savePlan, sendDueReminders, updateGuest as updateGuestRow, updateHousehold as updateHouseholdRow,
 } from '@/lib/knotwork/guests/store';
 
 // Guest-list writes (PRD P0-3, P0-4). Same order as the Phase 1 actions: capability, every ref (another org's row is
@@ -145,6 +145,16 @@ export const showRsvpLink = orgAction(null, z.object({ id: ref('household') }), 
     return rsvpLink(tx, ctx, h.id);
   });
   return { notice: url };
+});
+
+/** Replaces the household's RSVP link: the one they were sent stops working at once (a link that leaked, or was forwarded). */
+export const newRsvpLink = orgAction(null, z.object({ id: ref('household') }), async (ctx, i) => {
+  const url = await withOrg(ctx, async (tx) => {
+    need(await loadWho(tx, ctx), 'guests.edit');
+    const h = await householdIn(tx, ctx, i.id);
+    return replaceRsvpLink(tx, ctx, h.id);
+  });
+  return { notice: `${url} is the new link. The earlier link no longer works; send this one.` };
 });
 
 export const markSaveTheDate = orgAction(null, z.object({ id: ref('household') }), async (ctx, i) => {

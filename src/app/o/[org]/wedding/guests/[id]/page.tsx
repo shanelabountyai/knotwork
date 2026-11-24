@@ -9,7 +9,7 @@ import { ACCESSIBILITY, DIETARY, TAG_LABEL } from '@/lib/knotwork/guests/project
 import { loadPlan, toIn } from '@/lib/knotwork/guests/store';
 import { NoWedding, WeddingNav } from '../../bits';
 import { view } from '../../view';
-import { addGuest, markSaveTheDate, proposeGuestRemoval, recordRsvp, showRsvpLink, updateGuest, updateHousehold } from '../actions';
+import { addGuest, markSaveTheDate, newRsvpLink, proposeGuestRemoval, recordRsvp, showRsvpLink, updateGuest, updateHousehold } from '../actions';
 import { GuestNav } from '../nav';
 
 export const metadata = { title: 'Household' };
@@ -49,6 +49,12 @@ export default async function HouseholdPage({ params }: { params: Promise<{ org:
         <ActionForm action={bind(showRsvpLink)}>
           <input type="hidden" name="id" value={h.id} />
           <button type="submit">Show the RSVP link</button>
+        </ActionForm>
+      )}
+      {canEdit && h.state === 'invited' && (
+        <ActionForm action={bind(newRsvpLink)}>
+          <input type="hidden" name="id" value={h.id} />
+          <button type="submit">Make a new RSVP link (the one already sent stops working)</button>
         </ActionForm>
       )}
       {canEdit && !h.saveTheDateSentOn && (

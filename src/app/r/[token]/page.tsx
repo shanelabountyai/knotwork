@@ -1,4 +1,4 @@
-// public: the RSVP token is the credential (hashed at rest, INV-07); everything shown comes from guests/projection.ts
+// public: the RSVP token is the credential (matched by its sha256, INV-07; a sealed copy is kept for reminders, D-46); everything shown comes from guests/projection.ts
 import { headers } from 'next/headers';
 import { notFound } from 'next/navigation';
 import { clientIp } from '@/core/http';

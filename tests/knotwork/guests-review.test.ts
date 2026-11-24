@@ -4,14 +4,15 @@ import * as guestActions from '@/app/o/[org]/wedding/guests/actions';
 import { POST as respond } from '@/app/r/[token]/respond/route';
 import { now } from '@/core/clock';
 import { withOrg } from '@/core/db/rls';
+import { hashToken } from '@/core/tokens';
 import { addDays, todayIn } from '@/lib/knotwork/days';
 import { parseGuestCsv } from '@/lib/knotwork/guests/csv';
 import { isRsvpProblem, problemCodeOf, RSVP_PROBLEM } from '@/lib/knotwork/guests/projection';
-import { submitRsvp } from '@/lib/knotwork/guests/public';
+import { readRsvp, submitRsvp } from '@/lib/knotwork/guests/public';
 import { loadGuestState } from '@/lib/knotwork/guests/store';
 import { as, db, log, makeWedding, ok, outcome, refused, snapshot, type Couple } from './db';
 
-const { importGuests, proposeGuestRemoval, releaseWave, saveGuestPlan, showRsvpLink } = guestActions;
+const { importGuests, newRsvpLink, proposeGuestRemoval, releaseWave, saveGuestPlan, showRsvpLink } = guestActions;
 
 // Findings of the independent review of Phase 2 (2026-11-24), each reproduced here before it was fixed.
 // Same world as guests-db.test.ts: cap 8; A list 2 + 2 + 2 + 1 (+1 for Priya's guest) = 8 seats; B list 2 + 2 + 1.
@@ -220,5 +221,38 @@ describe('S5: the import holds up at its own limits', () => {
     expect(await db.household.count({ where: { orgId: c.orgId } })).toBe(2007);
     expect(await db.guest.count({ where: { orgId: c.orgId } })).toBe(2012);
     expect((await state()).cap.held).toBe(8); // queued households hold nothing
+  });
+});
+
+describe('S3: an RSVP link can be replaced, and is never replaced silently', () => {
+  it('a new link ends the old one at once; the log says it happened and holds no token', async () => {
+    const h = await household('The Sterns');
+    const old = await tokenOf('The Sterns');
+    expect(await readRsvp(old, IP)).toMatchObject({ householdName: 'The Sterns' });
+    const o = await outcome(newRsvpLink(c.slug, { id: h.id }));
+    const fresh = String((o.result as { notice: string }).notice).split('/r/')[1]!.split(/\s/)[0]!;
+    expect(fresh).not.toBe(old);
+    expect(await readRsvp(old, IP)).toBeNull(); // the same 404 as a link that never existed
+    expect(await readRsvp(fresh, IP)).toMatchObject({ householdName: 'The Sterns' });
+    expect(await tokenOf('The Sterns')).toBe(fresh);
+    const entry = (await log(c.orgId)).filter((e) => e.action === 'knotwork.household.relinked');
+    expect(entry).toMatchObject([{ targetId: h.id }]);
+    expect(JSON.stringify(entry.map((e) => e.data))).not.toContain(fresh);
+    expect(JSON.stringify(entry.map((e) => e.data))).not.toContain(old);
+  });
+  it('a saved link that can no longer be read is refused, not quietly replaced under the invitations already sent', async () => {
+    const h = await household('The Sterns');
+    const token = await tokenOf('The Sterns');
+    await db.household.update({ where: { id: h.id }, data: { rsvpTokenSealed: 'not.a.sealed-value' } }); // what rotating AUTH_SECRET does to every sealed copy
+    await refused(showRsvpLink(c.slug, { id: h.id }), /can no longer be read/);
+    expect((await household('The Sterns')).rsvpTokenHash).toBe(hashToken(token));
+    expect(await readRsvp(token, IP)).toMatchObject({ householdName: 'The Sterns' }); // the link in the guest's hand still works
+    expect((await outcome(newRsvpLink(c.slug, { id: h.id }))).error).toBeUndefined(); // the couple's own decision
+    expect(await readRsvp(token, IP)).toBeNull();
+  });
+  it('a helper without the guest-list grant cannot replace a link', async () => {
+    const helper = await db.membership.findFirstOrThrow({ where: { orgId: c.orgId, role: 'member' } });
+    await as(helper.userId);
+    await refused(newRsvpLink(c.slug, { id: (await household('The Sterns')).id }), /do not have access/);
   });
 });

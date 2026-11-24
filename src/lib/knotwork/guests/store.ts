@@ -183,14 +183,35 @@ export async function clearRsvp(tx: Tx, ctx: Ctx, guestId: string) {
 
 // ---- RSVP links
 
-/** The household's RSVP link. Made once (32 random bytes; only its sha256 and a sealed copy are stored) and reused. */
+/**
+ * The household's RSVP link. Made once (32 random bytes) and reused. Stored two ways: its sha256, which is what a
+ * guest's request is matched against, and a sealed copy (AES-GCM under AUTH_SECRET, D-46) so a reminder can carry the
+ * same link. A sealed copy that can no longer be opened (AUTH_SECRET was rotated) is NOT replaced here: that would
+ * end, without anyone deciding to, the link already printed on the invitations. The couple replaces it themselves
+ * with replaceRsvpLink (review 2026-11-24, S3; D-59).
+ */
 export async function rsvpLink(tx: Tx, ctx: { orgId: string }, householdId: string): Promise<string> {
-  const h = await tx.household.findFirstOrThrow({ where: { id: householdId, ...inOrg(ctx) }, select: { rsvpTokenSealed: true } });
+  const h = await tx.household.findFirstOrThrow({ where: { id: householdId, ...inOrg(ctx) }, select: { name: true, rsvpTokenHash: true, rsvpTokenSealed: true } });
   const existing = h.rsvpTokenSealed ? openSecret(h.rsvpTokenSealed, 'knotwork-rsvp') : null;
   if (existing) return `${env.APP_URL}/r/${existing}`;
+  if (h.rsvpTokenHash) throw new Refused(`The saved RSVP link for ${h.name} can no longer be read. The link they were sent still works. To send a reminder or show a link, make a new link for them first; the old one will then stop working.`);
+  return mint(tx, householdId);
+}
+
+async function mint(tx: Tx, householdId: string): Promise<string> {
   const token = newToken();
   await tx.household.update({ where: { id: householdId }, data: { rsvpTokenHash: hashToken(token), rsvpTokenSealed: sealSecret(token, 'knotwork-rsvp') } });
   return `${env.APP_URL}/r/${token}`;
+}
+
+/** Revokes the household's link and makes a new one: the old link is a 404 from this moment. Logged, without the token. */
+export async function replaceRsvpLink(tx: Tx, ctx: Ctx, householdId: string): Promise<string> {
+  await lockWedding(tx, ctx.orgId);
+  const h = await tx.household.findFirstOrThrow({ where: { id: householdId, ...inOrg(ctx) }, select: { name: true, state: true } });
+  if (h.state !== 'invited') throw new Refused('This household has not been invited yet, so it has no link.');
+  const url = await mint(tx, householdId);
+  await logChange(tx, ctx, 'household', 'relinked', householdId, h.name, null, { rsvpLink: 'replaced; the earlier link no longer works' });
+  return url;
 }
 
 // ---- waves (P0-4)

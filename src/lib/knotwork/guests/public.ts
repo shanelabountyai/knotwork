@@ -1,5 +1,5 @@
 // The guest's side of an RSVP link (PRD P0-3: "RSVP via tokenized links"). The token is the credential: 32 random
-// bytes, stored only as sha256 (INV-07). This is the ONE Knotwork file allowed to read across orgs (asSystem,
+// bytes, matched by its sha256 (INV-07); a sealed copy is also kept so reminders can reuse the link (D-46). This is the ONE Knotwork file allowed to read across orgs (asSystem,
 // src/core/db/cross-org.ts): the token names the household before any org is known. Everything after that one lookup
 // runs inside the household's own org scope, and everything returned to the guest comes from projection.ts (rule 3).
 import { inOrg } from '@/core/authz/guards';
