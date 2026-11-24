@@ -17,7 +17,7 @@ where they differ. Current phase plan: `docs/knotwork/PHASE-3-PLAN.md`. Session 
    One exception, by owner decision (D-33): while a workspace has one partner and has never had two, that partner's
    requests are approved at once, marked `solo`, through the same `executeApproved`.
 3. **Guest-facing surfaces never leak wave data.** The guest-facing surfaces are a closed list: `/r/[token]` (page,
-   `respond`, `gifts`, `gifts/contribute`) and `/p/[token]` (page, `upload`). Each returns only what its projection
+   `respond`, `gifts`, `gifts/contribute`, `gifts/claim`) and `/p/[token]` (page, `upload`). Each returns only what its projection
    builds: `src/lib/knotwork/guests/projection.ts`, `gifts/projection.ts`, `photos/projection.ts`. None has a list,
    wave, priority, invite date, creation time or state in it; the photo page shows the wedding title and the event
    name and nothing else. Add a field there deliberately or not at all. The sweep (`tests/knotwork/guests-pure.test.ts`,

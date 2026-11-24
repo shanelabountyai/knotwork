@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import * as giftActions from '@/app/o/[org]/wedding/gifts/actions';
 import * as guestActions from '@/app/o/[org]/wedding/guests/actions';
 import { exportSkipped, exportTables } from '@/app/export-hooks';
+import { POST as claimRoute } from '@/app/r/[token]/gifts/claim/route';
 import { POST as contributeRoute } from '@/app/r/[token]/gifts/contribute/route';
 import { POST as respondRoute } from '@/app/r/[token]/respond/route';
 import { now } from '@/core/clock';
@@ -9,13 +10,13 @@ import { withOrg } from '@/core/db/rls';
 import { parseAction } from '@/lib/knotwork/changelog-diff';
 import { addDays, dayOfDb, todayIn } from '@/lib/knotwork/days';
 import { loadRegistry, loadThankYous } from '@/lib/knotwork/gifts/couple';
-import { contributeGift, readGifts } from '@/lib/knotwork/gifts/public';
+import { claimGift, contributeGift, readGifts } from '@/lib/knotwork/gifts/public';
 import { FORBIDDEN_KEYS } from '@/lib/knotwork/guests/projection';
 import { readRsvp } from '@/lib/knotwork/guests/public';
 import { as, db, goToDay, log, makeWedding, ok, outcome, refused, snapshot, type Couple } from './db';
 
 const { importGuests, releaseWave, saveGuestPlan, showRsvpLink } = guestActions;
-const { acknowledgeThankYou, addRegistryItem, closeRegistry, updateRegistryItem } = giftActions;
+const { acknowledgeThankYou, addRegistryItem, addRegistryLink, closeRegistry, updateRegistryItem } = giftActions;
 
 // Group gifting (PRD P0-5) through the real actions and the real guest link. Same world as guests-db.test.ts:
 // cap 8; the A list (Lindqvists, Sterns, Vales, Priya Rao) is invited, the B list (Okoros, Trans, Sam Webb) waits.
@@ -443,6 +444,41 @@ describe('rule 3: the undetectability sweep on the gift page (PRD P0-4)', () => 
     for (const name of ['The Lindqvists', 'The Okoros']) expect(tokens.get(name)).toMatch(/^[\w-]{43}$/);
     // The couple's thank-you list names both households the same way: nothing there is shown to a guest, and nothing in it is a list.
     expect((await thankYous()).map((t) => [t.household, t.item])).toEqual([['The Lindqvists', 'Lantern'], ['The Okoros', 'Tent']]);
+
+    // P1-8: store items on the same page. Someone else (Priya) has already bought one of each before either looks.
+    const store = { store: 'Example Kitchen Co.', price: '45', url: 'https://www.example.com/item' };
+    for (const [title, wanted] of [['Skillet', '3'], ['Lamp', '1'], ['Kettle', '1']] as const) await ok(addRegistryLink(c.slug, { ...store, title, wanted }));
+    const linkId = async (title: string) => (await db.registryLink.findFirstOrThrow({ where: { orgId: c.orgId, title } })).id;
+    const claimAs = async (name: string, title: string, op = 'claim', quantity = '1') => claimGift(tokens.get(name)!, IP, { linkId: await linkId(title), op, quantity });
+    expect(await claimAs('Priya Rao', 'Skillet')).toEqual({ ok: true, done: 'claimed' });
+    // The pooled gifts now differ on purpose (each household completed a different one), so the store items are
+    // compared on their own, and the whole of each page is still swept for anything about waves.
+    const compareLinks = async () => {
+      const [va, vb] = [await viewOf('The Lindqvists'), await viewOf('The Okoros')];
+      expect(mask(vb.links)).toBe(mask(va.links));
+      expect(keys(va).filter((k) => FORBIDDEN_KEYS.includes(k))).toEqual([]);
+      const both = `${JSON.stringify(va)}${JSON.stringify(vb)}`;
+      for (const leak of [dayOfDb(a.invitedOn!), dayOfDb(b.invitedOn!), a.waveId!, b.waveId!, a.id, b.id, c.orgId, 'Priya', 'Rao']) expect(both, leak).not.toContain(leak);
+      expect(both).not.toMatch(/wave|priority|invited|"list"|"state"/i);
+      return va;
+    };
+    await compareLinks();
+    // Both mark one bought, both are refused a second, both take it back: the same answers, and still the same page.
+    expect(await claimAs('The Okoros', 'Skillet')).toEqual(await claimAs('The Lindqvists', 'Skillet'));
+    expect((await compareLinks()).links[0]).toMatchObject({ title: 'Skillet', remaining: 0, wanted: 3, yours: { quantity: 1 } });
+    expect(await claimAs('The Okoros', 'Skillet')).toEqual(await claimAs('The Lindqvists', 'Skillet'));
+    expect(await claimAs('The Okoros', 'Skillet', 'claim', 'x')).toEqual(await claimAs('The Lindqvists', 'Skillet', 'claim', 'x'));
+    expect(await claimAs('The Okoros', 'Skillet', 'withdraw')).toEqual(await claimAs('The Lindqvists', 'Skillet', 'withdraw'));
+    await compareLinks();
+    expect(await claimAs('The Okoros', 'Lamp')).toEqual({ ok: true, done: 'claimed' });
+    expect(await claimAs('The Lindqvists', 'Kettle')).toEqual({ ok: true, done: 'claimed' });
+    const [la, lb] = [await viewOf('The Lindqvists'), await viewOf('The Okoros')];
+    expect(mask(lb.links.find((l) => l.title === 'Lamp'))).toBe(mask(la.links.find((l) => l.title === 'Kettle')).replace('Kettle', 'Lamp'));
+    // The claim route answers both the same way, carrying only a code.
+    const post = async (name: string, title: string) => (await claimRoute(new Request(`http://localhost:8400/r/x/gifts/claim`, { method: 'POST', body: new URLSearchParams({ link: await linkId(title), op: 'claim', quantity: '1' }).toString(), headers: { 'content-type': 'application/x-www-form-urlencoded', 'x-forwarded-for': IP, 'sec-fetch-site': 'same-origin' } }), { params: Promise.resolve({ token: tokens.get(name)! }) })).headers.get('location')!.replace(tokens.get(name)!, 'T');
+    expect(await post('The Okoros', 'Skillet')).toBe(await post('The Lindqvists', 'Skillet'));
+    expect(await post('The Okoros', 'Kettle')).toBe(await post('The Lindqvists', 'Lamp')); // each the one the other bought: taken
+    expect(await post('The Okoros', 'Lamp')).toBe(await post('The Lindqvists', 'Kettle')); // each its own: already
   });
 });
 
@@ -450,11 +486,22 @@ describe('change log: a scripted gifting session covers every gift action', () =
   it('every action leaves its entries, with who', async () => {
     await give('The Vales', 'Record player', '200'); // funded: a thank-you to acknowledge
     await give('The Sterns', 'Canoe trip', '20');
+    await as(c.a);
+    await ok(giftActions.addRegistryLink(c.slug, { title: 'Skillet', store: 'Example Kitchen Co.', url: 'https://www.example.com/skillet', price: '', wanted: '1' }));
+    expect(await claimGift(tokens.get('The Vales')!, IP, { linkId: (await db.registryLink.findFirstOrThrow({ where: { orgId: c.orgId } })).id, op: 'claim', quantity: '1' })).toEqual({ ok: true, done: 'claimed' });
     const steps: [keyof typeof giftActions, () => Promise<Record<string, unknown>> | Record<string, unknown>, string[]][] = [
       ['addRegistryItem', () => ({ title: 'Tent', note: 'For the canoe trip', target: '80.00' }), ['knotwork.registry.created']],
       ['updateRegistryItem', async () => ({ id: (await item('Tent')).id, title: 'Tent', note: 'Three-person', target: '90' }), ['knotwork.registry.updated']],
       ['acknowledgeThankYou', async () => ({ id: (await db.thankYou.findFirstOrThrow({ where: { orgId: c.orgId } })).id }), ['knotwork.thankyou.acknowledged']],
       ['closeRegistry', () => ({ confirm: 'on' }), ['knotwork.registry.closed', 'knotwork.registry.closed']],
+      // P1-8 store items and P1-3 the gift log (a household's claim comes in through its link, before the session).
+      ['addRegistryLink', () => ({ title: 'Napkins', store: 'Example Linens', url: 'https://www.example.com/napkins', price: '30', wanted: '2' }), ['knotwork.registrylink.created']],
+      ['updateRegistryLink', async () => ({ id: (await db.registryLink.findFirstOrThrow({ where: { orgId: c.orgId, title: 'Napkins' } })).id, title: 'Napkins', store: 'Example Linens', url: 'https://www.example.com/napkins', price: '', wanted: '3' }), ['knotwork.registrylink.updated']],
+      ['removeRegistryLink', async () => ({ id: (await db.registryLink.findFirstOrThrow({ where: { orgId: c.orgId, title: 'Napkins' } })).id }), ['knotwork.registrylink.deleted']],
+      ['acknowledgeClaim', async () => ({ id: (await db.registryClaim.findFirstOrThrow({ where: { orgId: c.orgId } })).id }), ['knotwork.claim.acknowledged']],
+      ['logReceivedGift', () => ({ householdId: '', giverName: 'Great-aunt Odile', what: 'linen napkins', receivedOn: '' }), ['knotwork.giftlog.created']],
+      ['acknowledgeReceivedGift', async () => ({ id: (await db.giftLog.findFirstOrThrow({ where: { orgId: c.orgId } })).id }), ['knotwork.giftlog.acknowledged']],
+      ['removeReceivedGift', async () => ({ id: (await db.giftLog.findFirstOrThrow({ where: { orgId: c.orgId } })).id }), ['knotwork.giftlog.deleted']],
     ];
     expect(steps.map((s) => s[0]).sort()).toEqual(Object.keys(giftActions).sort());
     let seen = (await log(c.orgId)).length;
@@ -471,7 +518,7 @@ describe('change log: a scripted gifting session covers every gift action', () =
       seen = all.length;
     }
     const all = await log(c.orgId);
-    expect([...new Set(all.map((e) => parseAction(e.action)!.entity))]).toEqual(expect.arrayContaining(['registry', 'gift', 'thankyou'])); // every gifting entity
+    expect([...new Set(all.map((e) => parseAction(e.action)!.entity))]).toEqual(expect.arrayContaining(['registry', 'gift', 'thankyou', 'registrylink', 'claim', 'giftlog'])); // every gifting entity
     const updated = all.find((e) => e.action === 'knotwork.registry.updated')!;
     expect(updated.data).toMatchObject({ label: 'Tent', before: { note: 'For the canoe trip', targetCents: 8_000 }, after: { note: 'Three-person', targetCents: 9_000 } }); // a target is the couple's own figure
     expect(all.filter((e) => e.action === 'knotwork.registry.funded').map((e) => [(e.data as { label: string }).label, e.actorUserId])).toEqual([['Record player', null]]);

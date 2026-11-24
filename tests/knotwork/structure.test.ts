@@ -48,10 +48,14 @@ describe('rule 1: all deadlines derive from the anchor (no free-floating dates)'
     // from Wedding.date (D-92). P1-2: the day money arrived is a date of fact.
     'Funder.createdAt': 'row timestamp', 'FunderPledge.createdAt': 'row timestamp', 'FunderAllocation.createdAt': 'row timestamp: when the payment from the pledge was recorded',
     'FunderReceipt.receivedOn': 'a date of fact: the day the money arrived', 'FunderReceipt.createdAt': 'row timestamp',
+    // P1-3: how long a thank-you has been owed is computed on read from the day the gift arrived (thanks/aging.ts).
+    'GiftLog.receivedOn': 'a date of fact: the day the gift arrived', 'GiftLog.acknowledgedOn': 'a date of fact: when a partner marked the thank-you as sent', 'GiftLog.createdAt': 'row timestamp',
+    'RegistryLink.createdAt': 'row timestamp',
+    'RegistryClaim.claimedOn': 'a date of fact: the day the household said it bought the item', 'RegistryClaim.acknowledgedOn': 'a date of fact: when a partner marked the thank-you as sent', 'RegistryClaim.createdAt': 'row timestamp',
   };
 
-  it('finds the clone\'s thirty-two models', () => {
-    expect(models.map((m) => m.name)).toHaveLength(32); // twenty from Phases 1 and 2, three for gifting, five for photos and attachments, four for funding (P1-2)
+  it('finds the clone\'s thirty-five models', () => {
+    expect(models.map((m) => m.name)).toHaveLength(35); // twenty from Phases 1 and 2, three for gifting, five for photos and attachments, four for funding (P1-2), three for the gift log and store items (P1-3, P1-8)
   });
   it('a photo event stores day counts, and both of its days are worked out from the wedding date', () => {
     const event = models.find((m) => m.name === 'PhotoEvent')!.body;
@@ -141,9 +145,9 @@ describe('rule 2: designated actions only through the consent module', () => {
 // and exactly which files may touch an uploaded file. Anything outside either list fails here by name.
 describe('rule 3: the guest-facing surfaces are a closed list', () => {
   const strip = (text: string) => text.replace(/\/\/[^\n]*|\/\*[\s\S]*?\*\//g, '');
-  const GUEST_FACING = ['src/app/p/[token]/page.tsx', 'src/app/p/[token]/upload/route.ts', 'src/app/r/[token]/gifts/contribute/route.ts', 'src/app/r/[token]/gifts/page.tsx', 'src/app/r/[token]/page.tsx', 'src/app/r/[token]/respond/route.ts'];
+  const GUEST_FACING = ['src/app/p/[token]/page.tsx', 'src/app/p/[token]/upload/route.ts', 'src/app/r/[token]/gifts/claim/route.ts', 'src/app/r/[token]/gifts/contribute/route.ts', 'src/app/r/[token]/gifts/page.tsx', 'src/app/r/[token]/page.tsx', 'src/app/r/[token]/respond/route.ts'];
 
-  it('the public Knotwork routes are exactly /r/[token] (+ respond, gifts, gifts/contribute) and /p/[token] (+ upload)', () => {
+  it('the public Knotwork routes are exactly /r/[token] (+ respond, gifts, gifts/contribute, gifts/claim) and /p/[token] (+ upload)', () => {
     const routes = globSync('src/app/**/{page,route}.{ts,tsx}', { cwd: ROOT }).sort();
     const isPublic = (f: string) => /^\/\/ public: \S/m.test(read(f));
     expect(routes.filter((f) => /^src\/app\/(r|p)\//.test(f))).toEqual(GUEST_FACING);
@@ -189,7 +193,7 @@ describe('rule 4: uploads are hostile input: one pipeline, and nothing else read
   it('only uploads/read.ts takes a file, or raw bytes, out of a request', () => {
     expect(ours(filesWith(/\.arrayBuffer\(\)|\.blob\(\)|\.bytes\(\)|\breq(uest)?\.body\b|getReader\(|\bFile\b|\bBlob\b/))).toEqual([READ]);
     // formData() elsewhere is the two plain-text guest forms from Phase 2, which keep only strings.
-    const TEXT_FORMS = ['src/app/r/[token]/gifts/contribute/route.ts', 'src/app/r/[token]/respond/route.ts'];
+    const TEXT_FORMS = ['src/app/r/[token]/gifts/claim/route.ts', 'src/app/r/[token]/gifts/contribute/route.ts', 'src/app/r/[token]/respond/route.ts'];
     expect(ours(filesWith(/\.formData\(\)/))).toEqual([...TEXT_FORMS, READ]);
     for (const f of TEXT_FORMS) {
       expect(strip(read(f)).match(/form\.get(All)?\(/g)!.length, f).toBeGreaterThan(0);
@@ -217,7 +221,7 @@ describe('rule 4: uploads are hostile input: one pipeline, and nothing else read
     }
     // A route under the signed-in tree that takes a POST and is not on the list would be a second way in.
     const posts = globSync('src/app/{o,r,p}/**/route.{ts,tsx}', { cwd: ROOT }).sort().filter((f) => /export async function POST\b/.test(read(f)));
-    expect(posts).toEqual([UPLOAD_ROUTES[0]!, UPLOAD_ROUTES[1]!, 'src/app/r/[token]/gifts/contribute/route.ts', 'src/app/r/[token]/respond/route.ts']);
+    expect(posts).toEqual([UPLOAD_ROUTES[0]!, UPLOAD_ROUTES[1]!, 'src/app/r/[token]/gifts/claim/route.ts', 'src/app/r/[token]/gifts/contribute/route.ts', 'src/app/r/[token]/respond/route.ts']);
   });
   it('the pipeline is sniff, cap, decode, re-encode, inspect: in that order, in one function', () => {
     const text = strip(read(PROCESS));
@@ -288,7 +292,7 @@ describe('P0-5 privacy: the couple\'s side never reads what one household gave',
   const coupleSide = [...couplePages, 'src/app/export-hooks.ts'];
 
   it('finds the couple\'s gift pages and actions', () => {
-    expect(giftPages).toEqual(['actions.ts', 'nav.tsx', 'page.tsx', '[id]/page.tsx', 'thank-yous/page.tsx'].map((f) => `src/app/o/[org]/wedding/gifts/${f}`).sort());
+    expect(giftPages).toEqual(['actions.ts', 'nav.tsx', 'page.tsx', '[id]/page.tsx', 'links/[id]/page.tsx', 'thank-yous/page.tsx'].map((f) => `src/app/o/[org]/wedding/gifts/${f}`).sort());
   });
   it('no page, action or export hook on the couple\'s side names a ledger entry or its amount', () => {
     for (const f of [...giftPages, 'src/app/export-hooks.ts']) expect(strip(read(f)), f).not.toMatch(/amountCents/);
@@ -342,7 +346,7 @@ describe('P0-5 privacy: the couple\'s side never reads what one household gave',
     for (const c of ['RegistryItem_target_check', 'GiftEntry_sign_check']) expect(sql).toContain(`ADD CONSTRAINT "${c}"`);
     // Rule 3: the gift page and its route are built from gifts/public.ts, which is built from gifts/projection.ts.
     const guestFacing = globSync('src/app/r/**/*.{ts,tsx}', { cwd: ROOT }).sort();
-    expect(guestFacing).toEqual(['src/app/r/[token]/gifts/contribute/route.ts', 'src/app/r/[token]/gifts/page.tsx', 'src/app/r/[token]/page.tsx', 'src/app/r/[token]/respond/route.ts']);
+    expect(guestFacing).toEqual(['src/app/r/[token]/gifts/claim/route.ts', 'src/app/r/[token]/gifts/contribute/route.ts', 'src/app/r/[token]/gifts/page.tsx', 'src/app/r/[token]/page.tsx', 'src/app/r/[token]/respond/route.ts']);
     for (const f of guestFacing) {
       expect(read(f), f).toMatch(/^\/\/ public: \S/m);
       expect(strip(read(f)), f).not.toMatch(/@\/core\/db|gifts\/(couple|store)|guests\/store|\btx\b|withOrg|asSystem/);

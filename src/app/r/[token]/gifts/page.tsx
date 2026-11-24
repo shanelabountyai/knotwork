@@ -4,6 +4,7 @@ import { notFound } from 'next/navigation';
 import { clientIp } from '@/core/http';
 import { GIFT_DONE, GIFT_PROBLEM, isGiftDone, isGiftProblem } from '@/lib/knotwork/gifts/projection';
 import { readGifts } from '@/lib/knotwork/gifts/public';
+import { LINK_REL, LINK_TARGET } from '@/lib/knotwork/registry/links';
 
 // RULE 3: this page is guest-facing. It renders the GiftView and nothing else: the registry's items and their
 // progress (the same for every household) and this household's own contributions. No list, wave, invite date or state
@@ -32,7 +33,7 @@ export default async function Gifts({ params, searchParams }: { params: Promise<
       <p>No payment is taken on this page: a contribution is recorded, not charged.</p>
       {done && !problem && <p role="status" tabIndex={-1} autoFocus>{done}</p>}
       {problem && <p role="alert" tabIndex={-1} autoFocus>{problem} Nothing was recorded.</p>}
-      {view.items.length === 0 && <p>There are no gifts on the registry yet.</p>}
+      {view.items.length === 0 && view.links.length === 0 && <p>There are no gifts on the registry yet.</p>}
       {view.items.map((item) => (
         <section key={item.id} aria-label={item.title}>
           <h2>{item.title}</h2>
@@ -59,6 +60,38 @@ export default async function Gifts({ params, searchParams }: { params: Promise<
           )}
         </section>
       ))}
+      {view.links.length > 0 && (
+        <section aria-label="From a store">
+          <h2>From a store</h2>
+          <p>These are bought from a store directly. The links open the store in a new tab; nothing is bought or paid here. Once you have bought one, mark it below so nobody else buys the same.</p>
+          {view.links.map((l) => (
+            <section key={l.id} aria-label={l.title}>
+              <h3>{l.title}</h3>
+              <p>
+                {l.href ? <a href={l.href} target={LINK_TARGET} rel={LINK_REL}>{l.store}</a> : l.store}
+                {l.host && <> ({l.host})</>}
+                {l.priceText && <>, about {l.priceText}</>}
+              </p>
+              <p>{l.remaining === 0 ? 'All bought. Thank you.' : `${l.remaining} of ${l.wanted} still wanted.`}</p>
+              {l.yours ? (
+                <form method="post" action={`/r/${token}/gifts/claim`}>
+                  <p>You marked {l.yours.quantity} as bought ({l.yours.onText}).</p>
+                  <input type="hidden" name="link" value={l.id} />
+                  <input type="hidden" name="op" value="withdraw" />
+                  <button type="submit">Take back my mark on {l.title}</button>
+                </form>
+              ) : l.remaining > 0 && (
+                <form method="post" action={`/r/${token}/gifts/claim`}>
+                  <input type="hidden" name="link" value={l.id} />
+                  <input type="hidden" name="op" value="claim" />
+                  <label>How many you bought <input name="quantity" inputMode="numeric" required maxLength={2} defaultValue="1" aria-label={`How many ${l.title} you bought`} /></label>
+                  <button type="submit">I bought {l.title}</button>
+                </form>
+              )}
+            </section>
+          ))}
+        </section>
+      )}
       <p><a href={`/r/${token}`}>Back to your RSVP</a></p>
     </main>
   );

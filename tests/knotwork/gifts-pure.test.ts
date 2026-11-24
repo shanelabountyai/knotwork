@@ -98,7 +98,7 @@ describe('the gift ledger (PRD P0-5: partial contributions toward a target, full
 });
 
 describe('rule 3 and P0-5 privacy: what a household sees of the registry', () => {
-  const input = (list: 'A' | 'B', n: string, own: GiftViewInput['own'] = []): GiftViewInput => ({
+  const input = (list: 'A' | 'B', n: string, own: GiftViewInput['own'] = [], ownClaims: GiftViewInput['ownClaims'] = []): GiftViewInput => ({
     wedding: { title: 'Juniper & Rowan' },
     household: { id: `h-${n}`, name: `The ${n} household`, list, state: 'invited', priority: list === 'A' ? 1 : 50, invitedOn: list === 'A' ? '2027-03-01' : '2027-07-20', waveNumber: list === 'A' ? 1 : 3, createdAt: '2026-11-24T00:00:00Z' },
     items: [
@@ -107,7 +107,14 @@ describe('rule 3 and P0-5 privacy: what a household sees of the registry', () =>
       { id: 'i-3', title: 'Tent', note: '', targetCents: 30_000, potCents: 0, state: 'closed_unfunded', closedOn: '2027-02-01' },
     ],
     own,
+    // P1-8: store items. The internal fields (who else claimed, when the row was made) must have no way out.
+    links: [
+      { id: 'l-1', title: 'Cast-iron skillet', store: 'Example Kitchen Co.', url: 'https://www.example.com/skillet', priceCents: 4_500, quantityWanted: 2, claimed: 1, claimants: ['The Other household'], createdAt: '2026-11-25T00:00:00Z' },
+      { id: 'l-2', title: 'Linen napkins', store: 'Example Linens', url: 'javascript:alert(1)', priceCents: null, quantityWanted: 1, claimed: 1 },
+    ],
+    ownClaims,
   });
+  const claimedOne: GiftViewInput['ownClaims'] = [{ linkId: 'l-1', quantity: 1, on: '2027-04-03', id: 'c-1', householdId: 'h-x', createdAt: '2027-04-03T10:00:00Z' }];
   const mine: GiftViewInput['own'] = [{ itemId: 'i-1', kind: 'contribution', amountCents: 12_345, on: '2027-04-02', id: 'e-1', householdId: 'h-x', createdAt: '2027-04-02T10:00:00Z' }];
   const mask = (s: string) => s.replaceAll(/Alder|Birch/g, 'NAME');
   const walk = (o: unknown): string[] => (o && typeof o === 'object' ? Object.entries(o).flatMap(([k, v]) => [k, ...walk(v)]) : []);
@@ -115,11 +122,12 @@ describe('rule 3 and P0-5 privacy: what a household sees of the registry', () =>
   it('an A-list and a B-list household get the same page, byte for byte, once the name is masked', () => {
     expect(mask(JSON.stringify(giftView(input('B', 'Birch'))))).toBe(mask(JSON.stringify(giftView(input('A', 'Alder')))));
     expect(mask(JSON.stringify(giftView(input('B', 'Birch', mine))))).toBe(mask(JSON.stringify(giftView(input('A', 'Alder', mine)))));
+    expect(mask(JSON.stringify(giftView(input('B', 'Birch', mine, claimedOne))))).toBe(mask(JSON.stringify(giftView(input('A', 'Alder', mine, claimedOne)))));
   });
 
   it('the view has no wave, list, priority, invite date, creation time or state, at any depth', () => {
     for (const list of ['A', 'B'] as const) {
-      const v = giftView(input(list, 'Alder', mine));
+      const v = giftView(input(list, 'Alder', mine, claimedOne));
       expect(walk(v).filter((k) => FORBIDDEN_KEYS.includes(k))).toEqual([]);
       const text = JSON.stringify(v);
       for (const leak of ['2027-03-01', '2027-07-20', '2026-11-24', '2026-11-25', '"B"', 'wave', 'priority', 'invited', 'h-Alder', 'u-1', 'createdAt', 'householdId']) expect(text, leak).not.toContain(leak);
@@ -140,6 +148,17 @@ describe('rule 3 and P0-5 privacy: what a household sees of the registry', () =>
     expect(giftView(input('A', 'Alder')).items[0]).toMatchObject({ raisedText: '$358.01', yoursText: null, yours: [] });
   });
 
+  it('P1-8: a store item shows how many are still wanted and the household\'s own claim; never who else claimed; a bad stored address is no link', () => {
+    const v = giftView(input('A', 'Alder', [], claimedOne));
+    expect(v.links).toEqual([
+      { id: 'l-1', title: 'Cast-iron skillet', store: 'Example Kitchen Co.', href: 'https://www.example.com/skillet', host: 'www.example.com', priceText: '$45.00', wanted: 2, remaining: 1, yours: { quantity: 1, onText: 'Sat, Apr 3, 2027' } },
+      { id: 'l-2', title: 'Linen napkins', store: 'Example Linens', href: null, host: null, priceText: null, wanted: 1, remaining: 0, yours: null },
+    ]);
+    const text = JSON.stringify(giftView(input('A', 'Alder', [], claimedOne)));
+    for (const leak of ['The Other household', 'claimants', 'javascript', 'c-1', 'createdAt']) expect(text, leak).not.toContain(leak);
+    expect(giftView(input('A', 'Alder')).links[0]!.yours).toBeNull();
+  });
+
   it('an excess return and a refund read as money coming back, and the total is what is still in the pot', () => {
     const v = giftView(input('A', 'Alder', [
       { itemId: 'i-2', kind: 'contribution', amountCents: 25_000, on: '2027-01-05' },
@@ -154,8 +173,8 @@ describe('rule 3 and P0-5 privacy: what a household sees of the registry', () =>
   });
 
   it('what a guest is told is a closed list of fixed sentences; a code that is not on it shows nothing', () => {
-    expect(Object.keys(GIFT_PROBLEM).sort()).toEqual(['amount', 'closed', 'fail', 'funded', 'not-here']);
-    expect(Object.keys(GIFT_DONE).sort()).toEqual(['part', 'thanks']);
+    expect(Object.keys(GIFT_PROBLEM).sort()).toEqual(['already', 'amount', 'closed', 'fail', 'funded', 'not-claimed', 'not-here', 'quantity', 'taken', 'too-many']);
+    expect(Object.keys(GIFT_DONE).sort()).toEqual(['claimed', 'part', 'thanks', 'withdrawn']);
     for (const bad of ['', 'constructor', '__proto__', 'toString', '<script>', 'Amount']) expect(isGiftProblem(bad) || isGiftDone(bad), bad).toBe(false);
     // Fixed text: the only figures are the two bounds every household is shown.
     expect(Object.values({ ...GIFT_PROBLEM, ...GIFT_DONE }).join(' ').match(/\$[\d,.]+\d/g)).toEqual(['$1.00', '$100,000.00']);
@@ -170,7 +189,7 @@ describe('gifting is the partners\' alone (PRD P0-5 privacy; P0-2 scoped grants)
       expect(allows({ role: 'admin', grants: [...GRANT_SCOPES] }, cap), cap).toBe(false);
       expect(allows({ role: 'owner', grants: [] }, cap), cap).toBe(true);
     }
-    for (const entity of ['registry', 'gift', 'thankyou']) {
+    for (const entity of ['registry', 'gift', 'thankyou', 'giftlog', 'registrylink', 'claim']) {
       expect(canSeeEntity(everything, entity), entity).toBe(false);
       expect(canSeeEntity({ role: 'owner', grants: [] }, entity), entity).toBe(true);
     }

@@ -5,9 +5,11 @@ import { allows } from '@/lib/knotwork/access';
 import { showDay } from '@/lib/knotwork/days';
 import { loadRegistry } from '@/lib/knotwork/gifts/couple';
 import { usd } from '@/lib/knotwork/money';
+import { LINK_REL, LINK_TARGET, QUANTITY_MAX, URL_MAX } from '@/lib/knotwork/registry/links';
+import { loadLinks } from '@/lib/knotwork/registry/store';
 import { NoWedding, WeddingNav } from '../bits';
 import { view } from '../view';
-import { addRegistryItem, closeRegistry } from './actions';
+import { addRegistryItem, addRegistryLink, closeRegistry } from './actions';
 import { GiftNav } from './nav';
 
 export const metadata = { title: 'Gifts' };
@@ -17,9 +19,9 @@ export const metadata = { title: 'Gifts' };
 // reads a sum per gift and the givers' names, and nothing else exists to show.
 export default async function Gifts({ params }: { params: Promise<{ org: string }> }) {
   const ctx = await requireOrg((await params).org);
-  const data = await view(ctx, 'gifts.view', async (tx) => ({ items: await loadRegistry(tx, ctx) }));
+  const data = await view(ctx, 'gifts.view', async (tx) => ({ items: await loadRegistry(tx, ctx), links: await loadLinks(tx, ctx) }));
   if (!data) return <NoWedding slug={ctx.slug} />;
-  const { v, items } = data;
+  const { v, items, links } = data;
   const canEdit = allows(v.who, 'gifts.edit');
   const open = items.filter((i) => i.state === 'open');
   return (
@@ -44,8 +46,38 @@ export default async function Gifts({ params }: { params: Promise<{ org: string 
         </tbody>
       </table>
 
+      <h2>From a store</h2>
+      <p>Things guests buy from a store themselves. Guests see each one beside the gifts above, follow the link to the store, and mark it as bought so nobody buys the same one twice. Nothing is fetched from the store.</p>
+      {links.length === 0 ? <p>No store items yet.</p> : (
+        <table aria-label="Store items">
+          <thead><tr><th scope="col">Item</th><th scope="col">Store</th><th scope="col">Price</th><th scope="col">Bought</th><th scope="col">Who bought</th></tr></thead>
+          <tbody>
+            {links.map((l) => (
+              <tr key={l.id} aria-label={`Store item ${l.title}`}>
+                <th scope="row">{canEdit ? <Link href={`/o/${ctx.slug}/wedding/gifts/links/${l.id}`}>{l.title}</Link> : l.title}</th>
+                <td>{l.link ? <a href={l.link.href} target={LINK_TARGET} rel={LINK_REL}>{l.store}</a> : l.store}{l.link && <> ({l.link.host})</>}</td>
+                <td>{l.priceCents === null ? 'not given' : usd(l.priceCents)}</td>
+                <td>{l.claimed} of {l.quantityWanted}{l.remaining === 0 ? ', all bought' : ''}</td>
+                <td>{l.claimants.length === 0 ? 'nobody yet' : l.claimants.join(', ')}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+
       {canEdit && (
         <>
+          <h2>Add a store item</h2>
+          <ActionForm action={addRegistryLink.bind(null, ctx.slug)}>
+            <label>Item <input name="title" required maxLength={120} placeholder="Cast-iron skillet" /></label>
+            <label>Store <input name="store" required maxLength={80} placeholder="Example Kitchen Co." /></label>
+            <label>Link to the item <input name="url" type="url" required maxLength={URL_MAX} placeholder="https://www.example.com/skillet" /></label>
+            <label>Price in dollars (optional) <input name="price" inputMode="decimal" placeholder="45.00" /></label>
+            <label>How many you want <input name="wanted" required inputMode="numeric" defaultValue="1" maxLength={2} /></label>
+            <p>The link must start with https://. Up to {QUANTITY_MAX} of one item.</p>
+            <button type="submit">Add store item</button>
+          </ActionForm>
+
           <h2>Add a gift</h2>
           <ActionForm action={addRegistryItem.bind(null, ctx.slug)}>
             <label>Title <input name="title" required maxLength={120} placeholder="Honeymoon canoe trip" /></label>
