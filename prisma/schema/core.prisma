@@ -141,6 +141,12 @@ model Org {
   giftLogs GiftLog[] // app
   registryLinks RegistryLink[] // app
   registryClaims RegistryClaim[] // app
+  nameChanges NameChange[] // app
+  nameChangeSteps NameChangeStep[] // app
+  nameChangeArtifacts NameChangeArtifact[] // app
+  contingencyPlans ContingencyPlan[] // app
+  contingencyRuns ContingencyRun[] // app
+  contingencyItems ContingencyItem[] // app
 }
 
 model Membership {

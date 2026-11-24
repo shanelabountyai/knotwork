@@ -268,6 +268,7 @@ model Vendor {
   briefs             VendorBrief[]
   expenses           Expense[]
   attachments        VendorAttachment[]
+  contingencyItems   ContingencyItem[]
 
   @@index([orgId])
 }
@@ -912,4 +913,132 @@ model RegistryClaim {
   @@unique([linkId, householdId])
   @@index([orgId])
   @@index([householdId])
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
+// Phase 4, P1-4: the name-change sequence. The workflow itself is data (rules/name-change/*.json, illustrative only);
+// these tables hold one partner's progress through it. RULE 1: a step stores no date but the day it was finished (a
+// date of fact); "start after the wedding" is an offset in the rules, worked out from Wedding.date on read. Private
+// to its partner unless shared (D-114): the change log is masked at write like a sealed item (secrecy/seal.ts).
+
+enum NameStepStatus {
+  started
+  done
+}
+
+/// One partner's name change: which jurisdiction's rules it follows, and whether the other partner may see it.
+model NameChange {
+  id           String               @id @default(uuid()) @db.Uuid
+  orgId        String               @db.Uuid
+  org          Org                  @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  /// The partner whose name change this is. Only they change it.
+  userId       String               @db.Uuid
+  /// A rules file's key (rules/name-change/<key>.json); 'generic' is the fallback.
+  jurisdiction String
+  /// False: private to its partner (the default). True: the other partner may read it (never change it).
+  shared       Boolean              @default(false)
+  createdAt    DateTime             @default(now()) @db.Timestamptz(6)
+  steps        NameChangeStep[]
+  artifacts    NameChangeArtifact[]
+
+  @@unique([orgId, userId])
+}
+
+/// A step that has been started or finished. A step with no row has not been started.
+model NameChangeStep {
+  id           String         @id @default(uuid()) @db.Uuid
+  orgId        String         @db.Uuid
+  org          Org            @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  nameChangeId String         @db.Uuid
+  nameChange   NameChange     @relation(fields: [nameChangeId], references: [id], onDelete: Cascade)
+  /// The step's key in the rules file.
+  step         String
+  status       NameStepStatus
+  /// A date of fact: the day it was marked done.
+  completedOn  DateTime?      @db.Date
+
+  @@unique([nameChangeId, step])
+  @@index([orgId])
+}
+
+/// A document the partner holds (a certified marriage certificate, a new Social Security card).
+model NameChangeArtifact {
+  id           String     @id @default(uuid()) @db.Uuid
+  orgId        String     @db.Uuid
+  org          Org        @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  nameChangeId String     @db.Uuid
+  nameChange   NameChange @relation(fields: [nameChangeId], references: [id], onDelete: Cascade)
+  /// The artifact's key in the rules file.
+  artifact     String
+  createdAt    DateTime   @default(now()) @db.Timestamptz(6)
+
+  @@unique([nameChangeId, artifact])
+  @@index([orgId])
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
+// Phase 4, P1-6: contingency decision trees (a rain plan, a vendor no-show). A plan is a small tree of questions whose
+// leaves are actions; executing one branch writes a run, its checklist, the tasks it adds (ordinary tasks with
+// leadDays and bufferDays, so their dates derive from the wedding date, rule 1) and the spends it records or PROPOSES
+// (rule 2: a spend over the threshold only ever becomes a consent request). One run per plan (D-121).
+
+enum ContingencyItemKind {
+  check
+  notify
+}
+
+/// A decision tree (validated by src/lib/knotwork/contingency/tree.ts before it is stored).
+model ContingencyPlan {
+  id          String           @id @default(uuid()) @db.Uuid
+  orgId       String           @db.Uuid
+  org         Org              @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  title       String
+  tree        Json
+  createdById String?          @db.Uuid
+  createdAt   DateTime         @default(now()) @db.Timestamptz(6)
+  run         ContingencyRun?
+
+  @@unique([orgId, title])
+}
+
+/// The one time a plan was put into action: which answers were given, and the fingerprint of the preview executed.
+model ContingencyRun {
+  id           String            @id @default(uuid()) @db.Uuid
+  orgId        String            @db.Uuid
+  org          Org               @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  planId       String            @unique @db.Uuid
+  plan         ContingencyPlan   @relation(fields: [planId], references: [id], onDelete: Cascade)
+  /// The branch taken at each question, from the root (indexes), and the leaf it reached.
+  path         Json
+  leaf         String
+  /// 16 hex characters of the preview that was executed.
+  fingerprint  String
+  /// What executing did: the tasks added, the spends recorded and the requests proposed (ids).
+  result       Json
+  executedById String?           @db.Uuid
+  /// A date of fact: when the branch was executed.
+  executedAt   DateTime          @default(now()) @db.Timestamptz(6)
+  items        ContingencyItem[]
+
+  @@index([orgId])
+}
+
+/// One line of an executed branch's checklist: a thing to do, or a vendor to tell.
+model ContingencyItem {
+  id       String              @id @default(uuid()) @db.Uuid
+  orgId    String              @db.Uuid
+  org      Org                 @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  runId    String              @db.Uuid
+  run      ContingencyRun      @relation(fields: [runId], references: [id], onDelete: Cascade)
+  position Int
+  kind     ContingencyItemKind
+  text     String
+  vendorId String?             @db.Uuid
+  vendor   Vendor?             @relation(fields: [vendorId], references: [id], onDelete: SetNull)
+  /// A date of fact: the day it was ticked off.
+  doneOn   DateTime?           @db.Date
+  doneById String?             @db.Uuid
+
+  @@unique([runId, position])
+  @@index([orgId])
 }

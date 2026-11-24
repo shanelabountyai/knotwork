@@ -4,7 +4,7 @@ import { dbSystem as db } from '@/core/db/system';
 // CLONE-OWNED. The INV-01..04 harness seeds these rows in both fixture orgs, so it can drive
 // actions whose inputs use ref('<model>') for the clone's own tables. Return { model: id } for
 // one row of each model, owned by `org.orgId`. INV-29 (RLS enforce) calls it too, so every org-owned clone table has rows to scope.
-// Knotwork: one row in each of the thirteen Phase 1 tables and the seven Phase 2 tables, the three gifting tables, the five photo and attachment tables, the four Phase 4 funding tables, and the three for the thank-you ledger and store items. Fixed ids: the harness re-seeds before every call, and a
+// Knotwork: one row in each of the thirteen Phase 1 tables and the seven Phase 2 tables, the three gifting tables, the five photo and attachment tables, the four Phase 4 funding tables, the three for the thank-you ledger and store items, and the six for name changes and contingency plans. Fixed ids: the harness re-seeds before every call, and a
 // ref minted once must still resolve. The wedding is far in the future so nothing in the harness plan is late.
 const id = (key: 'a' | 'b', n: number) => `00000000-0000-4000-8000-${String((key === 'a' ? 7000 : 7500) + n).padStart(12, '0')}`;
 
@@ -59,6 +59,16 @@ export async function seedApp(org: { orgId: string; userId: string }, key: 'a' |
   const giftLog = await db.giftLog.create({ data: { id: id(key, 35), orgId, householdId: household.id, what: `harness gift log ${key}`, receivedOn: new Date('2026-11-01T00:00:00Z') } });
   const registryLink = await db.registryLink.create({ data: { id: id(key, 36), orgId, title: `harness store item ${key}`, store: 'Example Store', url: 'https://www.example.com/item', quantityWanted: 2 } });
   const registryClaim = await db.registryClaim.create({ data: { id: id(key, 37), orgId, linkId: registryLink.id, householdId: household.id, quantity: 1, claimedOn: new Date('2026-11-01T00:00:00Z') } });
+  // Phase 4 (P1-4): the harness owner's name change (generic rules), its first step started with both documents it
+  // needs held. (P1-6): a two-outcome plan that already ran once, with one checklist line.
+  const nameChange = await db.nameChange.create({ data: { id: id(key, 38), orgId, userId: org.userId, jurisdiction: 'generic' } });
+  const nameChangeStep = await db.nameChangeStep.create({ data: { id: id(key, 39), orgId, nameChangeId: nameChange.id, step: 'ssa', status: 'started' } });
+  const nameChangeArtifact = await db.nameChangeArtifact.create({ data: { id: id(key, 40), orgId, nameChangeId: nameChange.id, artifact: 'marriage-certificate' } });
+  await db.nameChangeArtifact.create({ data: { id: id(key, 44), orgId, nameChangeId: nameChange.id, artifact: 'proof-of-identity' } });
+  const tree = { root: 'q', nodes: { q: { type: 'question', text: 'Rain?', branches: [{ label: 'Yes', next: 'wet' }, { label: 'No', next: 'dry' }] }, wet: { type: 'leaf', title: 'Move inside', checklist: ['Move the chairs'], notify: [], tasks: [], spends: [] }, dry: { type: 'leaf', title: 'Nothing changes', checklist: [], notify: [], tasks: [], spends: [] } } };
+  const contingencyPlan = await db.contingencyPlan.create({ data: { id: id(key, 41), orgId, title: `harness plan ${key}`, tree } });
+  const contingencyRun = await db.contingencyRun.create({ data: { id: id(key, 42), orgId, planId: contingencyPlan.id, path: [0], leaf: 'wet', fingerprint: '0000000000000000', result: { tasks: [], expenses: [], requests: [] } } });
+  const contingencyItem = await db.contingencyItem.create({ data: { id: id(key, 43), orgId, runId: contingencyRun.id, position: 0, kind: 'check', text: 'Move the chairs' } });
   return {
     wedding: wedding.id, task: task.id, taskDependency: dependency.id, scheduleBaseline: baseline.id, budgetCategory: category.id, expense: expense.id, budgetSnapshot: snapshot.id,
     vendor: vendor.id, vendorPayment: payment.id, vendorFlag: flag.id, vendorBrief: brief.id, consentRequest: request.id, helperGrant: grant.id,
@@ -67,6 +77,8 @@ export async function seedApp(org: { orgId: string; userId: string }, key: 'a' |
     photoEvent: photoEvent.id, photoDevice: photoDevice.id, photo: photo.id, photoBlob: photoBlob.id, vendorAttachment: vendorAttachment.id,
     funder: funder.id, funderPledge: pledge.id, funderReceipt: receipt.id, funderAllocation: allocation.id,
     giftLog: giftLog.id, registryLink: registryLink.id, registryClaim: registryClaim.id,
+    nameChange: nameChange.id, nameChangeStep: nameChangeStep.id, nameChangeArtifact: nameChangeArtifact.id,
+    contingencyPlan: contingencyPlan.id, contingencyRun: contingencyRun.id, contingencyItem: contingencyItem.id,
   };
 }
 
