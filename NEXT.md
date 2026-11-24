@@ -1,5 +1,33 @@
 # NEXT
 
+## ▶ 2026-11-24 (later): independent review of PR #2 and PR #3; fixes pushed; Phase 3 NOT started
+Unattended run Shane asked for in chat on 2026-11-24. Two review agents that had not seen the author's reasoning read
+each PR; every finding was then reproduced with a failing test or traced before anything was changed. Decisions D-55
+to D-61. The full account is the "Independent review (2026-11-24)" comment on each PR.
+
+- **PR #2 (solo mode): 1 must-fix, 4 should-fix, all fixed** on `solo-partner` and merged into `phase-2`. The solo
+  migration left already-paired weddings unpaired (backfill migration `20261124000003`); the pairing latch is now set
+  by the database when the second partner joins (`20261124000004`), not by the next page load; a solo action is logged
+  as solo, not as two keys.
+- **PR #3 (Phase 2): 4 must-fix, 9 should-fix.** Fixed: a full room crashed a guest's reply (500); several replies at
+  once could add several plus-ones; an approved removal could push held seats past the cap; a rule-2 structure test
+  had been narrowed; the reply redirect carried free text and names; dietary-only changes were not logged; guest text
+  could forge lines on the DJ's brief; a plus-one could attend without their host; the CSV parser took 186 seconds on
+  one hostile line and ran before the access check; a link could not be revoked and was silently replaced after a
+  secret rotation; RSVP messages were not announced. Tests: `tests/knotwork/guests-review.test.ts` (17) and additions
+  to `solo.test.ts` (7), `structure.test.ts`, `guests-db.test.ts`, `e2e/guests.spec.ts`.
+- **Left for Shane (product calls, not fixed):** the plus-one seat rule (D-60), whether a removal re-entitles (D-58),
+  RSVP link expiry (D-59), whether closing the B list or a lockout to regrets should be undoable or need both keys
+  (D-50), two wordings ("you can change it here until the RSVP date" against D-51; "Needs both of you" shown in solo
+  mode), and keeping what a guest typed when a reply is refused.
+- **Why Phase 3 was not started:** the run's rule was "only if the review ends clean", and clean excluded any open
+  product call that changes the RSVP projection or the Phase 2 data model. D-60 option (b) changes what the RSVP page
+  offers, and D-59 option (b) adds a column; both are open. Phase 3's photo-upload links also copy whatever D-59
+  settles.
+- **Gate and CI:** in the PR comments, per check.
+- **You:** read the two review comments; answer D-60 and D-59 (a line each is enough); merge #2, then #3; then say
+  "Phase 3".
+
 ## ▶ 2026-11-24: Knotwork Phase 2 built (branch `phase-2`, draft PR against main, not merged, not deployed)
 Shane asked for it in chat ("Merge, then Phase 2"). Plan: `docs/knotwork/PHASE-2-PLAN.md`. Stacked on `solo-partner`
 (PR #2), so merge #2 first. Stopped at the Phase 2 gate; Phase 3 is not started. Shane's ten answers to the PRD v1.1
