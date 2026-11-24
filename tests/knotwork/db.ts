@@ -1,5 +1,6 @@
 // Shared by the Knotwork database tests: a synthetic couple (two owners), a helper, and a wedding from the template.
 import { expect } from 'vitest';
+import { advanceClock } from '@/core/clock';
 import { dbSystem as db } from '@/core/db/system';
 import { createWedding } from '@/app/o/[org]/wedding/actions';
 import { resetAuthTables, signInAs } from '../helpers/auth';
@@ -60,3 +61,12 @@ export async function snapshot(): Promise<string> {
 }
 
 export const log = (orgId: string) => db.auditEvent.findMany({ where: { orgId, action: { startsWith: 'knotwork.' } }, orderBy: { id: 'asc' } });
+
+/**
+ * Moves the clock to midday (US Central) on a calendar day. Use this, not advanceClock(days × 24h), when a test then
+ * counts calendar days: a jump of N × 24 hours across a daylight-saving change lands an hour off, which is the next
+ * calendar day for a test that happens to run between 11 pm and midnight Central. (CI found that on 2026-11-24.)
+ */
+export function goToDay(day: string) {
+  advanceClock(Date.parse(`${day}T18:00:00Z`) - Date.now());
+}

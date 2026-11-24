@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { addVendor, approveRequest, proposeBooking, regenerateBrief, updateVendor } from '@/app/o/[org]/wedding/actions';
 import * as guestActions from '@/app/o/[org]/wedding/guests/actions';
-import { advanceClock, now } from '@/core/clock';
+import { now } from '@/core/clock';
 import { withOrg } from '@/core/db/rls';
 import { hashToken } from '@/core/tokens';
 import { parseAction } from '@/lib/knotwork/changelog-diff';
@@ -9,7 +9,7 @@ import { addDays, dayOfDb, todayIn } from '@/lib/knotwork/days';
 import { FORBIDDEN_KEYS } from '@/lib/knotwork/guests/projection';
 import { readRsvp, submitRsvp } from '@/lib/knotwork/guests/public';
 import { loadChase, loadGuestState, rsvpDeadline } from '@/lib/knotwork/guests/store';
-import { as, db, log, makeWedding, ok, outcome, refused, snapshot, type Couple } from './db';
+import { as, db, goToDay, log, makeWedding, ok, outcome, refused, snapshot, type Couple } from './db';
 
 const { addDoNotPlay, addGuest, addHousehold, closeBList, importGuests, markCalled, markSaveTheDate, proposeGuestRemoval, recordRsvp, releaseWave, removeDoNotPlay, saveGuestPlan, sendReminders, showRsvpLink, updateGuest, updateHousehold } = guestActions;
 
@@ -137,7 +137,7 @@ describe('waves and the cap (PRD P0-4)', () => {
     await decline('The Vales');
     await decline('The Sterns');
     await refused(closeBList(c.slug, {}), /Nothing to close/); // 330 days out
-    advanceClock((330 - 41) * 86_400_000); // 41 days to go: inside the 42-day lockout
+    goToDay(addDays(date, -41)); // 41 days to go: inside the 42-day lockout
     await as(c.a); // a session does not outlive a jump of weeks
     await refused(releaseWave(c.slug, { list: 'B' }), /Too close to the wedding/);
     await ok(closeBList(c.slug, {}));
@@ -240,7 +240,7 @@ describe('rule 3: the undetectability sweep on real responses (PRD P0-4)', () =>
     await ok(releaseWave(c.slug, { list: 'A' }));
     await decline('The Vales');
     await decline('The Sterns');
-    advanceClock(30 * 86_400_000); // the B wave goes out a month later
+    goToDay(addDays(date, -300)); // the B wave goes out a month later
     await as(c.a); // a session does not outlive a jump of weeks
     await ok(releaseWave(c.slug, { list: 'B' }));
     const [a, b] = [await household('The Lindqvists'), await household('The Okoros')];
@@ -256,7 +256,7 @@ describe('rule 3: the undetectability sweep on real responses (PRD P0-4)', () =>
 
     // The reminders both households get (captured in the outbox, never sent) are the same text too.
     const deadline = await withOrg({ orgId: c.orgId }, async (tx) => rsvpDeadline(tx, { orgId: c.orgId }, await db.wedding.findUniqueOrThrow({ where: { orgId: c.orgId } })));
-    advanceClock((330 - 28 - 14) * 86_400_000); // to 14 days before the RSVP deadline (the offset is from the real now)
+    goToDay(addDays(deadline, -14)); // 14 days before the RSVP deadline
     await as(c.a); // a session does not outlive a jump of weeks
     expect(addDays(today(), 14)).toBe(deadline);
     await ok(sendReminders(c.slug, {}));
@@ -276,7 +276,7 @@ describe('chasing (PRD P0-3): the worklist follows the derived deadline', () => 
     // No booked vendor asks for a count, so RSVPs are due 14 + 14 days before the wedding (D-44).
     expect((await chase()).deadline).toBe(addDays(date, -28));
     await refused(sendReminders(c.slug, {}), /No reminder is due today/);
-    advanceClock((330 - 28 - 21) * 86_400_000); // 21 days before the deadline
+    goToDay(addDays(date, -28 - 21)); // 21 days before the deadline
     await as(c.a); // a session does not outlive a jump of weeks
     expect((await chase()).daysLeft).toBe(21);
     expect((await chase()).plan).toEqual({ remind: expect.arrayContaining([expect.objectContaining({ step: 21 })]), call: [(await household('The Vales')).id] }); // the Vales have no email
@@ -287,7 +287,7 @@ describe('chasing (PRD P0-3): the worklist follows the derived deadline', () => 
     expect((await db.outbox.findFirstOrThrow({ where: { orgId: c.orgId, to: 'linda@lindqvist.example' } })).data).toMatchObject({ subject: 'Please reply: Juniper & Rowan' });
     expect(await db.outbox.count({ where: { orgId: c.orgId, sentAt: { not: null } } })).toBe(0); // queued, not sent: no cron ran
     await decline('The Sterns'); // answered: off every list
-    advanceClock((330 - 28 - 3) * 86_400_000); // 3 days before
+    goToDay(addDays(date, -28 - 3)); // 3 days before
     await as(c.a); // a session does not outlive a jump of weeks
     const late = await chase();
     expect(late.plan.remind.map((r) => r.step)).toEqual([3, 3]);
