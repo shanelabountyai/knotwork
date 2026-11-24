@@ -1,25 +1,12 @@
 // public: the RSVP token is the credential; same-origin form posts only; rate limited per address
 import { NextResponse } from 'next/server';
-import { clientIp, isSameOrigin } from '@/core/http';
+import { clientIp } from '@/core/http';
 import { problemCodeOf } from '@/lib/knotwork/guests/projection';
 import { readRsvp, submitRsvp } from '@/lib/knotwork/guests/public';
+import { fromThisSite } from '@/lib/knotwork/guests/same-site';
 
 // A guest's reply (PRD P0-3). A plain form post, so it works with no script. The fields are named per guest id as the
 // page rendered them; the store checks every id against that guest's own household (projection.checkRsvp).
-/**
- * The RSVP page is served with Referrer-Policy: no-referrer (the token is in the URL), and under that policy a browser
- * sends `Origin: null` even on a same-origin form post, so the template's isSameOrigin alone refuses every real reply.
- * Sec-Fetch-Site still tells the truth where it exists. So: a browser that says the post is cross-site, or an Origin
- * that names another site, is refused; a missing or null Origin with no Sec-Fetch-Site (an older browser) is let in,
- * because the token is the credential and whoever holds it could post directly anyway (D-45).
- */
-function fromThisSite(h: Headers): boolean {
-  const site = h.get('sec-fetch-site');
-  if (site) return site === 'same-origin';
-  const origin = h.get('origin');
-  return !origin || origin === 'null' || isSameOrigin(h);
-}
-
 export async function POST(req: Request, { params }: { params: Promise<{ token: string }> }) {
   const { token } = await params;
   const back = (query: string) => new NextResponse(null, { status: 303, headers: { Location: `/r/${encodeURIComponent(token)}${query}`, 'Cache-Control': 'no-store' } });

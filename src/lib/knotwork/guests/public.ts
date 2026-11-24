@@ -22,6 +22,16 @@ async function find(token: string): Promise<{ orgId: string; id: string } | null
   return asSystem((sys) => sys.household.findFirst({ where: { rsvpTokenHash: hashToken(token), state: 'invited' }, select: { orgId: true, id: true } }));
 }
 
+/**
+ * The household an RSVP link names, for the other page on the same link (/r/[token]/gifts, D-63). The same rate limit
+ * and the same answers as the RSVP page: 'limited', or null for an unknown, malformed or not-yet-invited token.
+ * Exported so gifts/public.ts does not need a second cross-org lookup (INV-32: this stays the one file).
+ */
+export async function householdOfLink(token: string, ip: string): Promise<{ orgId: string; id: string } | 'limited' | null> {
+  if (!(await hit(`rsvp:ip:${ip}`, RSVP_LIMIT))) return 'limited';
+  return find(token);
+}
+
 async function viewOf(tx: Tx, orgId: string, householdId: string): Promise<RsvpView | null> {
   const ctx = { orgId };
   const h = await tx.household.findFirst({ where: { id: householdId, ...inOrg(ctx), state: 'invited' }, include: { guests: { orderBy: [{ createdAt: 'asc' }, { id: 'asc' }] } } });

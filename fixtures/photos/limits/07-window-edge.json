@@ -1,0 +1,60 @@
+{
+  "name": "07-window-edge",
+  "note": "Small limits. Windows are fixed, not sliding: three at the end of one window and three at the start of the next are all accepted (six inside a minute). Documented, not hidden: src/core/rate-limit.ts says the same.",
+  "limits": {
+    "perDevice": {
+      "limit": 3,
+      "windowMinutes": 10
+    },
+    "perAddress": {
+      "limit": 8,
+      "windowMinutes": 10
+    },
+    "perEvent": {
+      "limit": 12,
+      "windowMinutes": 60
+    }
+  },
+  "steps": [
+    {
+      "from": 570,
+      "every": 10,
+      "count": 3,
+      "devices": [
+        "d01"
+      ],
+      "address": "venue"
+    },
+    {
+      "from": 600,
+      "every": 10,
+      "count": 3,
+      "devices": [
+        "d01"
+      ],
+      "address": "venue"
+    },
+    {
+      "t": 640,
+      "device": "d01",
+      "address": "venue"
+    }
+  ],
+  "expect": {
+    "attempts": 7,
+    "totals": {
+      "device": 1,
+      "ok": 6
+    },
+    "runs": [
+      [
+        "ok",
+        6
+      ],
+      [
+        "device",
+        1
+      ]
+    ]
+  }
+}

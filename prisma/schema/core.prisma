@@ -126,6 +126,14 @@ model Org {
   headcountDeltas HeadcountDelta[] // app
   chaseEvents ChaseEvent[] // app
   doNotPlay DoNotPlay[] // app
+  registryItems RegistryItem[] // app
+  giftEntries GiftEntry[] // app
+  thankYous ThankYou[] // app
+  photoEvents PhotoEvent[] // app
+  photoDevices PhotoDevice[] // app
+  photos Photo[] // app
+  photoBlobs PhotoBlob[] // app
+  vendorAttachments VendorAttachment[] // app
 }
 
 model Membership {

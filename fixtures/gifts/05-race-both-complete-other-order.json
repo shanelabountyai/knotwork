@@ -1,0 +1,84 @@
+{
+  "name": "05-race-both-complete-other-order",
+  "note": "The same race as 04 with h3 served first: the pot is the target either way.",
+  "targetCents": 50000,
+  "race": true,
+  "steps": [
+    {
+      "op": "contribute",
+      "household": "h1",
+      "offerCents": 30000
+    },
+    {
+      "op": "contribute",
+      "household": "h3",
+      "offerCents": 25000
+    },
+    {
+      "op": "contribute",
+      "household": "h2",
+      "offerCents": 25000
+    }
+  ],
+  "expect": {
+    "steps": [
+      {
+        "ok": true,
+        "lines": [
+          {
+            "kind": "contribution",
+            "amountCents": 30000
+          }
+        ],
+        "potCents": 30000,
+        "state": "open"
+      },
+      {
+        "ok": true,
+        "lines": [
+          {
+            "kind": "contribution",
+            "amountCents": 25000
+          },
+          {
+            "kind": "excess_return",
+            "amountCents": -5000
+          }
+        ],
+        "potCents": 50000,
+        "state": "funded"
+      },
+      {
+        "ok": false,
+        "code": "funded"
+      }
+    ],
+    "entries": [
+      {
+        "kind": "contribution",
+        "amountCents": 30000,
+        "householdId": "h1"
+      },
+      {
+        "kind": "contribution",
+        "amountCents": 25000,
+        "householdId": "h3"
+      },
+      {
+        "kind": "excess_return",
+        "amountCents": -5000,
+        "householdId": "h3"
+      }
+    ],
+    "potCents": 50000,
+    "state": "funded",
+    "net": {
+      "h1": 30000,
+      "h3": 20000
+    },
+    "thankYous": [
+      "h1",
+      "h3"
+    ]
+  }
+}

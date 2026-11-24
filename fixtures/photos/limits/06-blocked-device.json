@@ -1,0 +1,72 @@
+{
+  "name": "06-blocked-device",
+  "note": "Small limits. d02 is blocked: every upload of its is refused before any counter is touched, so its three tries take none of the address's eight and the other three phones' eight uploads all fit.",
+  "limits": {
+    "perDevice": {
+      "limit": 3,
+      "windowMinutes": 10
+    },
+    "perAddress": {
+      "limit": 8,
+      "windowMinutes": 10
+    },
+    "perEvent": {
+      "limit": 12,
+      "windowMinutes": 60
+    }
+  },
+  "blocked": [
+    "d02"
+  ],
+  "steps": [
+    {
+      "from": 0,
+      "every": 5,
+      "count": 11,
+      "devices": [
+        "d01",
+        "d02",
+        "d03",
+        "d04"
+      ],
+      "address": "venue"
+    }
+  ],
+  "expect": {
+    "attempts": 11,
+    "totals": {
+      "blocked": 3,
+      "ok": 8
+    },
+    "runs": [
+      [
+        "ok",
+        1
+      ],
+      [
+        "blocked",
+        1
+      ],
+      [
+        "ok",
+        3
+      ],
+      [
+        "blocked",
+        1
+      ],
+      [
+        "ok",
+        3
+      ],
+      [
+        "blocked",
+        1
+      ],
+      [
+        "ok",
+        1
+      ]
+    ]
+  }
+}

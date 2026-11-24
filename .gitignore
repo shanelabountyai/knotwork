@@ -12,6 +12,8 @@ src/generated/
 *.tsbuildinfo
 .vercel
 uploads/
+# ...except Knotwork's upload pipeline, which is source code and not a folder of uploaded files (CLAUDE.md rule 4)
+!src/lib/knotwork/uploads/
 next-env.d.ts
 .DS_Store
 spikes/**/generated/

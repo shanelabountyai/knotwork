@@ -1,4 +1,5 @@
 import { pathToFileURL } from 'node:url';
+import sharp from 'sharp';
 import { sealSecret } from '@/core/auth/secret-box';
 import { now } from '@/core/clock';
 import { db } from '@/core/db'; // importing it is what refuses a cloud database (INV-18)
@@ -8,7 +9,11 @@ import { logChange } from '@/lib/knotwork/changelog';
 import { decide, propose } from '@/lib/knotwork/consent/store';
 import { requireWedding } from '@/lib/knotwork/context';
 import { addDays, dbOfDay, todayIn, type Day } from '@/lib/knotwork/days';
+import { addItem, contribute } from '@/lib/knotwork/gifts/store';
 import { applyRsvp, importHouseholds, releaseWave, savePlan } from '@/lib/knotwork/guests/store';
+import { addPhoto, createEvent, moderatePhoto } from '@/lib/knotwork/photos/store';
+import { processUpload, type Processed } from '@/lib/knotwork/uploads/process';
+import { hashToken } from '@/core/tokens';
 import { createWedding } from '@/lib/knotwork/schedule/store';
 import { addPayment, generateBrief, updateVendor } from '@/lib/knotwork/vendors/store';
 import { DEMO_TOTP_SECRET } from '../seed-demo';
@@ -153,6 +158,48 @@ export async function seedCouple(opts: { today?: Day } = {}): Promise<string[]> 
     for (const id of vendors.values()) await generateBrief(tx, a, id);
   });
 
+  // Phase 3: the registry. Two pooled gifts (mock money: nothing is charged). The canoe trip is partly funded by two
+  // households; the record player is funded, the last offer having been more than was needed (the excess went back),
+  // so two thank-yous are owed. Every household and amount is invented.
+  await withOrg({ orgId }, async (tx) => {
+    const canoe = await addItem(tx, a, { title: 'Honeymoon canoe trip', note: 'Two days on the Buffalo River', targetCents: 60_000 });
+    const player = await addItem(tx, b, { title: 'Record player', note: '', targetCents: 20_000 });
+    const gives = async (household: string, itemId: string, cents: number) => {
+      const h = await tx.household.findFirstOrThrow({ where: { orgId, name: household }, select: { id: true } });
+      const r = await contribute(tx, orgId, h.id, itemId, cents);
+      if (!r?.ok) throw new Error(`seed: ${household} could not give`);
+    };
+    await gives('The Lindqvists', canoe.id, 15_000);
+    await gives('The Ashbys', canoe.id, 10_000);
+    await gives('The Vales', player.id, 12_000);
+    await gives('Priya Rao', player.id, 10_000);
+  });
+
+  // Phase 3: the photo wall. One event, "Reception", where each photo waits for approval (the demo story: a guest's
+  // photo reaches the moderated wall once approved). Four SYNTHETIC pictures: flat colours drawn here, no photograph
+  // of anything or anyone, each put through the real upload pipeline. Three are approved; one is still waiting.
+  const pictures = [
+    { colour: { r: 176, g: 196, b: 222 }, name: 'Linda', caption: 'The arch at golden hour', approve: true },
+    { colour: { r: 222, g: 184, b: 135 }, name: 'Hal', caption: 'First dance', approve: true },
+    { colour: { r: 143, g: 188, b: 143 }, name: '', caption: '', approve: true },
+    { colour: { r: 219, g: 112, b: 147 }, name: 'Ben', caption: 'The cake, before', approve: false },
+  ];
+  const processed: ((typeof pictures)[number] & { image: Processed })[] = [];
+  for (const p of pictures) {
+    const r = await processUpload(await sharp({ create: { width: 1200, height: 800, channels: 3, background: p.colour } }).jpeg().toBuffer());
+    if (!r.ok) throw new Error(`seed: a synthetic picture was refused (${r.code})`);
+    processed.push({ ...p, image: r.image });
+  }
+  await withOrg({ orgId }, async (tx) => {
+    const event = await createEvent(tx, a, { name: 'Reception', mode: 'pre', uploadDays: 7, retentionDays: 365 });
+    for (const [i, p] of processed.entries()) {
+      // Two invented devices: no cookie exists for either, so neither can ever be presented by a browser.
+      const stored = await addPhoto(tx, orgId, event.id, hashToken(`seed-device-${(i % 2) + 1}`), { name: p.name, caption: p.caption }, p.image);
+      if (!stored?.ok) throw new Error('seed: a photo could not be stored');
+      if (p.approve) await moderatePhoto(tx, i % 2 ? b : a, stored.id, 'approve');
+    }
+  });
+
   const counts = await withOrg({ orgId }, async (tx) => ({
     tasks: await tx.task.count({ where: { orgId } }),
     vendors: await tx.vendor.count({ where: { orgId } }),
@@ -161,9 +208,13 @@ export async function seedCouple(opts: { today?: Day } = {}): Promise<string[]> 
     expenses: await tx.expense.count({ where: { orgId } }),
     households: await tx.household.count({ where: { orgId } }),
     guests: await tx.guest.count({ where: { orgId } }),
+    gifts: await tx.registryItem.count({ where: { orgId } }),
+    funded: await tx.registryItem.count({ where: { orgId, state: 'funded' } }),
+    photos: await tx.photo.count({ where: { orgId } }),
+    photosLive: await tx.photo.count({ where: { orgId, status: 'live' } }),
   }));
   return [
-    `${COUPLE.name} (/o/${COUPLE.slug}): wedding on ${date}, ${counts.tasks} tasks, ${counts.vendors} vendors (${counts.booked} booked), ${counts.expenses} spends, ${counts.requests} approved requests, ${counts.households} households (${counts.guests} guests)`,
+    `${COUPLE.name} (/o/${COUPLE.slug}): wedding on ${date}, ${counts.tasks} tasks, ${counts.vendors} vendors (${counts.booked} booked), ${counts.expenses} spends, ${counts.requests} approved requests, ${counts.households} households (${counts.guests} guests), ${counts.gifts} registry gifts (${counts.funded} funded), ${counts.photos} photos on one wall (${counts.photosLive} approved)`,
     `${COUPLE.juniper.email}  owner (partner)  (TOTP)`,
     `${COUPLE.rowan.email}  owner (partner)  (TOTP)`,
     `${COUPLE.maple.email}  member (helper: sees the budget)`,

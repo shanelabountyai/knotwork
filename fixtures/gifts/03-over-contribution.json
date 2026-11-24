@@ -1,0 +1,74 @@
+{
+  "name": "03-over-contribution",
+  "note": "The second offer is more than what remains: the whole offer is entered, the excess goes straight back, and the pot is the target exactly.",
+  "targetCents": 50000,
+  "steps": [
+    {
+      "op": "contribute",
+      "household": "h1",
+      "offerCents": 40000
+    },
+    {
+      "op": "contribute",
+      "household": "h2",
+      "offerCents": 30000
+    }
+  ],
+  "expect": {
+    "steps": [
+      {
+        "ok": true,
+        "lines": [
+          {
+            "kind": "contribution",
+            "amountCents": 40000
+          }
+        ],
+        "potCents": 40000,
+        "state": "open"
+      },
+      {
+        "ok": true,
+        "lines": [
+          {
+            "kind": "contribution",
+            "amountCents": 30000
+          },
+          {
+            "kind": "excess_return",
+            "amountCents": -20000
+          }
+        ],
+        "potCents": 50000,
+        "state": "funded"
+      }
+    ],
+    "entries": [
+      {
+        "kind": "contribution",
+        "amountCents": 40000,
+        "householdId": "h1"
+      },
+      {
+        "kind": "contribution",
+        "amountCents": 30000,
+        "householdId": "h2"
+      },
+      {
+        "kind": "excess_return",
+        "amountCents": -20000,
+        "householdId": "h2"
+      }
+    ],
+    "potCents": 50000,
+    "state": "funded",
+    "net": {
+      "h1": 40000,
+      "h2": 10000
+    },
+    "thankYous": [
+      "h1",
+      "h2"
+    ]
+  }
+}

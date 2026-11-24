@@ -1,5 +1,30 @@
 # NEXT
 
+## ▶ 2026-11-24 (latest): PR #2 and PR #3 merged; Knotwork Phase 3 built (branch `phase-3`, draft PR, not merged, not deployed)
+Shane asked in chat: "Good to merge and start next phase". PR #2 then PR #3 were merged with merge commits (main at
+160b037). He did not pick among the options the review left open, so they were taken "as built" (D-62) and are still
+open. Plan: `docs/knotwork/PHASE-3-PLAN.md`. Decisions D-62 to D-88. Phase 4 is not started.
+
+- **P0-5 group gifting:** a household gives through its own RSVP link (`/r/[token]/gifts`); an append-only ledger in
+  integer cents (mock money); a pot lands on its target exactly, an over-offer gets an excess return; funding writes
+  one thank-you per giving household; closing refunds every unfunded gift. The couple sees totals and names, never an
+  amount per giver (structure test, database test, export and change log checked).
+- **One upload pipeline (rule 4, D-39):** `src/lib/knotwork/uploads/`. JPEG, PNG, WebP by magic bytes; 10 MB and 50
+  megapixels; everything stored is re-encoded and then re-inspected for metadata; the raw upload is never stored.
+- **P0-6 photo wall:** `/p/[token]` upload link with a QR code, no account; pre- or post-moderation; takedown with
+  undo; device blocking; limits as data; dark polling wall; album, zip download, retention purge derived from the
+  wedding date. Contract attachments on the vendor page use the same pipeline (images only, D-65).
+- **Gate (cloud sandbox, 2026-11-24, re-run after the build):** lint 0 problems; typecheck clean; vitest 1180 passed /
+  48 skipped (RLS off) and 1227 passed / 1 skipped (RLS enforce); `foundation:drift` clean; `fixtures:check` 42 the
+  same; pytest 74 passed. Run once by the build workers: build OK, `foundation:check-modules` pass, Playwright 34
+  passed, sandbox schema check no difference.
+- **Not verified:** `prisma migrate deploy` / `migrate diff` (D-04; CI is the proof); the upload page on a real phone
+  (camera picker, HEIC); load beyond the 200-upload fixture (sharp runs in the request, the zip is built in memory).
+- **Open for Shane:** from the review: D-58, D-59, D-60, S4 (regrets are final). From this phase: D-65 (PDF
+  contracts), D-70 (one giver's amount equals the total), D-72 (closing the registry is one key), D-79 and D-80
+  (device cookie; what a blocked device is told), D-81 (the wall needs a signed-in laptop), D-82 (retention).
+- **You:** review the Phase 3 PR; answer what you care about above; then "Phase 4" (P1 items in ranked order).
+
 ## ▶ 2026-11-24 (later): independent review of PR #2 and PR #3; fixes pushed; Phase 3 NOT started
 Unattended run Shane asked for in chat on 2026-11-24. Two review agents that had not seen the author's reasoning read
 each PR; every finding was then reproduced with a failing test or traced before anything was changed. Decisions D-55

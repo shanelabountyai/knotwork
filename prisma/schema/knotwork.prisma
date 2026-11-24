@@ -70,6 +70,7 @@ enum GrantScope {
   vendors_view
   vendors_edit
   guests_edit
+  photos_moderate
 }
 
 enum BaselineKind {
@@ -247,6 +248,7 @@ model Vendor {
   flags              VendorFlag[]
   briefs             VendorBrief[]
   expenses           Expense[]
+  attachments        VendorAttachment[]
 
   @@index([orgId])
 }
@@ -446,6 +448,8 @@ model Household {
   createdAt         DateTime         @default(now()) @db.Timestamptz(6)
   guests            Guest[]
   chaseEvents       ChaseEvent[]
+  giftEntries       GiftEntry[]
+  thankYous         ThankYou[]
 
   @@unique([orgId, name])
 }
@@ -538,4 +542,210 @@ model DoNotPlay {
   createdAt DateTime @default(now()) @db.Timestamptz(6)
 
   @@unique([orgId, title, artist])
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
+// Phase 3: group gifting (PRD P0-5). Mock money, ledgered in integer cents; nothing is charged.
+// PRIVACY: GiftEntry.amountCents is what one household gave. The couple's side reads sums per item and contributor
+// names only (src/lib/knotwork/gifts/couple.ts); tests/knotwork/structure.test.ts scans for it.
+
+enum RegistryItemState {
+  open
+  funded
+  closed_unfunded
+}
+
+enum GiftEntryKind {
+  contribution
+  excess_return
+  refund
+}
+
+/// A pooled registry item: several households give toward one target.
+model RegistryItem {
+  id          String            @id @default(uuid()) @db.Uuid
+  orgId       String            @db.Uuid
+  org         Org               @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  title       String
+  note        String            @default("")
+  targetCents Int
+  state       RegistryItemState @default(open)
+  /// A date of fact: the day the pot reached its target.
+  fundedOn    DateTime?         @db.Date
+  /// A date of fact: the day the registry was closed with this item unfunded (everything given was refunded).
+  closedOn    DateTime?         @db.Date
+  createdById String?           @db.Uuid
+  createdAt   DateTime          @default(now()) @db.Timestamptz(6)
+  entries     GiftEntry[]
+  thankYous   ThankYou[]
+
+  @@unique([orgId, title])
+}
+
+/// The gift ledger. Append-only: a trigger refuses every UPDATE and DELETE. A contribution is positive; an excess
+/// return and a refund are negative. The pot is the sum.
+model GiftEntry {
+  id          String        @id @default(uuid()) @db.Uuid
+  orgId       String        @db.Uuid
+  org         Org           @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  itemId      String        @db.Uuid
+  item        RegistryItem  @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  householdId String        @db.Uuid
+  household   Household     @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  kind        GiftEntryKind
+  amountCents Int
+  createdAt   DateTime      @default(now()) @db.Timestamptz(6)
+
+  @@index([orgId])
+  @@index([itemId])
+  @@index([householdId])
+}
+
+/// A thank-you the couple owes: one per household that gave toward an item that funded (P1-3 adds aging on top).
+model ThankYou {
+  id               String       @id @default(uuid()) @db.Uuid
+  orgId            String       @db.Uuid
+  org              Org          @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  itemId           String       @db.Uuid
+  item             RegistryItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  householdId      String       @db.Uuid
+  household        Household    @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  createdAt        DateTime     @default(now()) @db.Timestamptz(6)
+  /// A date of fact: the day a partner marked the thank-you as sent.
+  acknowledgedOn   DateTime?    @db.Date
+  acknowledgedById String?      @db.Uuid
+
+  @@unique([itemId, householdId])
+  @@index([orgId])
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
+// Phase 3 (PRD P0-6 photo wall; contract attachments, D-39). RULE 4: every byte in PhotoBlob.bytes and
+// VendorAttachment.bytes was written by src/lib/knotwork/uploads/ (decoded, re-encoded, inspected clean); the raw
+// upload is never stored. RULE 1: when an upload link stops and when photos are purged are DERIVED from Wedding.date
+// (uploadDays, retentionDays); no column holds either day. RULE 3: /p/[token] shows the wedding title and the event
+// name, nothing else.
+
+enum PhotoMode {
+  pre
+  post
+}
+
+enum PhotoStatus {
+  pending
+  live
+  removed
+}
+
+enum PhotoBlobKind {
+  full
+  display
+  thumb
+}
+
+/// One wall: an upload link (its sha256, and a sealed copy for the QR code), and how it is moderated.
+model PhotoEvent {
+  id                String        @id @default(uuid()) @db.Uuid
+  orgId             String        @db.Uuid
+  org               Org           @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  name              String
+  /// post: a photo is live at once and removed on sight. pre: a photo waits until someone approves it.
+  mode              PhotoMode     @default(post)
+  uploadTokenHash   String        @unique
+  uploadTokenSealed String
+  uploadsOpen       Boolean       @default(true)
+  /// The link stops this many days after the wedding date (derived on read; D-68).
+  uploadDays        Int           @default(7)
+  /// Photos are purged this many days after the wedding date (derived on read).
+  retentionDays     Int           @default(365)
+  createdById       String?       @db.Uuid
+  createdAt         DateTime      @default(now()) @db.Timestamptz(6)
+  photos            Photo[]
+  devices           PhotoDevice[]
+
+  @@unique([orgId, name])
+}
+
+/// A device is a random cookie on the upload page; only its sha256 is kept. Blocking one refuses its uploads.
+model PhotoDevice {
+  id          String     @id @default(uuid()) @db.Uuid
+  orgId       String     @db.Uuid
+  org         Org        @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  eventId     String     @db.Uuid
+  event       PhotoEvent @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  tokenHash   String
+  createdAt   DateTime   @default(now()) @db.Timestamptz(6)
+  /// A date of fact: when a moderator blocked the device.
+  blockedAt   DateTime?  @db.Timestamptz(6)
+  blockedById String?    @db.Uuid
+  photos      Photo[]
+
+  @@unique([eventId, tokenHash])
+  @@index([orgId])
+}
+
+/// A photo's facts. Its bytes are in PhotoBlob, so a list never loads them.
+model Photo {
+  id              String       @id @default(uuid()) @db.Uuid
+  orgId           String       @db.Uuid
+  org             Org          @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  eventId         String       @db.Uuid
+  event           PhotoEvent   @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  deviceId        String       @db.Uuid
+  device          PhotoDevice  @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+  uploaderName    String       @default("")
+  caption         String       @default("")
+  status          PhotoStatus
+  /// What the photo was before it was removed (pending: rejected; live: taken down), so undo can put it back.
+  removedFrom     PhotoStatus?
+  hiddenFromWall  Boolean      @default(false)
+  hiddenFromAlbum Boolean      @default(false)
+  mime            String
+  width           Int
+  height          Int
+  createdAt       DateTime     @default(now()) @db.Timestamptz(6)
+  /// A date of fact: when the retention purge deleted this photo's bytes.
+  purgedAt        DateTime?    @db.Timestamptz(6)
+  blobs           PhotoBlob[]
+
+  @@index([orgId])
+  @@index([eventId, createdAt])
+  @@index([deviceId])
+}
+
+/// The re-encoded renditions (D-64: bytea for now, behind photos/blobs.ts). Never in the data export.
+model PhotoBlob {
+  id      String        @id @default(uuid()) @db.Uuid
+  orgId   String        @db.Uuid
+  org     Org           @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  photoId String        @db.Uuid
+  photo   Photo         @relation(fields: [photoId], references: [id], onDelete: Cascade)
+  kind    PhotoBlobKind
+  bytes   Bytes
+  size    Int
+  width   Int
+  height  Int
+
+  @@unique([photoId, kind])
+  @@index([orgId])
+}
+
+/// A photographed or scanned contract page on a vendor (images only, D-65), through the same pipeline.
+model VendorAttachment {
+  id           String   @id @default(uuid()) @db.Uuid
+  orgId        String   @db.Uuid
+  org          Org      @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  vendorId     String   @db.Uuid
+  vendor       Vendor   @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  label        String
+  mime         String
+  size         Int
+  width        Int
+  height       Int
+  bytes        Bytes
+  uploadedById String?  @db.Uuid
+  createdAt    DateTime @default(now()) @db.Timestamptz(6)
+
+  @@index([orgId])
+  @@index([vendorId])
 }

@@ -1,0 +1,432 @@
+{
+  "note": "Strip verification (CLAUDE.md rule 4; PRD P0-6 'EXIF/GPS stripped on ingest'). Every image here is synthetic: gradients drawn by scripts/knotwork/gen-photo-fixtures.ts, with invented metadata. For each file: its type by magic bytes, the size its header states, what the inspector finds in it BEFORE, what the pipeline answers, and what the inspector finds in the stored renditions AFTER. `npm run fixtures:check` recomputes every expect block from the committed files.",
+  "cases": [
+    {
+      "file": "phone-gps.jpg",
+      "note": "What a phone leaves: EXIF with a GPS position, XMP, an ICC profile and a comment. Stored with none of them.",
+      "expect": {
+        "type": "jpeg",
+        "width": 640,
+        "height": 480,
+        "before": [
+          "comment",
+          "exif",
+          "gps",
+          "icc",
+          "xmp"
+        ],
+        "result": "ok",
+        "stored": {
+          "full": {
+            "type": "jpeg",
+            "width": 640,
+            "height": 480
+          },
+          "display": {
+            "type": "jpeg",
+            "width": 640,
+            "height": 480
+          },
+          "thumb": {
+            "type": "jpeg",
+            "width": 400,
+            "height": 300
+          }
+        },
+        "after": []
+      }
+    },
+    {
+      "file": "rotated.jpg",
+      "note": "EXIF orientation 6 (the phone was held upright): stored upright, 200 wide and 300 tall, with the tag gone.",
+      "expect": {
+        "type": "jpeg",
+        "width": 300,
+        "height": 200,
+        "before": [
+          "exif",
+          "icc"
+        ],
+        "result": "ok",
+        "stored": {
+          "full": {
+            "type": "jpeg",
+            "width": 200,
+            "height": 300
+          },
+          "display": {
+            "type": "jpeg",
+            "width": 200,
+            "height": 300
+          },
+          "thumb": {
+            "type": "jpeg",
+            "width": 200,
+            "height": 300
+          }
+        },
+        "after": []
+      }
+    },
+    {
+      "file": "iptc.jpg",
+      "note": "An IPTC byline in a Photoshop APP13 segment.",
+      "expect": {
+        "type": "jpeg",
+        "width": 320,
+        "height": 240,
+        "before": [
+          "iptc"
+        ],
+        "result": "ok",
+        "stored": {
+          "full": {
+            "type": "jpeg",
+            "width": 320,
+            "height": 240
+          },
+          "display": {
+            "type": "jpeg",
+            "width": 320,
+            "height": 240
+          },
+          "thumb": {
+            "type": "jpeg",
+            "width": 320,
+            "height": 240
+          }
+        },
+        "after": []
+      }
+    },
+    {
+      "file": "plain.jpg",
+      "note": "Nothing to strip; still re-encoded, never stored as sent.",
+      "expect": {
+        "type": "jpeg",
+        "width": 200,
+        "height": 150,
+        "before": [],
+        "result": "ok",
+        "stored": {
+          "full": {
+            "type": "jpeg",
+            "width": 200,
+            "height": 150
+          },
+          "display": {
+            "type": "jpeg",
+            "width": 200,
+            "height": 150
+          },
+          "thumb": {
+            "type": "jpeg",
+            "width": 200,
+            "height": 150
+          }
+        },
+        "after": []
+      }
+    },
+    {
+      "file": "big.jpg",
+      "note": "5000 x 3000 (15 megapixels): the full rendition is brought down to 4096 on its long side.",
+      "expect": {
+        "type": "jpeg",
+        "width": 5000,
+        "height": 3000,
+        "before": [],
+        "result": "ok",
+        "stored": {
+          "full": {
+            "type": "jpeg",
+            "width": 4096,
+            "height": 2458
+          },
+          "display": {
+            "type": "jpeg",
+            "width": 1600,
+            "height": 960
+          },
+          "thumb": {
+            "type": "jpeg",
+            "width": 400,
+            "height": 240
+          }
+        },
+        "after": []
+      }
+    },
+    {
+      "file": "trailing.jpg",
+      "note": "A valid JPEG with a script tag after its end-of-image marker. The re-encode drops it.",
+      "expect": {
+        "type": "jpeg",
+        "width": 160,
+        "height": 120,
+        "before": [
+          "trailing"
+        ],
+        "result": "ok",
+        "stored": {
+          "full": {
+            "type": "jpeg",
+            "width": 160,
+            "height": 120
+          },
+          "display": {
+            "type": "jpeg",
+            "width": 160,
+            "height": 120
+          },
+          "thumb": {
+            "type": "jpeg",
+            "width": 160,
+            "height": 120
+          }
+        },
+        "after": []
+      }
+    },
+    {
+      "file": "text-chunks.png",
+      "note": "A PNG with an eXIf chunk (GPS), an ICC profile, two text chunks and a time chunk.",
+      "expect": {
+        "type": "png",
+        "width": 320,
+        "height": 200,
+        "before": [
+          "exif",
+          "gps",
+          "icc",
+          "text",
+          "time"
+        ],
+        "result": "ok",
+        "stored": {
+          "full": {
+            "type": "jpeg",
+            "width": 320,
+            "height": 200
+          },
+          "display": {
+            "type": "jpeg",
+            "width": 320,
+            "height": 200
+          },
+          "thumb": {
+            "type": "jpeg",
+            "width": 320,
+            "height": 200
+          }
+        },
+        "after": []
+      }
+    },
+    {
+      "file": "alpha.png",
+      "note": "A PNG with transparency: flattened onto white, stored as a JPEG.",
+      "expect": {
+        "type": "png",
+        "width": 240,
+        "height": 160,
+        "before": [],
+        "result": "ok",
+        "stored": {
+          "full": {
+            "type": "jpeg",
+            "width": 240,
+            "height": 160
+          },
+          "display": {
+            "type": "jpeg",
+            "width": 240,
+            "height": 160
+          },
+          "thumb": {
+            "type": "jpeg",
+            "width": 240,
+            "height": 160
+          }
+        },
+        "after": []
+      }
+    },
+    {
+      "file": "renamed-png.jpg",
+      "note": "A PNG behind a .jpg name: the name is not read, so it is taken as the PNG it is.",
+      "expect": {
+        "type": "png",
+        "width": 120,
+        "height": 90,
+        "before": [],
+        "result": "ok",
+        "stored": {
+          "full": {
+            "type": "jpeg",
+            "width": 120,
+            "height": 90
+          },
+          "display": {
+            "type": "jpeg",
+            "width": 120,
+            "height": 90
+          },
+          "thumb": {
+            "type": "jpeg",
+            "width": 120,
+            "height": 90
+          }
+        },
+        "after": []
+      }
+    },
+    {
+      "file": "exif.webp",
+      "note": "A WebP with EXIF (GPS), XMP and an ICC profile.",
+      "expect": {
+        "type": "webp",
+        "width": 400,
+        "height": 300,
+        "before": [
+          "exif",
+          "gps",
+          "icc",
+          "xmp"
+        ],
+        "result": "ok",
+        "stored": {
+          "full": {
+            "type": "jpeg",
+            "width": 400,
+            "height": 300
+          },
+          "display": {
+            "type": "jpeg",
+            "width": 400,
+            "height": 300
+          },
+          "thumb": {
+            "type": "jpeg",
+            "width": 400,
+            "height": 300
+          }
+        },
+        "after": []
+      }
+    },
+    {
+      "file": "not-a-jpeg.jpg",
+      "note": "HOSTILE: plain text behind a .jpg name. Refused by its bytes.",
+      "expect": {
+        "type": null,
+        "before": [
+          "unreadable"
+        ],
+        "result": "type"
+      }
+    },
+    {
+      "file": "animation.gif",
+      "note": "HOSTILE: a GIF. Not on the allowlist.",
+      "expect": {
+        "type": null,
+        "before": [
+          "unreadable"
+        ],
+        "result": "type"
+      }
+    },
+    {
+      "file": "drawing.svg",
+      "note": "HOSTILE: an SVG with a script in it. Not on the allowlist.",
+      "expect": {
+        "type": null,
+        "before": [
+          "unreadable"
+        ],
+        "result": "type"
+      }
+    },
+    {
+      "file": "contract.pdf",
+      "note": "A PDF. Refused, with the sentence that says PDFs are not accepted yet (D-65).",
+      "expect": {
+        "type": null,
+        "before": [
+          "unreadable"
+        ],
+        "result": "pdf"
+      }
+    },
+    {
+      "file": "truncated.jpg",
+      "note": "HOSTILE: a JPEG cut off part way. The decoder fails; nothing is stored.",
+      "expect": {
+        "type": "jpeg",
+        "width": 640,
+        "height": 480,
+        "before": [
+          "unreadable"
+        ],
+        "result": "unreadable"
+      }
+    },
+    {
+      "file": "pixel-bomb.png",
+      "note": "HOSTILE: 71 bytes whose header claims 30,000 x 30,000 pixels. Refused from the header, before decoding.",
+      "expect": {
+        "type": "png",
+        "before": [],
+        "result": "pixels"
+      }
+    },
+    {
+      "file": "animated.png",
+      "note": "HOSTILE: an animated PNG (an acTL chunk). Only still images are accepted.",
+      "expect": {
+        "type": "png",
+        "before": [
+          "other"
+        ],
+        "result": "animated"
+      }
+    },
+    {
+      "file": "animated.webp",
+      "note": "HOSTILE: a two-frame animated WebP. Only still images are accepted.",
+      "expect": {
+        "type": "webp",
+        "before": [
+          "other"
+        ],
+        "result": "animated"
+      }
+    },
+    {
+      "file": "empty.jpg",
+      "note": "No bytes at all.",
+      "expect": {
+        "type": null,
+        "before": [
+          "unreadable"
+        ],
+        "result": "empty"
+      }
+    },
+    {
+      "synthesize": {
+        "from": "plain.jpg",
+        "padToBytes": 10485761
+      },
+      "note": "HOSTILE: one byte over the 10 MB cap (plain.jpg padded out at run time; not committed).",
+      "expect": {
+        "type": "jpeg",
+        "before": [
+          "trailing"
+        ],
+        "result": "too-big"
+      }
+    }
+  ]
+}

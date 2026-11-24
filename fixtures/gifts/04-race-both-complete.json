@@ -1,0 +1,84 @@
+{
+  "name": "04-race-both-complete",
+  "note": "PRD P0-5 'over-contribution at the race': with 20000 to go, two households each offer 25000 at once. Whichever is served first completes the pot and gets 5000 back; the other is refused and nothing of theirs is taken. Here h2 is first.",
+  "targetCents": 50000,
+  "race": true,
+  "steps": [
+    {
+      "op": "contribute",
+      "household": "h1",
+      "offerCents": 30000
+    },
+    {
+      "op": "contribute",
+      "household": "h2",
+      "offerCents": 25000
+    },
+    {
+      "op": "contribute",
+      "household": "h3",
+      "offerCents": 25000
+    }
+  ],
+  "expect": {
+    "steps": [
+      {
+        "ok": true,
+        "lines": [
+          {
+            "kind": "contribution",
+            "amountCents": 30000
+          }
+        ],
+        "potCents": 30000,
+        "state": "open"
+      },
+      {
+        "ok": true,
+        "lines": [
+          {
+            "kind": "contribution",
+            "amountCents": 25000
+          },
+          {
+            "kind": "excess_return",
+            "amountCents": -5000
+          }
+        ],
+        "potCents": 50000,
+        "state": "funded"
+      },
+      {
+        "ok": false,
+        "code": "funded"
+      }
+    ],
+    "entries": [
+      {
+        "kind": "contribution",
+        "amountCents": 30000,
+        "householdId": "h1"
+      },
+      {
+        "kind": "contribution",
+        "amountCents": 25000,
+        "householdId": "h2"
+      },
+      {
+        "kind": "excess_return",
+        "amountCents": -5000,
+        "householdId": "h2"
+      }
+    ],
+    "potCents": 50000,
+    "state": "funded",
+    "net": {
+      "h1": 30000,
+      "h2": 20000
+    },
+    "thankYous": [
+      "h1",
+      "h2"
+    ]
+  }
+}

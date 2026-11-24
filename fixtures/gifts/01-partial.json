@@ -1,0 +1,40 @@
+{
+  "name": "01-partial",
+  "note": "One household gives part of the target: the pot is open with the rest to go.",
+  "targetCents": 50000,
+  "steps": [
+    {
+      "op": "contribute",
+      "household": "h1",
+      "offerCents": 20000
+    }
+  ],
+  "expect": {
+    "steps": [
+      {
+        "ok": true,
+        "lines": [
+          {
+            "kind": "contribution",
+            "amountCents": 20000
+          }
+        ],
+        "potCents": 20000,
+        "state": "open"
+      }
+    ],
+    "entries": [
+      {
+        "kind": "contribution",
+        "amountCents": 20000,
+        "householdId": "h1"
+      }
+    ],
+    "potCents": 20000,
+    "state": "open",
+    "net": {
+      "h1": 20000
+    },
+    "thankYous": []
+  }
+}

@@ -4,7 +4,10 @@ import { now } from '@/core/clock';
 import { withOrg } from '@/core/db/rls';
 import { dbSystem as db } from '@/core/db/system';
 import { loadBudget } from '@/lib/knotwork/budget-store';
+import { loadRegistry, loadThankYous } from '@/lib/knotwork/gifts/couple';
 import { loadGuestState } from '@/lib/knotwork/guests/store';
+import { wallFeed } from '@/lib/knotwork/photos/store';
+import { inspect } from '@/lib/knotwork/uploads/inspect';
 import { addDays, dayOfDb, todayIn } from '@/lib/knotwork/days';
 import { loadSchedule } from '@/lib/knotwork/schedule/store';
 import { COUPLE, seedCouple } from '../../scripts/knotwork/seed-couple';
@@ -77,6 +80,34 @@ describe('seed:couple', () => {
     expect(s.rows.filter((h) => h.list === 'B').map((h) => h.state)).toEqual(['queued', 'queued', 'queued']);
     for (const h of s.rows.filter((x) => x.state === 'invited')) expect(h.rsvpTokenHash).toMatch(/^[0-9a-f]{64}$/);
     for (const h of s.rows) for (const g of h.guests) expect(g.name).not.toMatch(/@/);
+  });
+
+  it('the registry has one gift partly funded and one funded exactly, with two thank-yous owed', async () => {
+    const items = await withOrg({ orgId }, (tx) => loadRegistry(tx, { orgId }));
+    expect(items.map((i) => [i.title, i.state, i.targetCents, i.raisedCents, i.contributors])).toEqual([
+      ['Honeymoon canoe trip', 'open', 60_000, 25_000, ['The Ashbys', 'The Lindqvists']],
+      ['Record player', 'funded', 20_000, 20_000, ['Priya Rao', 'The Vales']],
+    ]);
+    const owed = await withOrg({ orgId }, (tx) => loadThankYous(tx, { orgId }, (at) => todayIn(COUPLE.timeZone, at)));
+    expect(owed.map((t) => [t.household, t.item, t.acknowledgedOn])).toEqual([['Priya Rao', 'Record player', null], ['The Vales', 'Record player', null]]);
+    // The last offer was 100.00 against 80.00 remaining: entered whole, 20.00 back. Mock money: a ledger, never a charge.
+    expect((await db.giftEntry.findMany({ where: { orgId, kind: 'excess_return' } })).map((e) => e.amountCents)).toEqual([-2_000]);
+    expect(await db.giftEntry.count({ where: { orgId } })).toBe(5);
+  });
+
+  it('the photo wall has one pre-moderated event with three approved photos and one waiting, every stored byte clean', async () => {
+    const event = await db.photoEvent.findFirstOrThrow({ where: { orgId } });
+    expect(event).toMatchObject({ name: 'Reception', mode: 'pre', uploadsOpen: true, uploadDays: 7, retentionDays: 365 });
+    expect(event.uploadTokenHash).toMatch(/^[0-9a-f]{64}$/);
+    const photos = await db.photo.findMany({ where: { orgId }, orderBy: [{ createdAt: 'asc' }, { id: 'asc' }], include: { blobs: { orderBy: { kind: 'asc' } } } });
+    expect(photos.map((p) => [p.uploaderName, p.caption, p.status]).sort()).toEqual([['', '', 'live'], ['Ben', 'The cake, before', 'pending'], ['Hal', 'First dance', 'live'], ['Linda', 'The arch at golden hour', 'live']]);
+    for (const p of photos) {
+      expect(p.blobs.map((b) => [b.kind, b.width, b.height])).toEqual([['full', 1200, 800], ['display', 1200, 800], ['thumb', 400, 267]]);
+      for (const b of p.blobs) expect(inspect(b.bytes)).toEqual([]);
+    }
+    expect((await withOrg({ orgId }, (tx) => wallFeed(tx, { orgId }, event.id))).map((p) => p.caption).sort()).toEqual(['', 'First dance', 'The arch at golden hour']);
+    expect(await db.photoDevice.count({ where: { orgId } })).toBe(2);
+    expect(await db.vendorAttachment.count({ where: { orgId } })).toBe(0);
   });
 
   it('no vendor needs re-confirmation at the start, each has a brief, and the helper has one grant', async () => {

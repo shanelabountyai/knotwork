@@ -1,0 +1,61 @@
+{
+  "name": "14-race-three-way",
+  "note": "Three households each offer the whole target at once: one funds it alone; the other two are refused.",
+  "targetCents": 10000,
+  "race": true,
+  "steps": [
+    {
+      "op": "contribute",
+      "household": "h1",
+      "offerCents": 10000
+    },
+    {
+      "op": "contribute",
+      "household": "h2",
+      "offerCents": 10000
+    },
+    {
+      "op": "contribute",
+      "household": "h3",
+      "offerCents": 10000
+    }
+  ],
+  "expect": {
+    "steps": [
+      {
+        "ok": true,
+        "lines": [
+          {
+            "kind": "contribution",
+            "amountCents": 10000
+          }
+        ],
+        "potCents": 10000,
+        "state": "funded"
+      },
+      {
+        "ok": false,
+        "code": "funded"
+      },
+      {
+        "ok": false,
+        "code": "funded"
+      }
+    ],
+    "entries": [
+      {
+        "kind": "contribution",
+        "amountCents": 10000,
+        "householdId": "h1"
+      }
+    ],
+    "potCents": 10000,
+    "state": "funded",
+    "net": {
+      "h1": 10000
+    },
+    "thankYous": [
+      "h1"
+    ]
+  }
+}

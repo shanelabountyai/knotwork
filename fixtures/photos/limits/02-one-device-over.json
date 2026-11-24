@@ -1,0 +1,41 @@
+{
+  "name": "02-one-device-over",
+  "note": "Shipped limits. One phone sends 35 photos in under ten minutes: the 31st to 35th are refused (30 per device per 10 minutes). In the next window it is accepted again.",
+  "steps": [
+    {
+      "from": 0,
+      "every": 10,
+      "count": 35,
+      "devices": [
+        "d01"
+      ],
+      "address": "venue"
+    },
+    {
+      "t": 600,
+      "device": "d01",
+      "address": "venue"
+    }
+  ],
+  "expect": {
+    "attempts": 36,
+    "totals": {
+      "device": 5,
+      "ok": 31
+    },
+    "runs": [
+      [
+        "ok",
+        30
+      ],
+      [
+        "device",
+        5
+      ],
+      [
+        "ok",
+        1
+      ]
+    ]
+  }
+}
