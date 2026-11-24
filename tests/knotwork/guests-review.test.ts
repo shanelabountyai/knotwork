@@ -203,6 +203,51 @@ describe('S8: a plus-one comes with their host or not at all', () => {
   });
 });
 
+describe('S9: the undetectability sweep covers what the reply route sends back, not only the page', () => {
+  // An A household and a B household post the same kinds of reply. Status, headers and redirect must be identical
+  // once each household's own token is masked.
+  it('accepted, invalid, refused-when-full, unknown token and cross-site posts look the same for A and B', async () => {
+    await answer('The Vales', false);
+    await answer('The Sterns', false);
+    await ok(releaseWave(c.slug, { list: 'B' })); // Okoros and Trans are invited: held 8 of 8
+    const run = async (name: string) => {
+      const h = await household(name);
+      const token = await tokenOf(name);
+      const [g1, g2] = h.guests;
+      const mask = (r: Awaited<ReturnType<typeof post>>) => JSON.parse(JSON.stringify(r).replaceAll(token, 'TOKEN'));
+      return [
+        mask(await post(token, [[`attending:${g1!.id}`, 'yes'], [`meal:${g1!.id}`, 'Fish'], [`attending:${g2!.id}`, 'no']])), // saved
+        mask(await post(token, [[`attending:${g1!.id}`, 'yes'], [`meal:${g1!.id}`, 'Lobster']])), // not a meal on the menu
+        mask(await post(token, [[`attending:${g1!.id}`, 'yes'], [`meal:${g1!.id}`, 'Fish'], ['plusOneName', 'Someone Else']])), // no guest on this invitation
+        mask(await post(token, [[`attending:${g1!.id}`, 'yes'], [`meal:${g1!.id}`, 'Fish']], { 'sec-fetch-site': 'cross-site' })),
+        mask(await post(token, [[`attending:${g1!.id}`, 'yes'], [`meal:${g1!.id}`, 'Fish']], { origin: 'https://elsewhere.example' })),
+      ];
+    };
+    const [a, b] = [await run('The Lindqvists'), await run('The Okoros')];
+    expect(b).toEqual(a);
+    expect(a.map((r) => [r.status, r.location])).toEqual([[303, '/r/TOKEN?done=1'], [303, '/r/TOKEN?e=meal'], [303, '/r/TOKEN?e=no-guest'], [404, null], [404, null]]);
+    // Nothing a guest typed, and no name, ever rides in the redirect.
+    for (const r of [...a, ...b]) expect(r.location ?? '').toMatch(/^$|^\/r\/TOKEN\?(done=1|e=[a-z-]+)$/);
+    // No seat left: each household had one person decline above; with the cap lowered to what is held, a change of
+    // mind cannot be taken. Both get the same neutral answer.
+    await as(c.a);
+    await ok(saveGuestPlan(c.slug, { ...PLAN, cap: '6' }));
+    const full = async (name: string) => {
+      const h = await household(name);
+      const token = await tokenOf(name);
+      const r = await post(token, h.guests.flatMap((g): [string, string][] => [[`attending:${g.id}`, 'yes'], [`meal:${g.id}`, 'Fish']]));
+      return JSON.parse(JSON.stringify(r).replaceAll(token, 'TOKEN'));
+    };
+    const [fullA, fullB] = [await full('The Lindqvists'), await full('The Okoros')];
+    expect(fullB).toEqual(fullA);
+    expect(fullA).toMatchObject({ status: 303, location: '/r/TOKEN?e=full', text: '' });
+    expect((await state()).cap).toMatchObject({ cap: 6, held: 6 });
+    // A household that is still waiting (queued B) and a token nobody was given are the same 404.
+    const queued = await post('A'.repeat(43), [['x', 'y']]);
+    expect(queued).toMatchObject({ status: 404, location: null });
+  });
+});
+
 describe('S5: the import holds up at its own limits', () => {
   it('parses the largest text it accepts in well under a second, however many commas', () => {
     const t = performance.now();
