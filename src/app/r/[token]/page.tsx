@@ -2,7 +2,7 @@
 import { headers } from 'next/headers';
 import { notFound } from 'next/navigation';
 import { clientIp } from '@/core/http';
-import { ACCESSIBILITY, DIETARY, TAG_LABEL } from '@/lib/knotwork/guests/projection';
+import { ACCESSIBILITY, DIETARY, isRsvpProblem, RSVP_PROBLEM, TAG_LABEL } from '@/lib/knotwork/guests/projection';
 import { readRsvp } from '@/lib/knotwork/guests/public';
 
 // RULE 3: this page is guest-facing. It renders the RsvpView and nothing else: no list, wave, invite date or state
@@ -12,19 +12,21 @@ export const metadata = { title: 'RSVP', robots: { index: false, follow: false }
 
 const NOTE: Record<string, string> = { thanks: 'Thank you. Your reply is saved; you can change it here until the RSVP date.', limited: 'Too many tries. Wait a few minutes and try again.' };
 
-export default async function Rsvp({ params, searchParams }: { params: Promise<{ token: string }>; searchParams: Promise<{ done?: string; problem?: string }> }) {
+export default async function Rsvp({ params, searchParams }: { params: Promise<{ token: string }>; searchParams: Promise<{ done?: string; e?: string }> }) {
   const { token } = await params;
   const q = await searchParams;
   const view = await readRsvp(token, clientIp(await headers()));
   if (view === 'limited') return <main><h1>Too many requests</h1><p>Wait a few minutes and try again.</p></main>;
   if (!view) notFound();
+  // The query carries a code from a closed list; the sentence comes from here. Unknown codes show nothing.
+  const problem = typeof q.e === 'string' && isRsvpProblem(q.e) ? RSVP_PROBLEM[q.e] : null;
   return (
     <main>
       <h1>{view.wedding.title}</h1>
       <p>{view.wedding.dateText}</p>
       <p>Dear {view.householdName}, please reply by <strong>{view.rsvpByText}</strong>.</p>
       {q.done && <p role="status">{NOTE.thanks}</p>}
-      {q.problem && <p role="alert">{q.problem.slice(0, 200)}</p>}
+      {problem && <p role="alert">{problem}</p>}
       <form method="post" action={`/r/${token}/respond`}>
         {view.guests.map((g) => (
           <fieldset key={g.id}>

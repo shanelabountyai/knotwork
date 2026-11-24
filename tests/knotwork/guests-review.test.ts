@@ -5,6 +5,7 @@ import { POST as respond } from '@/app/r/[token]/respond/route';
 import { now } from '@/core/clock';
 import { withOrg } from '@/core/db/rls';
 import { addDays, todayIn } from '@/lib/knotwork/days';
+import { isRsvpProblem, problemCodeOf, RSVP_PROBLEM } from '@/lib/knotwork/guests/projection';
 import { submitRsvp } from '@/lib/knotwork/guests/public';
 import { loadGuestState } from '@/lib/knotwork/guests/store';
 import { as, db, log, makeWedding, ok, outcome, refused, snapshot, type Couple } from './db';
@@ -56,6 +57,25 @@ beforeEach(async () => {
   await ok(saveGuestPlan(c.slug, PLAN));
   await ok(importGuests(c.slug, { csv: CSV, confirm: 'on' }));
   await ok(releaseWave(c.slug, { list: 'A' }));
+});
+
+describe('S7: the reply route sends back a code, never a sentence or a name', () => {
+  it('a reply that cannot be saved redirects with a code from the closed list; the sentence names nobody', async () => {
+    const lind = await household('The Lindqvists');
+    const token = await tokenOf('The Lindqvists');
+    const [linda] = lind.guests;
+    const res = await post(token, [[`attending:${linda!.id}`, 'yes'], [`meal:${linda!.id}`, 'Lobster']]);
+    expect(res).toMatchObject({ status: 303, location: `/r/${token}?e=meal` });
+    expect(await submitRsvp(token, IP, { responses: [reply(linda!, true, { meal: 'Lobster' })], plusOneName: '' })).toEqual({ ok: false, message: RSVP_PROBLEM.meal });
+    for (const sentence of Object.values(RSVP_PROBLEM)) expect(sentence).not.toMatch(/Linda|Lindqvist/);
+  });
+  it('codes map one to one; anything else is the neutral one', () => {
+    for (const [code, sentence] of Object.entries(RSVP_PROBLEM)) expect(problemCodeOf(sentence)).toBe(code);
+    expect(problemCodeOf('That reply would hold 9 seats against a cap of 8.')).toBe('full');
+    expect(isRsvpProblem('meal')).toBe(true);
+    expect(isRsvpProblem('constructor')).toBe(false);
+    expect(isRsvpProblem('<script>')).toBe(false);
+  });
 });
 
 describe('M2: one plus-one per invitation, however many replies arrive at once', () => {

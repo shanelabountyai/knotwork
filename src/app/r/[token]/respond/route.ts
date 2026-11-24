@@ -1,6 +1,7 @@
 // public: the RSVP token is the credential; same-origin form posts only; rate limited per address
 import { NextResponse } from 'next/server';
 import { clientIp, isSameOrigin } from '@/core/http';
+import { problemCodeOf } from '@/lib/knotwork/guests/projection';
 import { readRsvp, submitRsvp } from '@/lib/knotwork/guests/public';
 
 // A guest's reply (PRD P0-3). A plain form post, so it works with no script. The fields are named per guest id as the
@@ -36,5 +37,6 @@ export async function POST(req: Request, { params }: { params: Promise<{ token: 
   const result = await submitRsvp(token, ip, { responses, plusOneName: one('plusOneName') });
   if (result === 'limited') return new NextResponse('Too many requests', { status: 429 });
   if (!result) return new NextResponse('Not found', { status: 404 });
-  return back(result.ok ? '?done=1' : `?problem=${encodeURIComponent(result.message)}`);
+  // Only a code from the closed list goes back in the URL, never the sentence and never a name (review S7).
+  return back(result.ok ? '?done=1' : `?e=${problemCodeOf(result.message)}`);
 }

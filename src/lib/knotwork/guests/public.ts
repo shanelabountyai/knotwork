@@ -9,7 +9,7 @@ import { hashToken } from '@/core/tokens';
 import { requireWedding, weddingDay } from '../context';
 import { lockWedding } from '../schedule/store';
 import { entitlement } from './plus-one';
-import { checkRsvp, rsvpView, type RsvpSubmission, type RsvpView } from './projection';
+import { checkGuestReply, rsvpView, type RsvpSubmission, type RsvpView } from './projection';
 import { applyRsvp, loadPlan, rsvpDeadline, toIn } from './store';
 
 /** Generous for a family filling in a form, tight for someone guessing tokens. Per IP. */
@@ -55,7 +55,7 @@ export async function submitRsvp(token: string, ip: string, submission: RsvpSubm
     await lockWedding(tx, h.orgId);
     const view = await viewOf(tx, h.orgId, h.id);
     if (!view) return null;
-    const checked = checkRsvp(view, submission);
+    const checked = checkGuestReply(view, submission);
     if (!checked.ok) return checked;
     await applyRsvp(tx, { orgId: h.orgId, userId: null }, h.id, checked);
     return { ok: true as const };

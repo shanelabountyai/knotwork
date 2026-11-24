@@ -60,28 +60,63 @@ export type CheckedRsvp =
   | { ok: true; responses: { guestId: string; attending: boolean; meal: string | null; dietary: string[]; accessibility: string[]; songRequest: string }[]; plusOneName: string | null }
   | { ok: false; message: string };
 
+/**
+ * Why a reply was not saved. A closed list: the public page shows these fixed sentences and the redirect carries only
+ * the code, so nothing a guest typed and no guest's name ever rides in a URL (review 2026-11-24, S7).
+ */
+export const RSVP_PROBLEM = {
+  empty: 'Tell us whether each person is coming.',
+  'not-yours': 'That reply names someone who is not on this invitation.',
+  needs: 'Pick dietary and access needs from the list.',
+  song: 'Keep the song request under 120 characters.',
+  meal: 'Pick a meal for each person who is coming.',
+  'no-guest': 'This invitation does not include a guest.',
+  name: 'That name is too long.',
+  host: 'A guest can only come with someone who is attending.',
+  full: 'We could not save that reply. Please get in touch with the couple.',
+} as const;
+export type RsvpProblem = keyof typeof RSVP_PROBLEM;
+export const isRsvpProblem = (code: string): code is RsvpProblem => Object.hasOwn(RSVP_PROBLEM, code);
+/** The code of one of the fixed sentences above; anything else is `full` (the neutral one). */
+export const problemCodeOf = (message: string): RsvpProblem => (Object.keys(RSVP_PROBLEM) as RsvpProblem[]).find((k) => RSVP_PROBLEM[k] === message) ?? 'full';
+
+type Coded = Extract<CheckedRsvp, { ok: true }> | { ok: false; code: RsvpProblem; who?: string };
+
 /** Validates what a guest sent against what that guest was shown. Nothing outside the view can be touched. */
-export function checkRsvp(view: RsvpView, s: RsvpSubmission): CheckedRsvp {
-  const no = (message: string): CheckedRsvp => ({ ok: false, message });
-  if (!s.responses.length) return no('Tell us whether each person is coming.');
+function check(view: RsvpView, s: RsvpSubmission): Coded {
+  const no = (code: RsvpProblem, who?: string): Coded => ({ ok: false, code, who });
+  if (!s.responses.length) return no('empty');
   const byId = new Map(view.guests.map((g) => [g.id, g]));
-  if (new Set(s.responses.map((r) => r.guestId)).size !== s.responses.length || s.responses.some((r) => !byId.has(r.guestId))) return no('That reply names someone who is not on this invitation.');
+  if (new Set(s.responses.map((r) => r.guestId)).size !== s.responses.length || s.responses.some((r) => !byId.has(r.guestId))) return no('not-yours');
   const out: Extract<CheckedRsvp, { ok: true }>['responses'] = [];
   for (const r of s.responses) {
     const g = byId.get(r.guestId)!;
-    if (r.dietary.some((d) => !(DIETARY as readonly string[]).includes(d)) || r.accessibility.some((a) => !(ACCESSIBILITY as readonly string[]).includes(a))) return no('Pick dietary and access needs from the list.');
+    if (r.dietary.some((d) => !(DIETARY as readonly string[]).includes(d)) || r.accessibility.some((a) => !(ACCESSIBILITY as readonly string[]).includes(a))) return no('needs');
     const song = r.songRequest.trim();
-    if (song.length > 120) return no('Keep the song request under 120 characters.');
+    if (song.length > 120) return no('song');
     const wantsMeal = r.attending && g.ageGroup === 'adult';
-    if (wantsMeal && !view.mealOptions.includes(r.meal)) return no(`Pick a meal for ${g.name}.`);
+    if (wantsMeal && !view.mealOptions.includes(r.meal)) return no('meal', g.name);
     out.push({ guestId: g.id, attending: r.attending, meal: wantsMeal ? r.meal : null, dietary: r.attending ? [...new Set(r.dietary)].sort() : [], accessibility: r.attending ? [...new Set(r.accessibility)].sort() : [], songRequest: r.attending ? song : '' });
   }
   const name = s.plusOneName.trim();
   if (name && !view.plusOneNamed) {
-    if (!view.plusOneAllowed) return no('This invitation does not include a guest.');
-    if (name.length > 120) return no('That name is too long.');
+    if (!view.plusOneAllowed) return no('no-guest');
+    if (name.length > 120) return no('name');
     const adultComing = view.guests.some((g) => g.ageGroup === 'adult' && !g.isPlusOne && (out.find((r) => r.guestId === g.id)?.attending ?? g.rsvp === 'attending'));
-    if (!adultComing) return no('A guest can only come with someone who is attending.');
+    if (!adultComing) return no('host');
   }
   return { ok: true, responses: out, plusOneName: name && !view.plusOneNamed ? name : null };
+}
+
+/** For the couple's own pages: the same check, and the sentence may name the person ("Pick a meal for Ben Vale."). */
+export function checkRsvp(view: RsvpView, s: RsvpSubmission): CheckedRsvp {
+  const r = check(view, s);
+  if (r.ok) return r;
+  return { ok: false, message: r.code === 'meal' && r.who ? `Pick a meal for ${r.who}.` : RSVP_PROBLEM[r.code] };
+}
+
+/** For the guest's link: the same check, answered only with one of the fixed sentences. */
+export function checkGuestReply(view: RsvpView, s: RsvpSubmission): CheckedRsvp {
+  const r = check(view, s);
+  return r.ok ? r : { ok: false, message: RSVP_PROBLEM[r.code] };
 }
