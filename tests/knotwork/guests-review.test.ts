@@ -128,3 +128,29 @@ describe('M2: one plus-one per invitation, however many replies arrive at once',
     expect((await state()).cap.held).toBe(4); // Lindqvists 2, Priya and her one guest
   });
 });
+
+describe('M3: an approved removal cannot push held seats past the cap', () => {
+  it('removing a declined spouse would entitle the other to a guest: refused while there is no seat for one', async () => {
+    const [ben, cy] = [await guest('Ben Vale'), await guest('Cy Vale')];
+    const vales = await household('The Vales');
+    expect(await submitRsvp(await tokenOf('The Vales'), IP, { responses: [reply(ben, false)], plusOneName: '' })).toEqual({ ok: true }); // Cy has not answered
+    await ok(saveGuestPlan(c.slug, { ...PLAN, cap: '7' }));
+    expect((await state()).cap).toMatchObject({ cap: 7, held: 7 });
+    await as(c.a);
+    await ok(proposeGuestRemoval(c.slug, { id: ben.id }));
+    const r = await db.consentRequest.findFirstOrThrow({ where: { orgId: c.orgId, kind: 'remove_guest' } });
+    await as(c.b);
+    await refused(approveRequest(c.slug, { id: r.id }), /would hold 8 seats against a cap of 7/);
+    expect((await guest('Ben Vale')).removedAt).toBeNull();
+    expect((await db.consentRequest.findUniqueOrThrow({ where: { id: r.id } })).status).toBe('pending');
+    expect((await state()).cap.held).toBe(7);
+    // And once there is room, the same approval goes through; everyone else can still answer.
+    await as(c.a);
+    await ok(saveGuestPlan(c.slug, { ...PLAN, cap: '8' }));
+    await as(c.b);
+    await ok(approveRequest(c.slug, { id: r.id }));
+    expect((await state()).cap).toMatchObject({ cap: 8, held: 8 });
+    expect(await submitRsvp(await tokenOf('The Vales'), IP, { responses: [reply(cy, true)], plusOneName: '' })).toEqual({ ok: true });
+    expect(vales.id).toBeTruthy();
+  });
+});

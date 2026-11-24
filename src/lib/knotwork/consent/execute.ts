@@ -20,7 +20,7 @@ import { logChange } from '../changelog';
 import { requireWedding, todayOf } from '../context';
 import { dbOfDay, isRealDay } from '../days';
 import { deltaFor } from '../guests/headcount';
-import { loadGuestState } from '../guests/store';
+import { assertWithinCap, loadGuestState } from '../guests/store';
 import { commitMove, lockWedding, syncRsvpTask } from '../schedule/store';
 import type { ConsentKind } from './machine';
 
@@ -106,7 +106,10 @@ export async function executeApproved(tx: Tx, ctx: Ctx, r: Approved, seen: { fin
         await tx.guest.update({ where: { id: g.id }, data: { removedAt: t, removedRequestId: r.id } });
         await logChange(tx, ctx, 'guest', 'deleted', g.id, `${g.name} (${g.household.name})`, { name: g.name, rsvp: g.rsvp, removed: false }, null, mark);
       }
-      const after = await loadGuestState(tx, ctx);
+      // Held seats never pass the cap, on this path too. A removal can RAISE the count: the plus-one rule is re-read
+      // (D-47), so a spouse left alone on an invitation becomes entitled to a guest and holds a seat for one. Throwing
+      // here rolls back the removal and the approval with it (review 2026-11-24, M3; D-58).
+      const after = await assertWithinCap(tx, ctx, 'That removal leaves someone alone on their invitation, who may then bring a guest. It');
       if (after.count.attending !== before.count.attending) {
         const d = deltaFor(guests.length === 1 ? guests[0]!.name.split(/\s+/)[0]! : `${guests.length} guests`, 'removed', before.count, after.count, after.prices);
         await tx.headcountDelta.create({ data: { orgId: ctx.orgId, label: d.label, deltaSeats: d.deltaSeats, deltaCents: d.deltaCents, attendingAfter: after.count.attending, costAfterCents: after.costCents } });
