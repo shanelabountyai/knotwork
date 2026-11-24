@@ -42,12 +42,11 @@ export async function endHelper(tx: Tx, orgId: string, userId: string) {
 }
 
 /**
- * The pairing latch (D-33): the first time two partners are seen, `pairedAt` is set and never unset. Called by every
- * page (view.ts) and by propose(), so a second partner who has so much as opened a page ends solo mode for good.
- * Returns the wedding as it now is, and how many partners there are.
+ * The pairing latch (D-33, D-56): `pairedAt` is set by the database the moment the workspace has two partners (trigger
+ * `Membership_pairing_latch`, or `Wedding_born_paired` for a wedding created later) and is never unset. This only
+ * reads: the wedding as it is now, not as the caller loaded it, and how many partners there are.
  */
 export async function syncPairing(tx: Tx, ctx: { orgId: string }, wedding: WeddingRow): Promise<{ wedding: WeddingRow; partnerCount: number }> {
   const partnerCount = await tx.membership.count({ where: { orgId: ctx.orgId, role: 'owner' } });
-  if (partnerCount < 2 || wedding.pairedAt) return { wedding, partnerCount };
-  return { wedding: await tx.wedding.update({ where: { orgId: ctx.orgId }, data: { pairedAt: now() } }), partnerCount };
+  return { wedding: (await loadWedding(tx, ctx)) ?? wedding, partnerCount };
 }

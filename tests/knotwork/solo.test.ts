@@ -111,7 +111,7 @@ describe('pairing ends solo mode for good', () => {
     await ok(proposeBooking(slug, { id: vendorId }));
     expect(await requests()).toMatchObject([{ status: 'pending', solo: false }]);
     expect((await db.vendor.findUniqueOrThrow({ where: { id: vendorId } })).status).toBe('considering');
-    expect((await wedding()).pairedAt).not.toBeNull(); // latched by the proposal
+    expect((await wedding()).pairedAt).not.toBeNull(); // latched when the second partner joined
     await as(b);
     await ok(approveRequest(slug, { id: (await requests())[0]!.id }));
     expect(await requests()).toMatchObject([{ status: 'approved', solo: false, deciderId: b }]);
@@ -119,8 +119,7 @@ describe('pairing ends solo mode for good', () => {
 
   it('removing your partner does not bring solo back', async () => {
     const b = await joinPartner();
-    await withOrg({ orgId }, async (tx) => syncPairing(tx, { orgId }, await wedding())); // what any page load by either of them does
-    await db.membership.delete({ where: { orgId_userId: { orgId, userId: b } } });
+        await db.membership.delete({ where: { orgId_userId: { orgId, userId: b } } });
     await as(a);
     await ok(proposeBooking(slug, { id: vendorId }));
     expect(await requests()).toMatchObject([{ status: 'pending', solo: false }]); // waits for a partner who is not there
@@ -146,7 +145,8 @@ describe('the database checks the solo mark (raw SQL as the owner role)', () => 
     const b = await joinPartner();
     await expect(goSolo((await pendingRow()).id)).rejects.toThrow(/solo is only for a workspace with one partner/);
     // One partner again, but the wedding was paired: refused.
-    await sql(`UPDATE "Wedding" SET "pairedAt" = now() WHERE "orgId" = '${orgId}'`);
+    expect((await wedding()).pairedAt).not.toBeNull(); // the database latched it when the second partner joined (D-56)
+    await expect(sql(`UPDATE "Wedding" SET "pairedAt" = now() WHERE "orgId" = '${orgId}'`)).rejects.toThrow(/a paired wedding stays paired/); // nor can its time move
     await db.membership.delete({ where: { orgId_userId: { orgId, userId: b } } });
     await expect(goSolo((await pendingRow()).id)).rejects.toThrow(/solo is only for a workspace with one partner/);
     await expect(sql(`UPDATE "Wedding" SET "pairedAt" = NULL WHERE "orgId" = '${orgId}'`)).rejects.toThrow(/a paired wedding stays paired/);
@@ -165,13 +165,23 @@ describe('the database checks the solo mark (raw SQL as the owner role)', () => 
 // Review 2026-11-24 (M1): the solo migration added `pairedAt` as NULL on every existing wedding, so a couple who were
 // already two partners before it ran could remove one another and act alone. The backfill marks them paired.
 describe('workspaces that already had two partners before solo mode existed', () => {
+  // The state the solo migration left behind: two partners and no latch. The latch triggers came later (D-56), so
+  // they are switched off while that state is built.
+  const beforeTheLatch = async <T>(fn: () => Promise<T>): Promise<T> => {
+    await db.$executeRawUnsafe('ALTER TABLE "Membership" DISABLE TRIGGER "Membership_pairing_latch"');
+    try {
+      return await fn();
+    } finally {
+      await db.$executeRawUnsafe('ALTER TABLE "Membership" ENABLE TRIGGER "Membership_pairing_latch"');
+    }
+  };
   const backfill = () => db.$executeRawUnsafe(readFileSync('prisma/migrations/20261124000003_knotwork_pairing_backfill/migration.sql', 'utf8'));
   const raw = (id: string, deciderId: string) =>
     db.$executeRawUnsafe(`UPDATE "ConsentRequest" SET status = 'declined', "deciderId" = '${deciderId}', "decidedAt" = now() WHERE id = '${id}'`);
 
   it('two partners today: paired by the migration, so removing one does not bring solo back', async () => {
-    const b = await joinPartner();
-    expect((await wedding()).pairedAt).toBeNull(); // the state the solo migration left behind
+    const b = await beforeTheLatch(joinPartner);
+    expect((await wedding()).pairedAt).toBeNull();
     await backfill();
     expect((await wedding()).pairedAt).not.toBeNull();
     await db.membership.delete({ where: { orgId_userId: { orgId, userId: b } } });
@@ -181,7 +191,7 @@ describe('workspaces that already had two partners before solo mode existed', ()
   });
 
   it('one partner today, but a second partner once decided a request: paired by the migration', async () => {
-    const b = await joinPartner();
+    const b = await beforeTheLatch(joinPartner);
     const r = await db.consentRequest.create({ data: { orgId, kind: 'book_vendor', payload: { vendorId }, summary: 'raw', proposerId: a, expiresAt: new Date(now().getTime() + 86_400_000) } });
     await raw(r.id, b);
     await db.membership.delete({ where: { orgId_userId: { orgId, userId: b } } });
@@ -197,3 +207,32 @@ describe('workspaces that already had two partners before solo mode existed', ()
     expect(await requests()).toMatchObject([{ status: 'approved', solo: true }]);
   });
 });
+
+// Review 2026-11-24 (S1): the latch used to be set by the next page load or proposal, so a second partner who had
+// joined but not yet opened a wedding page (she must enrol a second factor first) could be removed and solo came back.
+describe('pairing is latched when the second partner joins, not when someone next looks', () => {
+  it('join, then removal before any page load: still two keys', async () => {
+    const b = await joinPartner();
+    await db.membership.delete({ where: { orgId_userId: { orgId, userId: b } } });
+    await as(a);
+    await ok(proposeBooking(slug, { id: vendorId }));
+    expect(await requests()).toMatchObject([{ status: 'pending', solo: false }]);
+    expect((await db.vendor.findUniqueOrThrow({ where: { id: vendorId } })).status).toBe('considering');
+  });
+
+  it('a member promoted to partner latches it too, and the feed says when', async () => {
+    await db.membership.update({ where: { orgId_userId: { orgId, userId: helper } }, data: { role: 'owner' } });
+    expect((await wedding()).pairedAt).not.toBeNull();
+    expect((await log(orgId)).filter((e) => e.action === 'knotwork.wedding.paired')).toMatchObject([{ actorUserId: null, targetType: 'wedding', data: { before: { paired: false }, after: { paired: true } } }]);
+  });
+
+  it('a wedding created when there are already two partners is born paired', async () => {
+    const org = await makeOrg('solo-late-wedding');
+    const first = (await addMember(org.id, 'owner', 'ash@example.test')).id;
+    await addMember(org.id, 'owner', 'birch@example.test');
+    await as(first);
+    await ok(createWedding(org.slug, { title: 'Ash', date, timeZone: '' }));
+    expect((await db.wedding.findUniqueOrThrow({ where: { orgId: org.id } })).pairedAt).not.toBeNull();
+  });
+});
+
