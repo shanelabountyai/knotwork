@@ -86,6 +86,8 @@ const ENTITY_CAP: Record<string, Capability> = {
   giftlog: 'gifts.view', registrylink: 'gifts.view', claim: 'gifts.view',
   // P1-4 and P1-6: partners only. A name change's entries are also masked at write while it is unshared (D-114).
   namechange: 'namechange.own', contingency: 'contingency.view',
+  // P1-5: the seating chart is the guest list's (tables, pair rules, seats).
+  seating: 'guests.view',
 };
 export const canSeeEntity = (who: Who, entity: string): boolean => {
   const cap = ENTITY_CAP[entity];

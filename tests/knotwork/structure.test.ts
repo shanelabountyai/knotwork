@@ -56,10 +56,12 @@ describe('rule 1: all deadlines derive from the anchor (no free-floating dates)'
     'NameChange.createdAt': 'row timestamp', 'NameChangeStep.completedOn': 'a date of fact: the day the step was marked done', 'NameChangeArtifact.createdAt': 'row timestamp: when the document was marked held',
     // P1-6: tasks a plan adds are ordinary tasks (leadDays, bufferDays); nothing in a plan is a date.
     'ContingencyPlan.createdAt': 'row timestamp', 'ContingencyRun.executedAt': 'a date of fact: when the branch was put into action', 'ContingencyItem.doneOn': 'a date of fact: the day the line was ticked off',
+    // P1-5: a seating chart holds no date at all; D-42's vendor link stops a set number of days after the wedding date.
+    'SeatingTable.createdAt': 'row timestamp', 'SeatingRule.createdAt': 'row timestamp',
   };
 
-  it('finds the clone\'s forty-one models', () => {
-    expect(models.map((m) => m.name)).toHaveLength(41); // twenty from Phases 1 and 2, three for gifting, five for photos and attachments, four for funding (P1-2), three for the gift log and store items (P1-3, P1-8), three for name changes (P1-4), three for contingency plans (P1-6)
+  it('finds the clone\'s forty-four models', () => {
+    expect(models.map((m) => m.name)).toHaveLength(44); // twenty from Phases 1 and 2, three for gifting, five for photos and attachments, four for funding (P1-2), three for the gift log and store items (P1-3, P1-8), three for name changes (P1-4), three for contingency plans (P1-6), three for the seating chart (P1-5)
   });
   it('a photo event stores day counts, and both of its days are worked out from the wedding date', () => {
     const event = models.find((m) => m.name === 'PhotoEvent')!.body;
@@ -149,16 +151,33 @@ describe('rule 2: designated actions only through the consent module', () => {
 // and exactly which files may touch an uploaded file. Anything outside either list fails here by name.
 describe('rule 3: the guest-facing surfaces are a closed list', () => {
   const strip = (text: string) => text.replace(/\/\/[^\n]*|\/\*[\s\S]*?\*\//g, '');
-  const GUEST_FACING = ['src/app/p/[token]/page.tsx', 'src/app/p/[token]/upload/route.ts', 'src/app/r/[token]/gifts/claim/route.ts', 'src/app/r/[token]/gifts/contribute/route.ts', 'src/app/r/[token]/gifts/page.tsx', 'src/app/r/[token]/page.tsx', 'src/app/r/[token]/respond/route.ts'];
+  // D-42 adds the vendor's read-only page, /v/[token]: outside the workspace like the guest links, for one vendor.
+  const GUEST_FACING = ['src/app/p/[token]/page.tsx', 'src/app/p/[token]/upload/route.ts', 'src/app/r/[token]/gifts/claim/route.ts', 'src/app/r/[token]/gifts/contribute/route.ts', 'src/app/r/[token]/gifts/page.tsx', 'src/app/r/[token]/page.tsx', 'src/app/r/[token]/respond/route.ts', 'src/app/v/[token]/page.tsx'];
 
-  it('the public Knotwork routes are exactly /r/[token] (+ respond, gifts, gifts/contribute, gifts/claim) and /p/[token] (+ upload)', () => {
+  it('the public Knotwork routes are exactly /r/[token] (+ respond, gifts, gifts/contribute, gifts/claim), /p/[token] (+ upload) and /v/[token]', () => {
     const routes = globSync('src/app/**/{page,route}.{ts,tsx}', { cwd: ROOT }).sort();
     const isPublic = (f: string) => /^\/\/ public: \S/m.test(read(f));
-    expect(routes.filter((f) => /^src\/app\/(r|p)\//.test(f))).toEqual(GUEST_FACING);
+    expect(routes.filter((f) => /^src\/app\/(r|p|v)\//.test(f))).toEqual(GUEST_FACING);
     for (const f of GUEST_FACING) expect(isPublic(f), f).toBe(true);
     // Nothing under the signed-in tree is public, whatever it is called.
     expect(routes.filter((f) => f.startsWith('src/app/o/') && isPublic(f))).toEqual([]);
-    expect(routes.filter((f) => /^src\/app\/(o|r|p)\//.test(f) && isPublic(f))).toEqual(GUEST_FACING);
+    expect(routes.filter((f) => /^src\/app\/(o|r|p|v)\//.test(f) && isPublic(f))).toEqual(GUEST_FACING);
+  });
+  it('the vendor link\'s page touches no database and no store: only vendors/public.ts, which shows only the projection', () => {
+    const page = strip(read('src/app/v/[token]/page.tsx'));
+    expect(page).not.toMatch(/@\/core\/db|vendors\/(store|link|brief)|guests\/|gifts\/|secrecy\/|\btx\b|withOrg|asSystem/);
+    expect([...read('src/app/v/[token]/page.tsx').matchAll(/from '@\/lib\/knotwork\/([\w/-]+)'/g)].map((m) => m[1]!)).toEqual(['vendors/public']);
+    // The vendor's whole view is three strings: the wedding's title, its own name and its own brief (counts, never names).
+    const projection = strip(read('src/lib/knotwork/vendors/projection.ts'));
+    expect(projection).toMatch(/export type VendorLinkView = \{ weddingTitle: string; vendorName: string; brief: string \};/);
+    expect(projection).toMatch(/brief: renderBrief\(i\)\.body/);
+    const pub = strip(read('src/lib/knotwork/vendors/public.ts'));
+    expect(pub).toMatch(/Promise<VendorLinkView \| 'limited' \| null>/);
+    expect(pub).toMatch(/return vendorLinkView\(await briefInput\(/);
+    expect(pub).not.toMatch(/\.(household|guest|inviteWave|guestPlan|giftEntry|registryItem|expense|budgetCategory)\./);
+    // The brief it renders is the brief: role-filtered, no guest name in its input shape.
+    const brief = strip(read('src/lib/knotwork/vendors/brief.ts'));
+    expect(brief.split('guests?: {')[1]!.split('};')[0]).not.toMatch(/\bname\b/);
   });
   it('the photo link\'s two files touch no database and no store: only photos/public.ts, which shows only the projection', () => {
     for (const f of GUEST_FACING.slice(0, 2)) expect(strip(read(f)), f).not.toMatch(/@\/core\/db|photos\/(store|blobs|qr)|guests\/(store|public)|gifts\/|\btx\b|withOrg|asSystem/);
@@ -171,12 +190,12 @@ describe('rule 3: the guest-facing surfaces are a closed list', () => {
     expect(pub).toMatch(/Promise<UploadView \| 'limited' \| null>/);
     expect(pub).not.toMatch(/\.(household|guest|inviteWave|guestPlan|giftEntry|registryItem)\./);
   });
-  it('the only two Knotwork files that read across orgs are the two token lookups', () => {
-    expect(filesWith(/\basSystem\s*\(/).filter((f) => f.includes('knotwork') || /^src\/app\/(o|r|p)\//.test(f))).toEqual(['src/lib/knotwork/guests/public.ts', 'src/lib/knotwork/photos/public.ts']);
+  it('the only three Knotwork files that read across orgs are the three token lookups', () => {
+    expect(filesWith(/\basSystem\s*\(/).filter((f) => f.includes('knotwork') || /^src\/app\/(o|r|p|v)\//.test(f))).toEqual(['src/lib/knotwork/guests/public.ts', 'src/lib/knotwork/photos/public.ts', 'src/lib/knotwork/vendors/public.ts']);
   });
-  it('/p/:path* carries the same three headers as /r/:path* (the token is in the URL)', () => {
+  it('/p/:path* and /v/:path* carry the same three headers as /r/:path* (the token is in the URL)', () => {
     const config = read('next.config.ts');
-    for (const source of ['/r/:path*', '/p/:path*']) {
+    for (const source of ['/r/:path*', '/p/:path*', '/v/:path*']) {
       const block = config.slice(config.indexOf(`source: '${source}'`)).split('},\n    //')[0]!;
       expect(block, source).toContain(`{ key: 'Referrer-Policy', value: 'no-referrer' }`);
       expect(block, source).toContain(`{ key: 'X-Robots-Tag', value: 'noindex, nofollow' }`);
@@ -380,13 +399,14 @@ describe('P1-1 secrecy: every view of a task, expense, vendor or category passes
       'src/app/o/[org]/wedding/activity/page.tsx': /activityView\(/, 'src/app/o/[org]/wedding/approvals/page.tsx': /movePreview\(/, 'src/app/o/[org]/wedding/date/page.tsx': /movePreview\(/,
       'src/app/o/[org]/wedding/funding/page.tsx': /fundingView\(/, 'src/app/o/[org]/wedding/vendors/[id]/attachments/[attachment]/route.ts': /attachmentFile\(/,
       'src/app/o/[org]/wedding/vendors/[id]/attachments/route.ts': /vendorVisible\(/,
+      'src/app/o/[org]/wedding/dashboard/page.tsx': /dashboardView\(/,
     };
     for (const [f, re] of Object.entries(want)) expect(strip(read(f)), f).toMatch(re);
   });
   it('every loader in views.ts builds its answer with lens(); the funding reader does too', () => {
     const views = strip(read(VIEWS));
     const loaders = [...views.matchAll(/export async function (\w+)\(/g)].map((m) => m[1]!);
-    expect(loaders.sort()).toEqual(['activityView', 'attachmentFile', 'budgetView', 'contingencyWorld', 'flagsView', 'fundingOptions', 'movePreview', 'overviewView', 'scheduleView', 'vendorView', 'vendorVisible', 'vendorsView']);
+    expect(loaders.sort()).toEqual(['activityView', 'attachmentFile', 'budgetView', 'contingencyWorld', 'dashboardView', 'flagsView', 'fundingOptions', 'movePreview', 'overviewView', 'scheduleView', 'vendorView', 'vendorVisible', 'vendorsView']);
     for (const name of loaders) {
       const body = views.slice(views.indexOf(`export async function ${name}(`)).split(/\nexport /)[0]!;
       expect(body, name).toMatch(/lens\(|flagsView\(|vendorVisible\(/); // overview reuses flagsView; attachmentFile reuses vendorVisible

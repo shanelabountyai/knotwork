@@ -137,3 +137,14 @@ Two later features meet this model; neither changes it. Decisions D-114, D-119 a
 | Name change page (P1-4) | one partner's name change (rules followed, steps, documents) | private to its partner by default: the other partner's page does not read an unshared one; helpers get a 404 shared or not |
 | Change log, Activity page, audit CSV, export (P1-4) | the same | an unshared name change is a compartment of its partner with no reveal day (`compartmentsOf`, case `namechange`), so entries are written as "a private item"; the export blanks it for nobody |
 | Contingency preview and run (P1-6) | a private vendor told about a plan; a private category named by a spend | only booked vendors are told (never private, D-102), read through `contingencyWorld` with the lens; a private category does not exist for anyone else, and a designated spend into one's own private category is refused rather than revealed |
+
+## Addendum (Phase 4, slice D): the dashboard, the seating chart and the vendor link
+
+Three later features meet this model; none changes it. Decisions D-126, D-128 and D-129.
+
+| Path | What could leak | How it is closed |
+|---|---|---|
+| Progress dashboard (P1-7) | an overdue private task's title; a private vendor's open flag; a private category or spend in the budget figures | tasks, flags and budget figures are read through `dashboardView` in `secrecy/views.ts` (with `lens`): a private item counts in every figure and is listed as a masked line; "the totals include N private lines". Swept by the page glob (`secrecy-db`) and by `dashboard-db` |
+| Dashboard sections a helper's grants do not reach | approvals, thank-yous, contingency plans, headcount, budget | not computed at all for that helper (`dashboard/store.ts` checks each capability first) |
+| Seating chart (P1-5) | — | reads guests, households, tables and rules only; no task, expense, vendor or category |
+| Vendor read-only link (D-42) | a private vendor's brief; a private task in a shared vendor's brief | a private vendor has no link: making one is refused, making a vendor private ends its link, and `/v/[token]` answers 404 for any vendor sealed to nobody. The brief excludes sealed tasks already (D-104) |

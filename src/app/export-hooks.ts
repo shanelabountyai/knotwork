@@ -66,6 +66,10 @@ export const exportTables: readonly ExportTable[] = [
   whole('ContingencyPlan', (tx, orgId) => tx.contingencyPlan.findMany({ where: { orgId }, orderBy: [{ createdAt: 'asc' }, { id: 'asc' }] })),
   whole('ContingencyRun', (tx, orgId) => tx.contingencyRun.findMany({ where: { orgId }, orderBy: [{ executedAt: 'asc' }, { id: 'asc' }] })),
   whole('ContingencyItem', (tx, orgId) => tx.contingencyItem.findMany({ where: { orgId }, orderBy: [{ runId: 'asc' }, { position: 'asc' }] })),
+  // P1-5: the seating chart, whole (tables, pair rules between guests, seats; no secret, no token).
+  whole('SeatingTable', (tx, orgId) => tx.seatingTable.findMany({ where: { orgId }, orderBy: [{ name: 'asc' }, { id: 'asc' }] })),
+  whole('SeatingRule', (tx, orgId) => tx.seatingRule.findMany({ where: { orgId }, orderBy: [{ createdAt: 'asc' }, { id: 'asc' }] })),
+  whole('Seat', (tx, orgId) => tx.seat.findMany({ where: { orgId }, orderBy: [{ tableId: 'asc' }, { guestId: 'asc' }] })),
 ];
 
 // An org-owned table left out on purpose, with the reason. INV-34 fails on any model with an orgId column that is in

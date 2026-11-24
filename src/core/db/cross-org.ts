@@ -19,4 +19,5 @@ export const CROSS_ORG_FILES: Readonly<Record<string, string>> = {
   // clone entries below
   'src/lib/knotwork/guests/public.ts': 'an RSVP link names its household: the hashed-token lookup runs before any org is known', // app
   'src/lib/knotwork/photos/public.ts': 'a photo upload link names its event (hashed-token lookup before any org is known); the retention purge (cron) lists the orgs that hold photos', // app
+  'src/lib/knotwork/vendors/public.ts': "a vendor's read-only link names the vendor: the hashed-token lookup runs before any org is known (D-42)", // app
 };

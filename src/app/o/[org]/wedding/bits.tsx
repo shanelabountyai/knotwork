@@ -9,7 +9,7 @@ export function WeddingNav({ slug, counts }: { slug: string; counts?: { approval
   const base = `/o/${slug}/wedding`;
   return (
     <nav aria-label="Wedding">
-      <Link href={`/o/${slug}`}>Overview</Link> · <Link href={`${base}/schedule`}>Schedule</Link> · <Link href={`${base}/budget`}>Budget</Link> · <Link href={`${base}/funding`}>Funding</Link> ·{' '}
+      <Link href={`/o/${slug}`}>Overview</Link> · <Link href={`${base}/dashboard`}>Dashboard</Link> · <Link href={`${base}/schedule`}>Schedule</Link> · <Link href={`${base}/budget`}>Budget</Link> · <Link href={`${base}/funding`}>Funding</Link> ·{' '}
       <Link href={`${base}/vendors`}>Vendors</Link> · <Link href={`${base}/guests`}>Guests</Link> · <Link href={`${base}/gifts`}>Gifts</Link> · <Link href={`${base}/photos`}>Photos</Link> · <Link href={`${base}/contingency`}>Contingency plans</Link> · <Link href={`${base}/name-change`}>Name change</Link> · <Link href={`${base}/approvals`}>Approvals{counts?.approvals ? ` (${counts.approvals})` : ''}</Link> ·{' '}
       <Link href={`${base}/flags`}>Vendor flags{counts?.flags ? ` (${counts.flags})` : ''}</Link> · <Link href={`${base}/activity`}>Activity</Link> ·{' '}
       <Link href={`${base}/helpers`}>Helpers</Link>

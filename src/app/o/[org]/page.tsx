@@ -13,7 +13,7 @@ import { view } from './wedding/view';
 export const metadata = { title: 'Overview' };
 
 // The workspace home. No wedding yet: the form that creates one. Otherwise the four counts a couple checks first
-// (PRD P0-2: "unacknowledged flags surface on the dashboard"). The fuller P1-7 dashboard is Phase 4. Tasks and flags
+// (PRD P0-2: "unacknowledged flags surface on the dashboard"), and the link to the fuller P1-7 dashboard. Tasks and flags
 // come through secrecy/views.ts (P1-1): a private task counts, unnamed.
 export default async function OrgHome({ params }: { params: Promise<{ org: string }> }) {
   const ctx = await requireOrg((await params).org);
@@ -58,6 +58,7 @@ export default async function OrgHome({ params }: { params: Promise<{ org: strin
         <strong>{showDay(v.date)}</strong> · {daysToGo >= 0 ? `${daysToGo} days to go` : `${-daysToGo} days ago`}
         {partner && <> · <Link href={`/o/${ctx.slug}/wedding/date`}>Move the date</Link></>}
       </p>
+      <p><Link href={`/o/${ctx.slug}/wedding/dashboard`}><strong>Progress dashboard</strong></Link>: tasks on track, what is overdue, headcount, budget and more, in one place.</p>
       <ul aria-label="At a glance">
         <li><Link href={`/o/${ctx.slug}/wedding/schedule`}>{o.open} open tasks</Link>: {late} late, {impossible} impossible</li>
         {partner && <li><Link href={`/o/${ctx.slug}/wedding/approvals`}>{waiting} waiting for your approval</Link></li>}

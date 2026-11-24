@@ -5,7 +5,7 @@ export function GuestNav({ slug }: { slug: string }) {
   return (
     <nav aria-label="Guest list">
       <Link href={base}>Households</Link> · <Link href={`${base}/waves`}>Invitations and cap</Link> · <Link href={`${base}/chase`}>Chasing</Link> ·{' '}
-      <Link href={`${base}/music`}>Music</Link> · <Link href={`${base}/import`}>Import</Link>
+      <Link href={`${base}/music`}>Music</Link> · <Link href={`${base}/seating`}>Seating</Link> · <Link href={`${base}/import`}>Import</Link>
     </nav>
   );
 }

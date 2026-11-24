@@ -15,7 +15,7 @@ import { diff, type Plain } from './changelog-diff';
 import { PRIVATE_ENTRY } from './secrecy/compartment';
 import { sealedNow } from './secrecy/seal';
 
-export const ENTITIES = ['wedding', 'task', 'baseline', 'category', 'expense', 'snapshot', 'vendor', 'payment', 'flag', 'brief', 'request', 'grant', 'household', 'guest', 'wave', 'guestplan', 'song', 'registry', 'gift', 'thankyou', 'photoevent', 'photo', 'photodevice', 'attachment', 'funder', 'pledge', 'receipt', 'allocation', 'giftlog', 'registrylink', 'claim', 'namechange', 'contingency'] as const;
+export const ENTITIES = ['wedding', 'task', 'baseline', 'category', 'expense', 'snapshot', 'vendor', 'payment', 'flag', 'brief', 'request', 'grant', 'household', 'guest', 'wave', 'guestplan', 'song', 'registry', 'gift', 'thankyou', 'photoevent', 'photo', 'photodevice', 'attachment', 'funder', 'pledge', 'receipt', 'allocation', 'giftlog', 'registrylink', 'claim', 'namechange', 'contingency', 'seating'] as const;
 export type Entity = (typeof ENTITIES)[number];
 export const PREFIX = 'knotwork.';
 

@@ -66,7 +66,8 @@ async function write(tx: Tx, ctx: { orgId: string }, kind: ItemKind, id: string,
   const where = { id, orgId: ctx.orgId };
   if (kind === 'task') await tx.task.update({ where, data });
   else if (kind === 'expense') await setExpenseCompartment(tx, ctx, id, data);
-  else if (kind === 'vendor') await tx.vendor.update({ where, data });
+  // D-128: a private vendor has no read-only link, so making one private ends its link at once.
+  else if (kind === 'vendor') await tx.vendor.update({ where, data: data.privateToId ? { ...data, linkTokenHash: null, linkTokenSealed: null } : data });
   else await tx.budgetCategory.update({ where, data });
 }
 

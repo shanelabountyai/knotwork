@@ -9,12 +9,13 @@ import { vendorView } from '@/lib/knotwork/secrecy/views';
 import { ATTACHMENT_PROBLEM, ATTACHMENTS_PER_VENDOR } from '@/lib/knotwork/vendors/attachments';
 import { VENDOR_CATEGORIES } from '@/lib/knotwork/vendors/brief';
 import { hhmm } from '@/lib/knotwork/vendors/scope';
+import { vendorLinkOf } from '@/lib/knotwork/vendors/link';
 import { flagText } from '@/lib/knotwork/vendors/store';
 import { acknowledgeFlag, addVendorPayment, payVendorPayment, proposeBooking, proposeContract, regenerateBrief, updateVendor } from '../../actions';
 import { MineNote, NoWedding, PrivacySelect, privacyValue, WeddingNav } from '../../bits';
 import { setVendorPrivacy } from '../../privacy/actions';
 import { nameOf, view } from '../../view';
-import { removeVendorAttachment } from '../actions';
+import { endVendorReadLink, newVendorLink, removeVendorAttachment, showVendorLink } from '../actions';
 
 export const metadata = { title: 'Vendor' };
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -28,9 +29,13 @@ export default async function VendorPage({ params, searchParams }: { params: Pro
   const { id } = await params;
   const q = await searchParams;
   if (!UUID.test(id)) notFound();
-  const data = await view(ctx, 'vendors.view', async (tx, v) => ({ page: await vendorView(tx, ctx, v, id) }));
+  const data = await view(ctx, 'vendors.view', async (tx, v) => {
+    const page = await vendorView(tx, ctx, v, id);
+    // D-42: the read-only link's state (never the token itself: that is shown only by an action, to vendors.edit).
+    return { page, link: page && allows(v.who, 'vendors.edit') ? await vendorLinkOf(tx, ctx, id) : null };
+  });
   if (!data) return <NoWedding slug={ctx.slug} />;
-  const { v, page } = data;
+  const { v, page, link } = data;
   if (!page) notFound();
   const { vendor: x, mine, categories, attachments } = page;
   const canEdit = allows(v.who, 'vendors.edit');
@@ -165,6 +170,33 @@ export default async function VendorPage({ params, searchParams }: { params: Pro
           </ActionForm>
         )}
       </section>
+
+      {link && (
+        <section aria-label="Read-only link">
+          <h2>Read-only link for the vendor</h2>
+          <p>
+            A link the vendor can open without an account. It shows this brief, worked out fresh each time (counts, never guests&apos; names), and nothing else.{' '}
+            {link.exists ? (link.working ? `It works until ${showDay(link.lastDay)}.` : 'It does not work at the moment.') : `No link yet. A link works until ${showDay(link.lastDay)}.`}
+          </p>
+          {link.exists && (
+            <ActionForm action={bind(showVendorLink)}>
+              <input type="hidden" name="id" value={x.id} />
+              <button type="submit">Show the vendor link</button>
+            </ActionForm>
+          )}
+          <ActionForm action={bind(newVendorLink)}>
+            <input type="hidden" name="id" value={x.id} />
+            <button type="submit">{link.exists ? 'Replace the vendor link' : 'Make a vendor link'}</button>
+          </ActionForm>
+          {link.exists && (
+            <ActionForm action={bind(endVendorReadLink)}>
+              <input type="hidden" name="id" value={x.id} />
+              <button type="submit">End the vendor link</button>
+            </ActionForm>
+          )}
+          {mine && <p><small>While this vendor is private there is no link: making one is refused.</small></p>}
+        </section>
+      )}
 
       <section aria-label="Contract attachments" id="attachments">
         <h2>Contract attachments</h2>

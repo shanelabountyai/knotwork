@@ -15,6 +15,7 @@ import { fundingByCategory } from '../funding/store';
 import { loadSchedule, previewDateMove } from '../schedule/store';
 import { listAttachments, readAttachment } from '../vendors/attachments';
 import type { World } from '../contingency/preview';
+import { percentOf, taskFigures } from '../dashboard/figures';
 import type { Seen } from './compartment';
 import { lens, type Hidden, type Lensed } from './lens';
 import { compartmentsOf, seenOf } from './seal';
@@ -60,6 +61,31 @@ export async function overviewView(tx: Tx, ctx: OrgCtx, v: V, withFlags: boolean
     open: plan.filter((t) => !t.done).length, late: states.filter((t) => t.state === 'late').length, impossible: states.filter((t) => t.state === 'impossible').length,
     marginDays: schedule.marginDays, waiting, flags,
   };
+}
+
+/**
+ * P1-7, the progress dashboard: the schedule's figures (a hidden task counts in every figure; an overdue one is listed
+ * as a masked line), the open vendor flags (masked like the home page's) when the viewer may see vendors, and the
+ * budget's totals (hidden lines included, and how many there are) when the viewer may see the budget. Nothing stored.
+ */
+export async function dashboardView(tx: Tx, ctx: OrgCtx, v: V, see: { vendors: boolean; budget: boolean }) {
+  const L = lens(seenFor(ctx, v));
+  const { rows, schedule } = await loadSchedule(tx, ctx, v.wedding);
+  const tasks = taskFigures(rows.map((t) => schedule.tasks[t.id]!.state));
+  const overdue = rows
+    .filter((t) => schedule.tasks[t.id]!.state === 'late')
+    .map((t) => ({ ...L.task(t), due: schedule.tasks[t.id]!.due }))
+    .sort((a, b) => (a.due < b.due ? -1 : a.due > b.due ? 1 : (a.hidden ? 1 : 0) - (b.hidden ? 1 : 0) || (!a.hidden && !b.hidden ? a.row.title.localeCompare(b.row.title) : 0)));
+  const flags = see.vendors ? await flagsView(tx, ctx, v, true) : null;
+  let budget = null;
+  if (see.budget) {
+    const all = await loadBudget(tx, ctx); // every figure, hidden ones included
+    const categories = await tx.budgetCategory.findMany({ where: inOrg(ctx), select: C });
+    const expenses = await tx.expense.findMany({ where: inOrg(ctx), select: { ...C, category: { select: C }, vendor: { select: C } } });
+    const hiddenLines = categories.filter((c) => L.category(c).hidden).length + expenses.filter((e) => L.expense(e).hidden).length;
+    budget = { estimateCents: all.estimateCents, actualCents: all.actualCents, remainingCents: all.remainingCents, over: all.over, spentPct: percentOf(all.actualCents, all.estimateCents), overLines: all.lines.filter((l) => l.over).length, hiddenLines };
+  }
+  return { tasks, overdue, marginDays: schedule.marginDays, flags, budget };
 }
 
 /** A date-move preview with hidden task titles replaced (the date page and the approvals page). */

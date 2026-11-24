@@ -34,7 +34,7 @@ export async function exportCategories(tx: Tx, orgId: string): Rows {
 
 export async function exportVendors(tx: Tx, orgId: string): Rows {
   const L = await nobodyLens(tx, orgId);
-  return keep(await tx.vendor.findMany({ where: { orgId }, orderBy: { createdAt: 'asc' } }), L, (L, v) => L.blank('vendor', v, [v]));
+  return keep(await tx.vendor.findMany({ where: { orgId }, omit: { linkTokenHash: true, linkTokenSealed: true }, orderBy: { createdAt: 'asc' } }), L, (L, v) => L.blank('vendor', v, [v]));
 }
 
 export async function exportVendorPayments(tx: Tx, orgId: string): Rows {
