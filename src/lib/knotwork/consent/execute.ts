@@ -1,5 +1,5 @@
 // RULE 2 (CLAUDE.md): this file is the ONLY writer of designated fields. Nothing here runs unless consent/store.ts has
-// just marked the request approved by a second partner, in the same transaction; if anything below throws, that
+// just marked the request approved, by a second partner or solo (D-33), in the same transaction; if anything below throws, that
 // approval is rolled back with it, so there is never an approved request whose action did not happen.
 //
 //   book_vendor      Vendor.status = booked            (Vendor_guard trigger checks the request)
@@ -38,8 +38,12 @@ export type Payload<K extends keyof typeof PAYLOAD> = z.infer<(typeof PAYLOAD)[K
 type Ctx = { orgId: string; userId: string };
 type Approved = { id: string; kind: ConsentKind; payload: unknown };
 
-/** Does what an approved request allows. `seen` is the date-move fingerprint the approver was shown. */
-export async function executeApproved(tx: Tx, ctx: Ctx, r: Approved, seen: { fingerprint?: string }): Promise<void> {
+/** How the log marks a designated change: two keys, or one partner alone before pairing (D-33). Never both. */
+export const keysMark = (solo: boolean | undefined) => (solo ? { twoKey: false, solo: true } : { twoKey: true });
+
+/** Does what an approved request allows. `seen` is the date-move fingerprint the approver was shown, and whether the approval was solo. */
+export async function executeApproved(tx: Tx, ctx: Ctx, r: Approved, seen: { fingerprint?: string; solo?: boolean }): Promise<void> {
+  const mark = keysMark(seen.solo);
   switch (r.kind) {
     case 'book_vendor': {
       const p = PAYLOAD.book_vendor.parse(r.payload);
@@ -47,7 +51,7 @@ export async function executeApproved(tx: Tx, ctx: Ctx, r: Approved, seen: { fin
       if (!v) throw new Refused('That vendor no longer exists.');
       if (v.status !== 'considering') throw new Refused(v.status === 'booked' ? 'That vendor is already booked.' : 'That vendor was dropped.');
       await tx.vendor.update({ where: { id: v.id }, data: { status: 'booked', bookedRequestId: r.id } });
-      await logChange(tx, ctx, 'vendor', 'updated', v.id, v.name, { status: v.status }, { status: 'booked' }, { twoKey: true });
+      await logChange(tx, ctx, 'vendor', 'updated', v.id, v.name, { status: v.status }, { status: 'booked' }, mark);
       await syncRsvpTask(tx, ctx); // a booked vendor's count deadline now drives the RSVP deadline
       return;
     }
@@ -58,7 +62,7 @@ export async function executeApproved(tx: Tx, ctx: Ctx, r: Approved, seen: { fin
       if (v.contractSignedOn) throw new Refused('That contract is already signed.');
       const signedOn = todayOf(await requireWedding(tx, ctx));
       await tx.vendor.update({ where: { id: v.id }, data: { contractSignedOn: dbOfDay(signedOn), contractTotalCents: p.totalCents, contractRequestId: r.id } });
-      await logChange(tx, ctx, 'vendor', 'updated', v.id, v.name, { contractSignedOn: null, contractTotalCents: v.contractTotalCents }, { contractSignedOn: signedOn, contractTotalCents: p.totalCents }, { twoKey: true });
+      await logChange(tx, ctx, 'vendor', 'updated', v.id, v.name, { contractSignedOn: null, contractTotalCents: v.contractTotalCents }, { contractSignedOn: signedOn, contractTotalCents: p.totalCents }, mark);
       return;
     }
     case 'spend': {
@@ -71,7 +75,7 @@ export async function executeApproved(tx: Tx, ctx: Ctx, r: Approved, seen: { fin
         if (pay.paidOn) throw new Refused('That payment has already been paid.');
       }
       const vendorId = p.vendorId && (await tx.vendor.findFirst({ where: { id: p.vendorId, ...inOrg(ctx) }, select: { id: true } })) ? p.vendorId : null;
-      await createExpense(tx, ctx, wedding, { ...p, vendorId }, r.id);
+      await createExpense(tx, ctx, wedding, { ...p, vendorId }, r.id, seen.solo);
       return;
     }
     case 'change_date': {
@@ -86,7 +90,7 @@ export async function executeApproved(tx: Tx, ctx: Ctx, r: Approved, seen: { fin
       const before = { spendThresholdCents: w.spendThresholdCents, consentExpiryDays: w.consentExpiryDays, chaseBufferDays: w.chaseBufferDays };
       if (JSON.stringify(before) === JSON.stringify(p)) throw new Refused('Those are already the rules.');
       await tx.wedding.update({ where: { orgId: ctx.orgId }, data: { ...p, settingsRequestId: r.id } });
-      await logChange(tx, ctx, 'wedding', 'updated', w.id, 'Approval rules', before, p, { twoKey: true });
+      await logChange(tx, ctx, 'wedding', 'updated', w.id, 'Approval rules', before, p, mark);
       await syncRsvpTask(tx, ctx); // the chase buffer moves the RSVP deadline
       return;
     }

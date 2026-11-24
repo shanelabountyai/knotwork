@@ -30,7 +30,7 @@ export async function propose(tx: Tx, ctx: Ctx, wedding: WeddingRow, kind: Conse
   if (!soloAllowed({ partnerCount: pairing.partnerCount, everPaired: !!pairing.wedding.pairedAt }, actor)) return { ...r, executed: false };
   await tx.consentRequest.update({ where: { id: r.id }, data: { status: 'approved', solo: true, decidedAt: t, executedAt: t } });
   await logChange(tx, ctx, 'request', 'approved', r.id, summary, { status: 'pending' }, { status: 'approved', solo: true }, { kind, proposerId: ctx.userId, solo: true });
-  await executeApproved(tx, ctx, { id: r.id, kind, payload }, { fingerprint: opts.fingerprint });
+  await executeApproved(tx, ctx, { id: r.id, kind, payload }, { fingerprint: opts.fingerprint, solo: true });
   return { ...r, executed: true };
 }
 

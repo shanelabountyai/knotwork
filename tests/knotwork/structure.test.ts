@@ -61,9 +61,9 @@ describe('rule 2: designated actions only through the consent module', () => {
   const EXECUTE = 'src/lib/knotwork/consent/execute.ts';
 
   it('only the executor (and the atomic move it calls) writes the wedding row after creation', () => {
-    expect(filesWith(/\.wedding\.(update|updateMany|upsert|delete|deleteMany)\(/)).toEqual([EXECUTE, 'src/lib/knotwork/context.ts', 'src/lib/knotwork/schedule/store.ts']);
-    // context.ts writes one thing: the pairing latch (D-33), which is not designated and only ever tightens the rule.
-    expect(read('src/lib/knotwork/context.ts').match(/\.wedding\.update\([^;]*;/g)).toEqual(["}.wedding.update({ where: { orgId: ctx.orgId }, data: { pairedAt: now() } }), partnerCount };".slice(1)]);
+    // The pairing latch (D-33) is not written by any file: the database sets it (D-56).
+    expect(filesWith(/\.wedding\.(update|updateMany|upsert|delete|deleteMany)\(/)).toEqual([EXECUTE, 'src/lib/knotwork/schedule/store.ts']);
+    expect(filesWith(/pairedAt:/)).toEqual([]);
     expect(read('src/lib/knotwork/schedule/store.ts').match(/\.wedding\.update\(/g)).toHaveLength(1); // inside commitMove
     expect(filesWith(/\bcommitMove\(/)).toEqual([EXECUTE, 'src/lib/knotwork/schedule/store.ts']); // defined in the store, called only by the executor
   });
