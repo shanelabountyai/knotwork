@@ -2,7 +2,7 @@
 
 Wedding planning for one couple and their circle, on saas-foundation v1.7.0. **Synthetic data only; not deployed.**
 Spec: `docs/prds/prd-knotwork-wedding.md` (v1.1). Decisions: `docs/knotwork/decisions.md`, which outranks the PRD
-where they differ. Current phase plan: `docs/knotwork/PHASE-1-PLAN.md`. Session state: `NEXT.md`. Write-up: `WRITEUP.md`.
+where they differ. Current phase plan: `docs/knotwork/PHASE-3-PLAN.md`. Session state: `NEXT.md`. Write-up: `WRITEUP.md`.
 
 ## The four build rules (PRD "Build Notes")
 
@@ -16,14 +16,22 @@ where they differ. Current phase plan: `docs/knotwork/PHASE-1-PLAN.md`. Session 
    file writes those fields itself (`tests/knotwork/structure.test.ts` scans for it; the database also checks it).
    One exception, by owner decision (D-33): while a workspace has one partner and has never had two, that partner's
    requests are approved at once, marked `solo`, through the same `executeApproved`.
-3. **Guest-facing surfaces never leak wave data.** The only guest-facing surface is `/r/[token]` (page and
-   `respond` route). Everything it returns is built by `src/lib/knotwork/guests/projection.ts`, which has no list,
-   wave, priority, invite date, creation time or state in it. Add a field there deliberately or not at all. The sweep
-   (`tests/knotwork/guests-pure.test.ts`, `guests-db.test.ts`, `e2e/guests.spec.ts`) compares an A household with a B
-   household. A guest is never deleted, only removed by an approved request.
-4. **Uploads are hostile input: strip, validate, cap.** No phase so far accepts a file (the guest import is pasted
-   text, capped and validated line by line; file uploads arrive in Phase 3, D-39). Nothing that takes a file ships
-   without an allowlist, a size cap and metadata stripping, each with a test.
+3. **Guest-facing surfaces never leak wave data.** The guest-facing surfaces are a closed list: `/r/[token]` (page,
+   `respond`, `gifts`, `gifts/contribute`) and `/p/[token]` (page, `upload`). Each returns only what its projection
+   builds: `src/lib/knotwork/guests/projection.ts`, `gifts/projection.ts`, `photos/projection.ts`. None has a list,
+   wave, priority, invite date, creation time or state in it; the photo page shows the wedding title and the event
+   name and nothing else. Add a field there deliberately or not at all. The sweep (`tests/knotwork/guests-pure.test.ts`,
+   `guests-db.test.ts`, `gifts-db.test.ts`, `e2e/guests.spec.ts`) compares an A household with a B household;
+   `tests/knotwork/structure.test.ts` holds the list of routes. A guest is never deleted, only removed by an approved
+   request.
+4. **Uploads are hostile input: strip, validate, cap.** Every file enters through `src/lib/knotwork/uploads/`
+   (`receiveImage`), called by the only two upload routes: `/p/[token]/upload` and
+   `/o/[org]/wedding/vendors/[id]/attachments`. Allowlist by magic bytes (JPEG, PNG, WebP; the name and the declared
+   type are never read); 10 MB checked while reading, 50 megapixels from the header before decoding; decoded and
+   re-encoded with no metadata, then the output is inspected (`inspect.ts`) and the ingest fails unless it is clean.
+   The raw upload is never stored: a bytes column takes only a `Processed` image. Each guard has a fixture in
+   `fixtures/photos/strip/` and a test (`uploads-pure`, `photos-db`, `attachments`, `structure`). The guest import
+   is still pasted text. A new file type (PDF, D-65) ships only with its own strip, allowlist and cap, each tested.
 
 ## Foundation rules (the template's, unchanged)
 
@@ -32,7 +40,8 @@ where they differ. Current phase plan: `docs/knotwork/PHASE-1-PLAN.md`. Session 
   `scripts/foundation-*.ts`, the template's settings, login, demo, onboarding and account routes. `npm run
   foundation:drift` must pass. An unavoidable patch goes in `FOUNDATION_PATCHES.md` with a decisions row.
 - Knotwork's own code lives in `src/lib/knotwork/` (pure engines and stores), `src/app/o/[org]/wedding/` (routes),
-  `prisma/schema/knotwork.prisma`, `tests/knotwork/`, `fixtures/`, `tools/` (Python stdlib oracles) and `scripts/knotwork/`.
+  `prisma/schema/knotwork.prisma`, `tests/knotwork/`, `fixtures/`, `rules/` (limits as data), `tools/` (Python stdlib
+  oracles) and `scripts/knotwork/`.
 - Every page and route handler awaits `requireOrg` first. Every server action is built by `orgAction`, every row id in
   its schema is `ref('<model>')`, and a row from another org is `notFound()` before any other answer (INV-01 to 04).
 - Every org-owned table has `orgId`, an RLS policy (`npm run rls:policies`), an entry in `src/app/export-hooks.ts` and
