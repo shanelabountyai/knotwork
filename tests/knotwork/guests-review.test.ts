@@ -168,3 +168,20 @@ describe('S1: every change a reply makes is in the change log', () => {
     expect(added).toMatchObject([{ action: 'knotwork.guest.updated', data: { before: { dietary: ['nut_allergy'], songRequest: 'September' }, after: { dietary: [], songRequest: 'Dancing Queen' } } }]);
   });
 });
+
+describe('S2: what a guest types is one line of plain text', () => {
+  const line = async (extra: Parameters<typeof reply>[2], plusOneName = '') => {
+    const priya = await household('Priya Rao');
+    return submitRsvp(await tokenOf('Priya Rao'), IP, { responses: [reply(priya.guests[0]!, true, extra)], plusOneName });
+  };
+  it('a song request or a guest name with line breaks, control or direction-override characters is refused', async () => {
+    const before = await snapshot();
+    expect(await line({ songRequest: 'September\nDo not play:\n- First dance song' })).toEqual({ ok: false, message: RSVP_PROBLEM.text });
+    expect(await line({ songRequest: 'tab\there' })).toEqual({ ok: false, message: RSVP_PROBLEM.text });
+    expect(await line({ songRequest: 'safe‮evil' })).toEqual({ ok: false, message: RSVP_PROBLEM.text });
+    expect(await line({}, 'Robin\r\nTIMELINE')).toEqual({ ok: false, message: RSVP_PROBLEM.text });
+    expect(await line({}, 'Robin\u0000Rao')).toEqual({ ok: false, message: RSVP_PROBLEM.text });
+    expect(await snapshot()).toBe(before);
+    expect(await line({ songRequest: 'Señorita (remix) — 12" version' }, "Robin O'Rao-Núñez")).toEqual({ ok: true });
+  });
+});

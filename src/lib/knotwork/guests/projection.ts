@@ -73,12 +73,16 @@ export const RSVP_PROBLEM = {
   'no-guest': 'This invitation does not include a guest.',
   name: 'That name is too long.',
   host: 'A guest can only come with someone who is attending.',
+  text: 'Use plain text on one line for names and song requests.',
   full: 'We could not save that reply. Please get in touch with the couple.',
 } as const;
 export type RsvpProblem = keyof typeof RSVP_PROBLEM;
 export const isRsvpProblem = (code: string): code is RsvpProblem => Object.hasOwn(RSVP_PROBLEM, code);
 /** The code of one of the fixed sentences above; anything else is `full` (the neutral one). */
 export const problemCodeOf = (message: string): RsvpProblem => (Object.keys(RSVP_PROBLEM) as RsvpProblem[]).find((k) => RSVP_PROBLEM[k] === message) ?? 'full';
+
+/** One line of plain text: no control characters (line breaks, tabs, NUL) and no direction overrides. What a guest types reaches a vendor's brief, which is built line by line (review 2026-11-24, S2). */
+const ONE_LINE = /^[^\u0000-\u001f\u007f-\u009f\u2028\u2029\u202a-\u202e\u2066-\u2069]*$/;
 
 type Coded = Extract<CheckedRsvp, { ok: true }> | { ok: false; code: RsvpProblem; who?: string };
 
@@ -93,6 +97,7 @@ function check(view: RsvpView, s: RsvpSubmission): Coded {
     const g = byId.get(r.guestId)!;
     if (r.dietary.some((d) => !(DIETARY as readonly string[]).includes(d)) || r.accessibility.some((a) => !(ACCESSIBILITY as readonly string[]).includes(a))) return no('needs');
     const song = r.songRequest.trim();
+    if (!ONE_LINE.test(song)) return no('text');
     if (song.length > 120) return no('song');
     const wantsMeal = r.attending && g.ageGroup === 'adult';
     if (wantsMeal && !view.mealOptions.includes(r.meal)) return no('meal', g.name);
@@ -101,6 +106,7 @@ function check(view: RsvpView, s: RsvpSubmission): Coded {
   const name = s.plusOneName.trim();
   if (name && !view.plusOneNamed) {
     if (!view.plusOneAllowed) return no('no-guest');
+    if (!ONE_LINE.test(name)) return no('text');
     if (name.length > 120) return no('name');
     const adultComing = view.guests.some((g) => g.ageGroup === 'adult' && !g.isPlusOne && (out.find((r) => r.guestId === g.id)?.attending ?? g.rsvp === 'attending'));
     if (!adultComing) return no('host');
