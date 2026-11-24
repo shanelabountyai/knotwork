@@ -6,6 +6,9 @@ const PORT = Number(process.env.PORT ?? 8400);
 export default defineConfig({
   testDir: 'e2e',
   fullyParallel: false,
+  // Knotwork: e2e/knotwork.spec.ts and e2e/guests.spec.ts each rebuild the same seeded workspace, so spec files must
+  // not run side by side. (CI's runner has enough cores for two workers; the first Phase 2 run there failed on this.)
+  workers: 1,
   reporter: 'list',
   use: { baseURL: `http://localhost:${PORT}` },
   webServer: {
