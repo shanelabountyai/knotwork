@@ -1,5 +1,11 @@
 # NEXT
 
+## ▶ 2026-11-24: PR #1 merged; solo mode (branch `solo-partner`, draft PR #2)
+Shane approved PR #1 in chat on 2026-11-24 and asked for it merged (merge commit 9f2c532, not a squash, so v1.7.0 stays
+an ancestor), then Phase 2. He also answered Question 1: a solo partner may act alone until the second joins. That is
+D-33: one migration (`20261124000000_knotwork_solo`), `soloAllowed`, the pairing latch `Wedding.pairedAt`,
+`tests/knotwork/solo.test.ts`. Phase 2 is branch `phase-2`, stacked on `solo-partner`.
+
 ## ▶ 2026-11-23: Knotwork Phase 1 built (branch `kickoff`, one draft PR, not merged, not deployed)
 Unattended run Shane asked for on 2026-11-23. Plan: `docs/knotwork/PHASE-1-PLAN.md`. Decisions: `docs/knotwork/decisions.md`
 (D-01 to D-32). Stopped at the Phase 1 gate; Phase 2 is not started.

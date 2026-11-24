@@ -40,3 +40,13 @@ export async function endHelper(tx: Tx, orgId: string, userId: string) {
   await tx.helperGrant.deleteMany({ where: { orgId, userId } });
   await tx.task.updateMany({ where: { orgId, assigneeId: userId }, data: { assigneeId: null } });
 }
+
+/**
+ * The pairing latch (D-33, D-56): `pairedAt` is set by the database the moment the workspace has two partners (trigger
+ * `Membership_pairing_latch`, or `Wedding_born_paired` for a wedding created later) and is never unset. This only
+ * reads: the wedding as it is now, not as the caller loaded it, and how many partners there are.
+ */
+export async function syncPairing(tx: Tx, ctx: { orgId: string }, wedding: WeddingRow): Promise<{ wedding: WeddingRow; partnerCount: number }> {
+  const partnerCount = await tx.membership.count({ where: { orgId: ctx.orgId, role: 'owner' } });
+  return { wedding: (await loadWedding(tx, ctx)) ?? wedding, partnerCount };
+}

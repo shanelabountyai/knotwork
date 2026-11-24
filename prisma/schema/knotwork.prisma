@@ -94,6 +94,9 @@ model Wedding {
   chaseBufferDays     Int             @default(14)
   settingsRequestId   String?         @db.Uuid
   settingsRequest     ConsentRequest? @relation("weddingSettings", fields: [settingsRequestId], references: [id], onDelete: NoAction)
+  /// A date of fact (D-33): the first moment the workspace was seen with two partners. Never unset; while it is null
+  /// and there is one partner, that partner's designated actions execute solo.
+  pairedAt            DateTime?       @db.Timestamptz(6)
   createdById         String?         @db.Uuid
   createdAt           DateTime        @default(now()) @db.Timestamptz(6)
   updatedAt           DateTime        @updatedAt @db.Timestamptz(6)
@@ -323,6 +326,8 @@ model ConsentRequest {
   decidedAt       DateTime?          @db.Timestamptz(6)
   declineReason   String             @default("")
   executedAt      DateTime?          @db.Timestamptz(6)
+  /// D-33: executed by the only partner of a never-paired workspace; then deciderId is null.
+  solo            Boolean            @default(false)
   weddingDates    Wedding[]          @relation("weddingDate")
   weddingSettings Wedding[]          @relation("weddingSettings")
   bookedVendors   Vendor[]           @relation("vendorBooked")

@@ -14,13 +14,13 @@ type Ctx = { orgId: string; userId: string | null };
 export type ExpenseInput = { categoryId: string; vendorId: string | null; description: string; amountCents: number; paidOn: Day; paymentId: string | null };
 
 /** Writes the expense and, when it pays a scheduled vendor payment, marks that payment paid and its task done. */
-export async function createExpense(tx: Tx, ctx: Ctx, wedding: WeddingRow, input: ExpenseInput, requestId: string | null) {
+export async function createExpense(tx: Tx, ctx: Ctx, wedding: WeddingRow, input: ExpenseInput, requestId: string | null, solo = false) {
   if (spendNeedsConsent(input.amountCents, wedding.spendThresholdCents) && !requestId) throw new Error('two-key: a spend over the threshold needs an approved request');
   const category = await tx.budgetCategory.findFirstOrThrow({ where: { id: input.categoryId, ...inOrg(ctx) }, select: { name: true } });
   const expense = await tx.expense.create({
     data: { orgId: ctx.orgId, categoryId: input.categoryId, vendorId: input.vendorId, description: input.description, amountCents: input.amountCents, paidOn: dbOfDay(input.paidOn), requestId, createdById: ctx.userId },
   });
-  await logChange(tx, ctx, 'expense', 'created', expense.id, `${input.description} (${category.name})`, null, { amountCents: input.amountCents, amount: usd(input.amountCents), category: category.name, paidOn: input.paidOn, twoKey: !!requestId });
+  await logChange(tx, ctx, 'expense', 'created', expense.id, `${input.description} (${category.name})`, null, { amountCents: input.amountCents, amount: usd(input.amountCents), category: category.name, paidOn: input.paidOn, twoKey: !!requestId && !solo, ...(solo && { solo: true }) });
   if (input.paymentId) {
     const p = await tx.vendorPayment.findFirstOrThrow({ where: { id: input.paymentId, ...inOrg(ctx) } });
     await tx.vendorPayment.update({ where: { id: p.id }, data: { paidOn: dbOfDay(input.paidOn), expenseId: expense.id } });

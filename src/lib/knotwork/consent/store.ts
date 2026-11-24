@@ -7,21 +7,31 @@ import { Refused } from '@/core/errors';
 import type { Prisma } from '@/generated/prisma/client';
 import { isPartner } from '../access';
 import { logChange } from '../changelog';
-import type { WeddingRow } from '../context';
+import { syncPairing, type WeddingRow } from '../context';
 import { executeApproved } from './execute';
-import { canPropose, expiresAt, KIND_LABEL, REFUSAL_MESSAGE, transition, type ConsentEvent, type ConsentKind, type ConsentStatus } from './machine';
+import { canPropose, expiresAt, KIND_LABEL, REFUSAL_MESSAGE, soloAllowed, transition, type ConsentEvent, type ConsentKind, type ConsentStatus } from './machine';
 
 type Ctx = { orgId: string; userId: string; role: string };
 
-/** A partner asks for a designated action. Nothing changes but this row. */
-export async function propose(tx: Tx, ctx: Ctx, wedding: WeddingRow, kind: ConsentKind, payload: Prisma.InputJsonObject, summary: string) {
-  if (!canPropose({ userId: ctx.userId, isPartner: isPartner(ctx.role) })) throw new Refused('Only the two partners can ask for this.');
+/**
+ * A partner asks for a designated action. With two partners nothing changes but this row. In solo mode (D-33: one
+ * partner, never paired) the request is approved and executed at once, marked solo, in this same transaction; a date
+ * move then needs the fingerprint of the preview the proposer saw. Returns whether it executed.
+ */
+export async function propose(tx: Tx, ctx: Ctx, wedding: WeddingRow, kind: ConsentKind, payload: Prisma.InputJsonObject, summary: string, opts: { fingerprint?: string } = {}) {
+  const actor = { userId: ctx.userId, isPartner: isPartner(ctx.role) };
+  if (!canPropose(actor)) throw new Refused('Only the two partners can ask for this.');
+  const pairing = await syncPairing(tx, ctx, wedding);
   const t = now();
   const r = await tx.consentRequest.create({
     data: { orgId: ctx.orgId, kind, payload, summary, proposerId: ctx.userId, proposedAt: t, expiresAt: new Date(expiresAt(t.getTime(), wedding.consentExpiryDays)) },
   });
   await logChange(tx, ctx, 'request', 'proposed', r.id, summary, null, { kind, status: 'pending', expiresAt: r.expiresAt });
-  return r;
+  if (!soloAllowed({ partnerCount: pairing.partnerCount, everPaired: !!pairing.wedding.pairedAt }, actor)) return { ...r, executed: false };
+  await tx.consentRequest.update({ where: { id: r.id }, data: { status: 'approved', solo: true, decidedAt: t, executedAt: t } });
+  await logChange(tx, ctx, 'request', 'approved', r.id, summary, { status: 'pending' }, { status: 'approved', solo: true }, { kind, proposerId: ctx.userId, solo: true });
+  await executeApproved(tx, ctx, { id: r.id, kind, payload }, { fingerprint: opts.fingerprint, solo: true });
+  return { ...r, executed: true };
 }
 
 /** True when a pending request of this kind already names this vendor (or, with no vendor, exists at all). */

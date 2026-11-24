@@ -30,8 +30,12 @@ withdrawn by its proposer, or expire.
 
 The spend threshold is itself two-key. Otherwise one partner raises it and the claim is empty.
 
-**What it deliberately does not do.** It does not stop a partner outside the app. It does not let a solo owner act
-alone while waiting for the second partner (an open question for the owner of this project).
+**What it deliberately does not do.** It does not stop a partner outside the app.
+
+**Solo mode (owner decision, 2026-11-24).** A couple rarely signs up together. Until a second partner has ever been
+in the workspace, the first one's designated actions go through at once and are marked "solo" in the feed. The first
+time two partners are seen the workspace is paired for good: removing your partner does not bring solo back. So the
+two-key claim is exact for paired workspaces and deliberately absent before pairing.
 
 ## Anchor-derived scheduling (P0-1)
 

@@ -40,7 +40,13 @@ export default async function Approvals({ params }: { params: Promise<{ org: str
       <WeddingNav slug={ctx.slug} counts={{ approvals: forMe.length, flags: 0 }} />
       <h1>Approvals</h1>
       <p>Booking a vendor, signing a contract, a spend over {usd(w.spendThresholdCents)}, moving the date and changing these rules each need both of you.</p>
-      {v.partners.length < 2 && <p role="status">You are the only partner in this workspace so far. Nothing here can be approved until your partner joins as an owner.</p>}
+      {v.partners.length < 2 && (
+        <p role="status">
+          {w.pairedAt
+            ? 'This workspace has had two partners and now has one. Nothing here can be approved until a second partner joins as an owner.'
+            : 'You are the only partner so far, so these happen as soon as you ask and are marked solo. From the moment your partner joins as an owner, each needs both of you, for good.'}
+        </p>
+      )}
 
       <section aria-label="Waiting for you">
         <h2>Waiting for you</h2>
@@ -89,8 +95,8 @@ export default async function Approvals({ params }: { params: Promise<{ org: str
           <tbody>
             {decided.map((r) => (
               <tr key={r.id}>
-                <th scope="row">{r.summary}</th><td>{r.status}{r.declineReason && `: ${r.declineReason}`}</td><td>{nameOf(v, r.proposerId)}</td>
-                <td>{r.deciderId ? nameOf(v, r.deciderId) : ''}</td><td>{r.decidedAt ? when(r.decidedAt) : ''}</td>
+                <th scope="row">{r.summary}</th><td>{r.status}{r.solo && ' (solo)'}{r.declineReason && `: ${r.declineReason}`}</td><td>{nameOf(v, r.proposerId)}</td>
+                <td>{r.deciderId ? nameOf(v, r.deciderId) : r.solo ? 'nobody: solo' : ''}</td><td>{r.decidedAt ? when(r.decidedAt) : ''}</td>
               </tr>
             ))}
           </tbody>

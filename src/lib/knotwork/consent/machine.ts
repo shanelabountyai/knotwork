@@ -56,3 +56,11 @@ export function transition(r: RequestState, event: ConsentEvent, actor: Actor, n
   if (isProposer) return { ok: false, reason: 'own-request', status: 'pending' };
   return { ok: true, status: event === 'approve' ? 'approved' : 'declined' };
 }
+
+/**
+ * Solo mode (D-33, owner decision 2026-11-24). While a workspace has exactly one partner and has never had two, that
+ * partner's designated actions execute at once, single-signed and marked solo. The moment a second partner has been
+ * seen, the workspace is paired for good: losing a partner later does not bring solo back, or removing your partner
+ * would be a way to act alone.
+ */
+export const soloAllowed = (w: { partnerCount: number; everPaired: boolean }, actor: Actor) => actor.isPartner && w.partnerCount === 1 && !w.everPaired;
