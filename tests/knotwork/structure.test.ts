@@ -17,6 +17,7 @@ describe('rule 1: all deadlines derive from the anchor (no free-floating dates)'
   const ALLOWED: Record<string, string> = {
     'Wedding.date': 'THE anchor: the one stored deadline',
     'Wedding.createdAt': 'row timestamp', 'Wedding.updatedAt': 'row timestamp',
+    'Wedding.pairedAt': 'a date of fact: when two partners were first seen (D-33)',
     'Task.completedOn': 'a date of fact: when it was finished', 'Task.createdAt': 'row timestamp',
     'ScheduleBaseline.fromDate': 'history: the anchor before a move', 'ScheduleBaseline.toDate': 'history: the anchor after a move', 'ScheduleBaseline.createdAt': 'row timestamp',
     'BudgetCategory.createdAt': 'row timestamp',
@@ -55,7 +56,9 @@ describe('rule 2: designated actions only through the consent module', () => {
   const EXECUTE = 'src/lib/knotwork/consent/execute.ts';
 
   it('only the executor (and the atomic move it calls) writes the wedding row after creation', () => {
-    expect(filesWith(/\.wedding\.(update|updateMany|upsert|delete|deleteMany)\(/)).toEqual([EXECUTE, 'src/lib/knotwork/schedule/store.ts']);
+    expect(filesWith(/\.wedding\.(update|updateMany|upsert|delete|deleteMany)\(/)).toEqual([EXECUTE, 'src/lib/knotwork/context.ts', 'src/lib/knotwork/schedule/store.ts']);
+    // context.ts writes one thing: the pairing latch (D-33), which is not designated and only ever tightens the rule.
+    expect(read('src/lib/knotwork/context.ts').match(/\.wedding\.update\([^;]*;/g)).toEqual(["}.wedding.update({ where: { orgId: ctx.orgId }, data: { pairedAt: now() } }), partnerCount };".slice(1)]);
     expect(read('src/lib/knotwork/schedule/store.ts').match(/\.wedding\.update\(/g)).toHaveLength(1); // inside commitMove
     expect(filesWith(/\bcommitMove\(/)).toEqual([EXECUTE, 'src/lib/knotwork/schedule/store.ts']); // defined in the store, called only by the executor
   });
@@ -84,6 +87,8 @@ describe('rule 2: designated actions only through the consent module', () => {
   it('the migration carries the database half: four guard triggers and the two-key check', () => {
     const sql = read('prisma/migrations/20261123000001_knotwork_phase1/migration.sql');
     for (const t of ['ConsentRequest_guard', 'Vendor_guard', 'Wedding_guard', 'Expense_guard']) expect(sql).toContain(`CREATE TRIGGER "${t}"`);
+    const solo = read('prisma/migrations/20261124000000_knotwork_solo/migration.sql');
+    for (const t of ['ConsentRequest_insert_guard', 'Wedding_paired_guard']) expect(solo).toContain(`CREATE TRIGGER "${t}"`);
     expect(sql).toContain('"deciderId" <> "proposerId"');
   });
 });

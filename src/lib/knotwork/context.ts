@@ -40,3 +40,14 @@ export async function endHelper(tx: Tx, orgId: string, userId: string) {
   await tx.helperGrant.deleteMany({ where: { orgId, userId } });
   await tx.task.updateMany({ where: { orgId, assigneeId: userId }, data: { assigneeId: null } });
 }
+
+/**
+ * The pairing latch (D-33): the first time two partners are seen, `pairedAt` is set and never unset. Called by every
+ * page (view.ts) and by propose(), so a second partner who has so much as opened a page ends solo mode for good.
+ * Returns the wedding as it now is, and how many partners there are.
+ */
+export async function syncPairing(tx: Tx, ctx: { orgId: string }, wedding: WeddingRow): Promise<{ wedding: WeddingRow; partnerCount: number }> {
+  const partnerCount = await tx.membership.count({ where: { orgId: ctx.orgId, role: 'owner' } });
+  if (partnerCount < 2 || wedding.pairedAt) return { wedding, partnerCount };
+  return { wedding: await tx.wedding.update({ where: { orgId: ctx.orgId }, data: { pairedAt: now() } }), partnerCount };
+}

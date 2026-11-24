@@ -184,7 +184,7 @@ export const proposeDateMove = orgAction(null, z.object({ to: z.string().trim().
     if (from === i.to) throw new Refused('The wedding is already on that date.');
     if (preview.fingerprint !== i.fingerprint) throw new Refused('The plan changed since this preview was made. Look at the new preview, then propose again.');
     if (await hasPending(tx, ctx, 'change_date')) throw new Refused('A date change is already waiting for your partner.');
-    await propose(tx, ctx, wedding, 'change_date', { from, to: i.to }, `Move the wedding from ${showDay(from)} to ${showDay(i.to)}`);
+    await propose(tx, ctx, wedding, 'change_date', { from, to: i.to }, `Move the wedding from ${showDay(from)} to ${showDay(i.to)}`, { fingerprint: i.fingerprint });
   });
   redirect(home(ctx, '/approvals'));
 });
@@ -222,8 +222,8 @@ async function spendOrPropose(tx: Tx, ctx: OrgCtx, input: ExpenseInput, label: s
     return 'recorded';
   }
   if (!isPartner(ctx.role)) throw new Refused(`That is over ${usd(wedding.spendThresholdCents)}, so one of the partners has to propose it.`);
-  await propose(tx, ctx, wedding, 'spend', input as unknown as Prisma.InputJsonObject, `Spend ${usd(input.amountCents)}: ${label}`);
-  return 'proposed';
+  const r = await propose(tx, ctx, wedding, 'spend', input as unknown as Prisma.InputJsonObject, `Spend ${usd(input.amountCents)}: ${label}`);
+  return r.executed ? 'recorded' : 'proposed'; // solo mode (D-33) executes at once
 }
 
 export const addExpense = orgAction(

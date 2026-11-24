@@ -14,6 +14,8 @@ where they differ. Current phase plan: `docs/knotwork/PHASE-1-PLAN.md`. Session 
    threshold, changing the wedding date, changing the consent settings (and, from Phase 2, removing a guest) happen
    only inside `executeApproved` in `src/lib/knotwork/consent/execute.ts`, after a second owner approves. No action
    file writes those fields itself (`tests/knotwork/structure.test.ts` scans for it; the database also checks it).
+   One exception, by owner decision (D-33): while a workspace has one partner and has never had two, that partner's
+   requests are approved at once, marked `solo`, through the same `executeApproved`.
 3. **Guest-facing surfaces never leak wave data.** No Phase 1 surface is guest-facing. From Phase 2, every
    guest-visible response is an explicit projection and is swept by a fixture.
 4. **Uploads are hostile input: strip, validate, cap.** Phase 1 accepts no uploads. Nothing that takes a file ships

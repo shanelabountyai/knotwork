@@ -3,7 +3,7 @@ import { notFound } from 'next/navigation';
 import { inOrg, type OrgCtx } from '@/core/authz/guards';
 import { withOrg, type Tx } from '@/core/db/rls';
 import { allows, type Capability, type Who } from '@/lib/knotwork/access';
-import { loadWedding, loadWho, todayOf, weddingDay, type WeddingRow } from '@/lib/knotwork/context';
+import { loadWedding, loadWho, syncPairing, todayOf, weddingDay, type WeddingRow } from '@/lib/knotwork/context';
 import type { Day } from '@/lib/knotwork/days';
 
 export type View = { who: Who; wedding: WeddingRow; today: Day; date: Day; people: Map<string, string>; partners: string[] };
@@ -16,8 +16,9 @@ export async function view<T>(ctx: OrgCtx, cap: Capability, fn: (tx: Tx, v: View
   return withOrg(ctx, async (tx) => {
     const who = await loadWho(tx, ctx);
     if (!allows(who, cap)) notFound();
-    const wedding = await loadWedding(tx, ctx);
-    if (!wedding) return null;
+    const found = await loadWedding(tx, ctx);
+    if (!found) return null;
+    const { wedding } = await syncPairing(tx, ctx, found); // D-33: two partners seen once ends solo mode for good
     const members = await tx.membership.findMany({ where: inOrg(ctx), select: { userId: true, role: true, user: { select: { email: true, name: true } } }, orderBy: { createdAt: 'asc' } });
     const v: View = {
       who, wedding, today: todayOf(wedding), date: weddingDay(wedding),
