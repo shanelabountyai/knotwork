@@ -261,6 +261,10 @@ model Vendor {
   privateToId String? @db.Uuid
   /// The reveal point: days after the wedding date (negative: before; 0: the wedding day). Null while private: only by hand.
   revealDays  Int?
+  /// D-42: the vendor's read-only link (/v/[token]): sha256 of the token, and a sealed copy so the couple can show it
+  /// again. Null: no link. Replacing it stops the old one at once. Never exported.
+  linkTokenHash      String?         @unique
+  linkTokenSealed    String?
   createdAt          DateTime        @default(now()) @db.Timestamptz(6)
   tasks              Task[]
   payments           VendorPayment[]
@@ -436,6 +440,8 @@ model GuestPlan {
   /// A B wave releases at least this many seats, unless it is everything left.
   minBatchSeats   Int      @default(4)
   mealOptions     String[]
+  /// P1-5: whether the seating chart also seats guests who have not answered yet (attending guests always are).
+  seatPending     Boolean  @default(false)
   updatedAt       DateTime @updatedAt @db.Timestamptz(6)
 }
 
@@ -501,6 +507,9 @@ model Guest {
   removedRequestId String?         @db.Uuid
   removedRequest   ConsentRequest? @relation(fields: [removedRequestId], references: [id], onDelete: NoAction)
   createdAt        DateTime        @default(now()) @db.Timestamptz(6)
+  seat             Seat?
+  seatingRulesA    SeatingRule[]   @relation("seatingRuleA")
+  seatingRulesB    SeatingRule[]   @relation("seatingRuleB")
 
   @@index([orgId])
   @@index([householdId])
@@ -1041,4 +1050,61 @@ model ContingencyItem {
 
   @@unique([runId, position])
   @@index([orgId])
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
+// Phase 4, P1-5: the seating chart. A guest-list feature (guests.view / guests.edit); never on a guest-facing surface
+// (rule 3). Tables and pair rules are the couple's input; seats are what generate (src/lib/knotwork/seating/engine.ts),
+// a manual move or a lock wrote. Nothing here is a date (rule 1).
+
+enum SeatingRuleKind {
+  apart
+  together
+}
+
+/// A table at the reception, with how many it seats.
+model SeatingTable {
+  id        String   @id @default(uuid()) @db.Uuid
+  orgId     String   @db.Uuid
+  org       Org      @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  name      String
+  capacity  Int
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+  seats     Seat[]
+
+  @@unique([orgId, name])
+}
+
+/// Two guests who must sit apart, or together. `hard`: a seating that breaks it is not acceptable; otherwise a
+/// preference the score weighs. Stored with the smaller guest id first (the database checks it), so a pair is one row.
+model SeatingRule {
+  id          String          @id @default(uuid()) @db.Uuid
+  orgId       String          @db.Uuid
+  org         Org             @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  kind        SeatingRuleKind
+  hard        Boolean
+  guestAId    String          @db.Uuid
+  guestA      Guest           @relation("seatingRuleA", fields: [guestAId], references: [id], onDelete: Cascade)
+  guestBId    String          @db.Uuid
+  guestB      Guest           @relation("seatingRuleB", fields: [guestBId], references: [id], onDelete: Cascade)
+  createdById String?         @db.Uuid
+  createdAt   DateTime        @default(now()) @db.Timestamptz(6)
+
+  @@unique([guestAId, guestBId])
+  @@index([orgId])
+}
+
+/// Where one guest sits. `locked`: a regenerate keeps it.
+model Seat {
+  id      String       @id @default(uuid()) @db.Uuid
+  orgId   String       @db.Uuid
+  org     Org          @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  guestId String       @unique @db.Uuid
+  guest   Guest        @relation(fields: [guestId], references: [id], onDelete: Cascade)
+  tableId String       @db.Uuid
+  table   SeatingTable @relation(fields: [tableId], references: [id], onDelete: Cascade)
+  locked  Boolean      @default(false)
+
+  @@index([orgId])
+  @@index([tableId])
 }

@@ -4,7 +4,7 @@ import { dbSystem as db } from '@/core/db/system';
 // CLONE-OWNED. The INV-01..04 harness seeds these rows in both fixture orgs, so it can drive
 // actions whose inputs use ref('<model>') for the clone's own tables. Return { model: id } for
 // one row of each model, owned by `org.orgId`. INV-29 (RLS enforce) calls it too, so every org-owned clone table has rows to scope.
-// Knotwork: one row in each of the thirteen Phase 1 tables and the seven Phase 2 tables, the three gifting tables, the five photo and attachment tables, the four Phase 4 funding tables, the three for the thank-you ledger and store items, and the six for name changes and contingency plans. Fixed ids: the harness re-seeds before every call, and a
+// Knotwork: one row in each of the thirteen Phase 1 tables and the seven Phase 2 tables, the three gifting tables, the five photo and attachment tables, the four Phase 4 funding tables, the three for the thank-you ledger and store items, the six for name changes and contingency plans, and the three for the seating chart. Fixed ids: the harness re-seeds before every call, and a
 // ref minted once must still resolve. The wedding is far in the future so nothing in the harness plan is late.
 const id = (key: 'a' | 'b', n: number) => `00000000-0000-4000-8000-${String((key === 'a' ? 7000 : 7500) + n).padStart(12, '0')}`;
 
@@ -69,6 +69,12 @@ export async function seedApp(org: { orgId: string; userId: string }, key: 'a' |
   const contingencyPlan = await db.contingencyPlan.create({ data: { id: id(key, 41), orgId, title: `harness plan ${key}`, tree } });
   const contingencyRun = await db.contingencyRun.create({ data: { id: id(key, 42), orgId, planId: contingencyPlan.id, path: [0], leaf: 'wet', fingerprint: '0000000000000000', result: { tasks: [], expenses: [], requests: [] } } });
   const contingencyItem = await db.contingencyItem.create({ data: { id: id(key, 43), orgId, runId: contingencyRun.id, position: 0, kind: 'check', text: 'Move the chairs' } });
+  // Phase 4 (P1-5): a table of eight, a second guest in the harness household, a keep-apart rule between the two
+  // (smaller id first, as the database requires) and the first guest's seat.
+  const seatingTable = await db.seatingTable.create({ data: { id: id(key, 45), orgId, name: `harness table ${key}`, capacity: 8 } });
+  const secondGuest = await db.guest.create({ data: { id: id(key, 48), orgId, householdId: household.id, name: `harness second guest ${key}`, dietary: [], accessibility: [] } });
+  const seatingRule = await db.seatingRule.create({ data: { id: id(key, 46), orgId, kind: 'apart', hard: true, guestAId: guest.id, guestBId: secondGuest.id } });
+  const seat = await db.seat.create({ data: { id: id(key, 47), orgId, guestId: guest.id, tableId: seatingTable.id } });
   return {
     wedding: wedding.id, task: task.id, taskDependency: dependency.id, scheduleBaseline: baseline.id, budgetCategory: category.id, expense: expense.id, budgetSnapshot: snapshot.id,
     vendor: vendor.id, vendorPayment: payment.id, vendorFlag: flag.id, vendorBrief: brief.id, consentRequest: request.id, helperGrant: grant.id,
@@ -79,6 +85,7 @@ export async function seedApp(org: { orgId: string; userId: string }, key: 'a' |
     giftLog: giftLog.id, registryLink: registryLink.id, registryClaim: registryClaim.id,
     nameChange: nameChange.id, nameChangeStep: nameChangeStep.id, nameChangeArtifact: nameChangeArtifact.id,
     contingencyPlan: contingencyPlan.id, contingencyRun: contingencyRun.id, contingencyItem: contingencyItem.id,
+    seatingTable: seatingTable.id, seatingRule: seatingRule.id, seat: seat.id,
   };
 }
 

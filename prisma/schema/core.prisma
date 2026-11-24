@@ -147,6 +147,9 @@ model Org {
   contingencyPlans ContingencyPlan[] // app
   contingencyRuns ContingencyRun[] // app
   contingencyItems ContingencyItem[] // app
+  seatingTables SeatingTable[] // app
+  seatingRules SeatingRule[] // app
+  seats Seat[] // app
 }
 
 model Membership {
