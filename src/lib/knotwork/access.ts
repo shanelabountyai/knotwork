@@ -21,6 +21,7 @@ export type Capability =
   | 'budget.view' | 'budget.edit'
   | 'vendors.view' | 'vendors.edit'
   | 'guests.view' | 'guests.edit'
+  | 'gifts.view' | 'gifts.edit'
   | 'consent.view' | 'consent.propose' | 'consent.decide'
   | 'activity.view' | 'helpers.manage' | 'wedding.create';
 
@@ -38,6 +39,9 @@ const HELPER: Record<Capability, (g: readonly GrantScope[]) => boolean> = {
   'vendors.edit': (g) => g.includes('vendors_edit'),
   'guests.view': (g) => g.includes('guests_edit'),
   'guests.edit': (g) => g.includes('guests_edit'),
+  // Gifting is the partners' alone: no grant reaches it (who gave toward what is the couple's to know, P0-5).
+  'gifts.view': () => false,
+  'gifts.edit': () => false,
   'consent.view': () => false,
   'consent.propose': () => false,
   'consent.decide': () => false,
@@ -55,6 +59,7 @@ const ENTITY_CAP: Record<string, Capability> = {
   vendor: 'vendors.view', payment: 'vendors.view', flag: 'vendors.view', brief: 'vendors.view',
   request: 'consent.view', grant: 'helpers.manage',
   household: 'guests.view', guest: 'guests.view', wave: 'guests.view', guestplan: 'guests.view', song: 'guests.view',
+  registry: 'gifts.view', gift: 'gifts.view', thankyou: 'gifts.view',
 };
 export const canSeeEntity = (who: Who, entity: string): boolean => {
   const cap = ENTITY_CAP[entity];

@@ -126,6 +126,9 @@ model Org {
   headcountDeltas HeadcountDelta[] // app
   chaseEvents ChaseEvent[] // app
   doNotPlay DoNotPlay[] // app
+  registryItems RegistryItem[] // app
+  giftEntries GiftEntry[] // app
+  thankYous ThankYou[] // app
 }
 
 model Membership {

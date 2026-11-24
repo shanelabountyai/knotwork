@@ -446,6 +446,8 @@ model Household {
   createdAt         DateTime         @default(now()) @db.Timestamptz(6)
   guests            Guest[]
   chaseEvents       ChaseEvent[]
+  giftEntries       GiftEntry[]
+  thankYous         ThankYou[]
 
   @@unique([orgId, name])
 }
@@ -538,4 +540,79 @@ model DoNotPlay {
   createdAt DateTime @default(now()) @db.Timestamptz(6)
 
   @@unique([orgId, title, artist])
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
+// Phase 3: group gifting (PRD P0-5). Mock money, ledgered in integer cents; nothing is charged.
+// PRIVACY: GiftEntry.amountCents is what one household gave. The couple's side reads sums per item and contributor
+// names only (src/lib/knotwork/gifts/couple.ts); tests/knotwork/structure.test.ts scans for it.
+
+enum RegistryItemState {
+  open
+  funded
+  closed_unfunded
+}
+
+enum GiftEntryKind {
+  contribution
+  excess_return
+  refund
+}
+
+/// A pooled registry item: several households give toward one target.
+model RegistryItem {
+  id          String            @id @default(uuid()) @db.Uuid
+  orgId       String            @db.Uuid
+  org         Org               @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  title       String
+  note        String            @default("")
+  targetCents Int
+  state       RegistryItemState @default(open)
+  /// A date of fact: the day the pot reached its target.
+  fundedOn    DateTime?         @db.Date
+  /// A date of fact: the day the registry was closed with this item unfunded (everything given was refunded).
+  closedOn    DateTime?         @db.Date
+  createdById String?           @db.Uuid
+  createdAt   DateTime          @default(now()) @db.Timestamptz(6)
+  entries     GiftEntry[]
+  thankYous   ThankYou[]
+
+  @@unique([orgId, title])
+}
+
+/// The gift ledger. Append-only: a trigger refuses every UPDATE and DELETE. A contribution is positive; an excess
+/// return and a refund are negative. The pot is the sum.
+model GiftEntry {
+  id          String        @id @default(uuid()) @db.Uuid
+  orgId       String        @db.Uuid
+  org         Org           @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  itemId      String        @db.Uuid
+  item        RegistryItem  @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  householdId String        @db.Uuid
+  household   Household     @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  kind        GiftEntryKind
+  amountCents Int
+  createdAt   DateTime      @default(now()) @db.Timestamptz(6)
+
+  @@index([orgId])
+  @@index([itemId])
+  @@index([householdId])
+}
+
+/// A thank-you the couple owes: one per household that gave toward an item that funded (P1-3 adds aging on top).
+model ThankYou {
+  id               String       @id @default(uuid()) @db.Uuid
+  orgId            String       @db.Uuid
+  org              Org          @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  itemId           String       @db.Uuid
+  item             RegistryItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  householdId      String       @db.Uuid
+  household        Household    @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  createdAt        DateTime     @default(now()) @db.Timestamptz(6)
+  /// A date of fact: the day a partner marked the thank-you as sent.
+  acknowledgedOn   DateTime?    @db.Date
+  acknowledgedById String?      @db.Uuid
+
+  @@unique([itemId, householdId])
+  @@index([orgId])
 }

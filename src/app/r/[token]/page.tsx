@@ -57,6 +57,8 @@ export default async function Rsvp({ params, searchParams }: { params: Promise<{
         {view.plusOneAllowed && !view.plusOneNamed && <label>You are welcome to bring a guest. Their name <input name="plusOneName" maxLength={120} /></label>}
         <button type="submit">Send reply</button>
       </form>
+      {/* The same link for every household, whatever is on the registry: it says nothing about this one (rule 3). */}
+      <p><a href={`/r/${token}/gifts`}>Gift registry</a></p>
     </main>
   );
 }

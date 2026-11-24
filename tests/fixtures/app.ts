@@ -4,7 +4,7 @@ import { dbSystem as db } from '@/core/db/system';
 // CLONE-OWNED. The INV-01..04 harness seeds these rows in both fixture orgs, so it can drive
 // actions whose inputs use ref('<model>') for the clone's own tables. Return { model: id } for
 // one row of each model, owned by `org.orgId`. INV-29 (RLS enforce) calls it too, so every org-owned clone table has rows to scope.
-// Knotwork: one row in each of the thirteen Phase 1 tables and the seven Phase 2 tables. Fixed ids: the harness re-seeds before every call, and a
+// Knotwork: one row in each of the thirteen Phase 1 tables and the seven Phase 2 tables, and the three gifting tables. Fixed ids: the harness re-seeds before every call, and a
 // ref minted once must still resolve. The wedding is far in the future so nothing in the harness plan is late.
 const id = (key: 'a' | 'b', n: number) => `00000000-0000-4000-8000-${String((key === 'a' ? 7000 : 7500) + n).padStart(12, '0')}`;
 
@@ -37,10 +37,15 @@ export async function seedApp(org: { orgId: string; userId: string }, key: 'a' |
   const delta = await db.headcountDelta.create({ data: { id: id(key, 20), orgId, label: 'harness', deltaSeats: 0, deltaCents: 0, attendingAfter: 0, costAfterCents: 0 } });
   const chase = await db.chaseEvent.create({ data: { id: id(key, 21), orgId, householdId: household.id, kind: 'reminder', step: 21 } });
   const song = await db.doNotPlay.create({ data: { id: id(key, 22), orgId, title: `harness song ${key}` } });
+  // Phase 3, gifting: an open item with one contribution toward it, and a thank-you nobody has acknowledged.
+  const registryItem = await db.registryItem.create({ data: { id: id(key, 23), orgId, title: `harness gift ${key}`, targetCents: 10_000 } });
+  const giftEntry = await db.giftEntry.create({ data: { id: id(key, 24), orgId, itemId: registryItem.id, householdId: household.id, kind: 'contribution', amountCents: 2_500 } });
+  const thankYou = await db.thankYou.create({ data: { id: id(key, 25), orgId, itemId: registryItem.id, householdId: household.id } });
   return {
     wedding: wedding.id, task: task.id, taskDependency: dependency.id, scheduleBaseline: baseline.id, budgetCategory: category.id, expense: expense.id, budgetSnapshot: snapshot.id,
     vendor: vendor.id, vendorPayment: payment.id, vendorFlag: flag.id, vendorBrief: brief.id, consentRequest: request.id, helperGrant: grant.id,
     guestPlan: guestPlan.id, inviteWave: wave.id, household: household.id, guest: guest.id, headcountDelta: delta.id, chaseEvent: chase.id, doNotPlay: song.id,
+    registryItem: registryItem.id, giftEntry: giftEntry.id, thankYou: thankYou.id,
   };
 }
 

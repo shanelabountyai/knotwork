@@ -1,0 +1,72 @@
+{
+  "name": "12-close-after-funded",
+  "note": "A funded gift is not touched by a close: nothing is refunded.",
+  "targetCents": 20000,
+  "steps": [
+    {
+      "op": "contribute",
+      "household": "h1",
+      "offerCents": 12000
+    },
+    {
+      "op": "contribute",
+      "household": "h2",
+      "offerCents": 8000
+    },
+    {
+      "op": "close"
+    }
+  ],
+  "expect": {
+    "steps": [
+      {
+        "ok": true,
+        "lines": [
+          {
+            "kind": "contribution",
+            "amountCents": 12000
+          }
+        ],
+        "potCents": 12000,
+        "state": "open"
+      },
+      {
+        "ok": true,
+        "lines": [
+          {
+            "kind": "contribution",
+            "amountCents": 8000
+          }
+        ],
+        "potCents": 20000,
+        "state": "funded"
+      },
+      {
+        "ok": false,
+        "code": "not-open"
+      }
+    ],
+    "entries": [
+      {
+        "kind": "contribution",
+        "amountCents": 12000,
+        "householdId": "h1"
+      },
+      {
+        "kind": "contribution",
+        "amountCents": 8000,
+        "householdId": "h2"
+      }
+    ],
+    "potCents": 20000,
+    "state": "funded",
+    "net": {
+      "h1": 12000,
+      "h2": 8000
+    },
+    "thankYous": [
+      "h1",
+      "h2"
+    ]
+  }
+}

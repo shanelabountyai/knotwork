@@ -1,0 +1,25 @@
+{
+  "name": "09-close-nothing-given",
+  "note": "Closing a gift nobody gave toward: closed, no entries.",
+  "targetCents": 50000,
+  "steps": [
+    {
+      "op": "close"
+    }
+  ],
+  "expect": {
+    "steps": [
+      {
+        "ok": true,
+        "lines": [],
+        "potCents": 0,
+        "state": "closed_unfunded"
+      }
+    ],
+    "entries": [],
+    "potCents": 0,
+    "state": "closed_unfunded",
+    "net": {},
+    "thankYous": []
+  }
+}

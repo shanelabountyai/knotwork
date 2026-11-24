@@ -1,0 +1,120 @@
+{
+  "name": "08-close-with-refunds",
+  "note": "Refund-on-unfunded at close: each household gets one refund for exactly what it has in the pot (h1 gave twice), the pot is zero, and a later offer is refused.",
+  "targetCents": 50000,
+  "steps": [
+    {
+      "op": "contribute",
+      "household": "h1",
+      "offerCents": 10000
+    },
+    {
+      "op": "contribute",
+      "household": "h2",
+      "offerCents": 15000
+    },
+    {
+      "op": "contribute",
+      "household": "h1",
+      "offerCents": 5000
+    },
+    {
+      "op": "close"
+    },
+    {
+      "op": "contribute",
+      "household": "h3",
+      "offerCents": 1000
+    }
+  ],
+  "expect": {
+    "steps": [
+      {
+        "ok": true,
+        "lines": [
+          {
+            "kind": "contribution",
+            "amountCents": 10000
+          }
+        ],
+        "potCents": 10000,
+        "state": "open"
+      },
+      {
+        "ok": true,
+        "lines": [
+          {
+            "kind": "contribution",
+            "amountCents": 15000
+          }
+        ],
+        "potCents": 25000,
+        "state": "open"
+      },
+      {
+        "ok": true,
+        "lines": [
+          {
+            "kind": "contribution",
+            "amountCents": 5000
+          }
+        ],
+        "potCents": 30000,
+        "state": "open"
+      },
+      {
+        "ok": true,
+        "lines": [
+          {
+            "kind": "refund",
+            "amountCents": -15000
+          },
+          {
+            "kind": "refund",
+            "amountCents": -15000
+          }
+        ],
+        "potCents": 0,
+        "state": "closed_unfunded"
+      },
+      {
+        "ok": false,
+        "code": "closed"
+      }
+    ],
+    "entries": [
+      {
+        "kind": "contribution",
+        "amountCents": 10000,
+        "householdId": "h1"
+      },
+      {
+        "kind": "contribution",
+        "amountCents": 15000,
+        "householdId": "h2"
+      },
+      {
+        "kind": "contribution",
+        "amountCents": 5000,
+        "householdId": "h1"
+      },
+      {
+        "householdId": "h1",
+        "kind": "refund",
+        "amountCents": -15000
+      },
+      {
+        "householdId": "h2",
+        "kind": "refund",
+        "amountCents": -15000
+      }
+    ],
+    "potCents": 0,
+    "state": "closed_unfunded",
+    "net": {
+      "h1": 0,
+      "h2": 0
+    },
+    "thankYous": []
+  }
+}

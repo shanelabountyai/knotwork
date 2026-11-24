@@ -1,11 +1,12 @@
 import { moduleExportTables } from '@/app/modules';
 import type { ExportTable } from '@/core/tenancy/export';
+import { exportRegistry } from '@/lib/knotwork/gifts/couple';
 
 // Clone-owned (v1.6.0), like org-hooks.ts: which tables a data export holds beyond the template's core ones
 // (addendum §5). Add one entry per org-owned table, selecting only columns that are safe to hand over: never a
 // sealed column, token hash or recovery code (INV-34 scans the output). Every query runs inside withOrg.
 //   { name: 'Booking', rows: (tx, orgId) => tx.booking.findMany({ where: { orgId }, select: { id: true, startsAt: true } }) },
-// Knotwork: all twenty org-owned tables. None of the Phase 1 thirteen holds a sealed secret, a token or a token hash;
+// Knotwork: every org-owned table (twenty from Phases 1 and 2, three for gifting). None of the Phase 1 thirteen holds a sealed secret, a token or a token hash;
 // the two hash-like columns (ScheduleBaseline.fingerprint, VendorBrief.inputsHash) are 16 hex characters of a preview
 // or a brief body, not credentials, and short enough that the INV-34 scan for 64-hex strings stays meaningful (D-15).
 const whole = (name: string, rows: ExportTable['rows']): ExportTable => ({ name, rows });
@@ -32,8 +33,14 @@ export const exportTables: readonly ExportTable[] = [
   whole('HeadcountDelta', (tx, orgId) => tx.headcountDelta.findMany({ where: { orgId }, orderBy: { at: 'asc' } })),
   whole('ChaseEvent', (tx, orgId) => tx.chaseEvent.findMany({ where: { orgId }, orderBy: { at: 'asc' } })),
   whole('DoNotPlay', (tx, orgId) => tx.doNotPlay.findMany({ where: { orgId }, orderBy: { title: 'asc' } })),
+  // Phase 3, gifting. The export is the couple's, so it holds what the couple may see: each item with its total and
+  // its contributors' names (built by gifts/couple.ts), and the thank-yous. The ledger itself is skipped, below.
+  whole('RegistryItem', (tx, orgId) => exportRegistry(tx, orgId)),
+  whole('ThankYou', (tx, orgId) => tx.thankYou.findMany({ where: { orgId }, orderBy: { createdAt: 'asc' } })),
 ];
 
 // An org-owned table left out on purpose, with the reason. INV-34 fails on any model with an orgId column that is in
 // neither list, so a new table cannot silently drop out of every export.
-export const exportSkipped: Readonly<Record<string, string>> = {};
+export const exportSkipped: Readonly<Record<string, string>> = {
+  GiftEntry: 'the gift ledger holds what each household gave, which the couple never sees (PRD P0-5); RegistryItem carries each item\'s total and contributor names instead',
+};

@@ -2,10 +2,13 @@
 // The expectations were first produced by the Python oracle (tools/schedule_oracle.py --write), so a clean check here
 // means two implementations that share no code agree byte for byte (decisions D-23, D-25). Fixture 12 is the shipped
 // default template; its tasks are written from src/lib/knotwork/schedule/template.ts so the two cannot drift.
+// The same goes for fixtures/gifts/ (Phase 3): the TypeScript ledger writes each expect block, and tools/gift_oracle.py
+// recomputes it independently under pytest.
 import { readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { computeSchedule, previewMove, type PlanTask } from '../../src/lib/knotwork/schedule/engine';
+import { replay, type Step } from '../../src/lib/knotwork/gifts/ledger';
 import { templatePlan } from '../../src/lib/knotwork/schedule/template';
 
 const DIR = 'fixtures/schedule';
@@ -29,6 +32,15 @@ export function regenerate(fx: Fx): string {
   return `${JSON.stringify(full, null, 2)}\n`;
 }
 
+const GIFT_DIR = 'fixtures/gifts';
+export type GiftFx = { name: string; note: string; targetCents: number; race?: boolean; steps: Step[]; expect?: unknown };
+
+/** A gift fixture with its expect block recomputed by the ledger: every step's outcome, then the ledger as it ends. */
+export function regenerateGift(fx: GiftFx): string {
+  const rest = { name: fx.name, note: fx.note, targetCents: fx.targetCents, ...(fx.race && { race: true }), steps: fx.steps };
+  return `${JSON.stringify({ ...rest, expect: replay(fx.targetCents, fx.steps) }, null, 2)}\n`;
+}
+
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const write = process.argv.includes('--write');
   if (write) writeFileSync(join(DIR, `${TEMPLATE_FIXTURE.name}.json`), regenerate(TEMPLATE_FIXTURE));
@@ -41,6 +53,15 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
       if (write) writeFileSync(join(DIR, f), next);
     }
     console.log(`${next === text ? 'same ' : write ? 'wrote' : 'DIFF '} ${f}`);
+  }
+  for (const f of readdirSync(GIFT_DIR).filter((n) => n.endsWith('.json')).sort()) {
+    const text = readFileSync(join(GIFT_DIR, f), 'utf8');
+    const next = regenerateGift(JSON.parse(text) as GiftFx);
+    if (next !== text) {
+      diffs++;
+      if (write) writeFileSync(join(GIFT_DIR, f), next);
+    }
+    console.log(`${next === text ? 'same ' : write ? 'wrote' : 'DIFF '} gifts/${f}`);
   }
   if (diffs && !write) process.exit(1);
 }

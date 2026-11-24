@@ -1,0 +1,65 @@
+{
+  "name": "02-exactly-funded",
+  "note": "Two households add up to the target exactly: funded, one thank-you each, nothing returned.",
+  "targetCents": 50000,
+  "steps": [
+    {
+      "op": "contribute",
+      "household": "h1",
+      "offerCents": 20000
+    },
+    {
+      "op": "contribute",
+      "household": "h2",
+      "offerCents": 30000
+    }
+  ],
+  "expect": {
+    "steps": [
+      {
+        "ok": true,
+        "lines": [
+          {
+            "kind": "contribution",
+            "amountCents": 20000
+          }
+        ],
+        "potCents": 20000,
+        "state": "open"
+      },
+      {
+        "ok": true,
+        "lines": [
+          {
+            "kind": "contribution",
+            "amountCents": 30000
+          }
+        ],
+        "potCents": 50000,
+        "state": "funded"
+      }
+    ],
+    "entries": [
+      {
+        "kind": "contribution",
+        "amountCents": 20000,
+        "householdId": "h1"
+      },
+      {
+        "kind": "contribution",
+        "amountCents": 30000,
+        "householdId": "h2"
+      }
+    ],
+    "potCents": 50000,
+    "state": "funded",
+    "net": {
+      "h1": 20000,
+      "h2": 30000
+    },
+    "thankYous": [
+      "h1",
+      "h2"
+    ]
+  }
+}

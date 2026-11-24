@@ -1,0 +1,97 @@
+{
+  "name": "13-odd-cents",
+  "note": "Integer cents all the way: three uneven offers land on 333.33 exactly.",
+  "targetCents": 33333,
+  "steps": [
+    {
+      "op": "contribute",
+      "household": "h1",
+      "offerCents": 11111
+    },
+    {
+      "op": "contribute",
+      "household": "h2",
+      "offerCents": 11111
+    },
+    {
+      "op": "contribute",
+      "household": "h3",
+      "offerCents": 11112
+    }
+  ],
+  "expect": {
+    "steps": [
+      {
+        "ok": true,
+        "lines": [
+          {
+            "kind": "contribution",
+            "amountCents": 11111
+          }
+        ],
+        "potCents": 11111,
+        "state": "open"
+      },
+      {
+        "ok": true,
+        "lines": [
+          {
+            "kind": "contribution",
+            "amountCents": 11111
+          }
+        ],
+        "potCents": 22222,
+        "state": "open"
+      },
+      {
+        "ok": true,
+        "lines": [
+          {
+            "kind": "contribution",
+            "amountCents": 11112
+          },
+          {
+            "kind": "excess_return",
+            "amountCents": -1
+          }
+        ],
+        "potCents": 33333,
+        "state": "funded"
+      }
+    ],
+    "entries": [
+      {
+        "kind": "contribution",
+        "amountCents": 11111,
+        "householdId": "h1"
+      },
+      {
+        "kind": "contribution",
+        "amountCents": 11111,
+        "householdId": "h2"
+      },
+      {
+        "kind": "contribution",
+        "amountCents": 11112,
+        "householdId": "h3"
+      },
+      {
+        "kind": "excess_return",
+        "amountCents": -1,
+        "householdId": "h3"
+      }
+    ],
+    "potCents": 33333,
+    "state": "funded",
+    "net": {
+      "h1": 11111,
+      "h2": 11111,
+      "h3": 11111
+    },
+    "thankYous": [
+      "h1",
+      "h2",
+      "h3"
+    ]
+  }
+}

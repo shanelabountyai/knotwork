@@ -8,6 +8,7 @@ import { logChange } from '@/lib/knotwork/changelog';
 import { decide, propose } from '@/lib/knotwork/consent/store';
 import { requireWedding } from '@/lib/knotwork/context';
 import { addDays, dbOfDay, todayIn, type Day } from '@/lib/knotwork/days';
+import { addItem, contribute } from '@/lib/knotwork/gifts/store';
 import { applyRsvp, importHouseholds, releaseWave, savePlan } from '@/lib/knotwork/guests/store';
 import { createWedding } from '@/lib/knotwork/schedule/store';
 import { addPayment, generateBrief, updateVendor } from '@/lib/knotwork/vendors/store';
@@ -153,6 +154,23 @@ export async function seedCouple(opts: { today?: Day } = {}): Promise<string[]> 
     for (const id of vendors.values()) await generateBrief(tx, a, id);
   });
 
+  // Phase 3: the registry. Two pooled gifts (mock money: nothing is charged). The canoe trip is partly funded by two
+  // households; the record player is funded, the last offer having been more than was needed (the excess went back),
+  // so two thank-yous are owed. Every household and amount is invented.
+  await withOrg({ orgId }, async (tx) => {
+    const canoe = await addItem(tx, a, { title: 'Honeymoon canoe trip', note: 'Two days on the Buffalo River', targetCents: 60_000 });
+    const player = await addItem(tx, b, { title: 'Record player', note: '', targetCents: 20_000 });
+    const gives = async (household: string, itemId: string, cents: number) => {
+      const h = await tx.household.findFirstOrThrow({ where: { orgId, name: household }, select: { id: true } });
+      const r = await contribute(tx, orgId, h.id, itemId, cents);
+      if (!r?.ok) throw new Error(`seed: ${household} could not give`);
+    };
+    await gives('The Lindqvists', canoe.id, 15_000);
+    await gives('The Ashbys', canoe.id, 10_000);
+    await gives('The Vales', player.id, 12_000);
+    await gives('Priya Rao', player.id, 10_000);
+  });
+
   const counts = await withOrg({ orgId }, async (tx) => ({
     tasks: await tx.task.count({ where: { orgId } }),
     vendors: await tx.vendor.count({ where: { orgId } }),
@@ -161,9 +179,11 @@ export async function seedCouple(opts: { today?: Day } = {}): Promise<string[]> 
     expenses: await tx.expense.count({ where: { orgId } }),
     households: await tx.household.count({ where: { orgId } }),
     guests: await tx.guest.count({ where: { orgId } }),
+    gifts: await tx.registryItem.count({ where: { orgId } }),
+    funded: await tx.registryItem.count({ where: { orgId, state: 'funded' } }),
   }));
   return [
-    `${COUPLE.name} (/o/${COUPLE.slug}): wedding on ${date}, ${counts.tasks} tasks, ${counts.vendors} vendors (${counts.booked} booked), ${counts.expenses} spends, ${counts.requests} approved requests, ${counts.households} households (${counts.guests} guests)`,
+    `${COUPLE.name} (/o/${COUPLE.slug}): wedding on ${date}, ${counts.tasks} tasks, ${counts.vendors} vendors (${counts.booked} booked), ${counts.expenses} spends, ${counts.requests} approved requests, ${counts.households} households (${counts.guests} guests), ${counts.gifts} registry gifts (${counts.funded} funded)`,
     `${COUPLE.juniper.email}  owner (partner)  (TOTP)`,
     `${COUPLE.rowan.email}  owner (partner)  (TOTP)`,
     `${COUPLE.maple.email}  member (helper: sees the budget)`,

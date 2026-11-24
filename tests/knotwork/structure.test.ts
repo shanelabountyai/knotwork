@@ -35,10 +35,13 @@ describe('rule 1: all deadlines derive from the anchor (no free-floating dates)'
     'Guest.respondedAt': 'a date of fact', 'Guest.removedAt': 'a date of fact: when both approved the removal', 'Guest.createdAt': 'row timestamp',
     'InviteWave.releasedAt': 'a date of fact', 'HeadcountDelta.at': 'row timestamp', 'ChaseEvent.at': 'a date of fact: when the reminder went or the call was made',
     'DoNotPlay.createdAt': 'row timestamp',
+    'RegistryItem.fundedOn': 'a date of fact: the day the pot reached its target', 'RegistryItem.closedOn': 'a date of fact: the day the registry was closed with the gift unfunded',
+    'RegistryItem.createdAt': 'row timestamp', 'GiftEntry.createdAt': 'row timestamp: when the entry was written (the ledger is append-only)',
+    'ThankYou.createdAt': 'row timestamp: when the thank-you became owed', 'ThankYou.acknowledgedOn': 'a date of fact: when a partner marked it as sent',
   };
 
-  it('finds the clone\'s twenty models', () => {
-    expect(models.map((m) => m.name)).toHaveLength(20);
+  it('finds the clone\'s twenty-three models', () => {
+    expect(models.map((m) => m.name)).toHaveLength(23); // twenty from Phases 1 and 2, three for gifting
   });
   it('every date column is on the list with its reason; a new one fails until someone decides what it is', () => {
     expect(dateFields.sort()).toEqual(Object.keys(ALLOWED).sort());
@@ -119,5 +122,78 @@ describe('rules 3 and 4 have nothing to guard yet', () => {
     const publicKnotwork = routes.filter((f) => /wedding|rsvp|guest|wall|upload/i.test(f) && /^\/\/ public:/m.test(read(f)));
     expect(publicKnotwork).toEqual([]);
     expect(filesWith(/type="file"|formData\(\)\.get\([^)]*\) as File|multipart\/form-data/).filter((f) => f.includes('wedding') || f.includes('knotwork'))).toEqual([]);
+  });
+});
+
+describe('P0-5 privacy: the couple\'s side never reads what one household gave', () => {
+  const strip = (text: string) => text.replace(/\/\/[^\n]*|\/\*[\s\S]*?\*\//g, ''); // comments do not count
+  const COUPLE_LOADER = 'src/lib/knotwork/gifts/couple.ts';
+  const couplePages = globSync('src/app/o/**/*.{ts,tsx}', { cwd: ROOT }).sort();
+  const giftPages = couplePages.filter((f) => f.includes('/wedding/gifts/'));
+  // Everything signed-in people are served from, plus the data export: every file but the one loader.
+  const coupleSide = [...couplePages, 'src/app/export-hooks.ts'];
+
+  it('finds the couple\'s gift pages and actions', () => {
+    expect(giftPages).toEqual(['actions.ts', 'nav.tsx', 'page.tsx', '[id]/page.tsx', 'thank-yous/page.tsx'].map((f) => `src/app/o/[org]/wedding/gifts/${f}`).sort());
+  });
+  it('no page, action or export hook on the couple\'s side names a ledger entry or its amount', () => {
+    for (const f of [...giftPages, 'src/app/export-hooks.ts']) expect(strip(read(f)), f).not.toMatch(/amountCents/);
+    for (const f of coupleSide) expect(strip(read(f)), f).not.toMatch(/\bgiftEntry\b|\bGiftEntry\w*\b(?!:)|gifts\/(public|projection)|\bnetByHousehold\b|\bcontributorsOf\b|\bpotCents\b/);
+    // The export hook hands over what the couple\'s loader builds, and skips the ledger by name.
+    expect(read('src/app/export-hooks.ts')).toMatch(/whole\('RegistryItem', \(tx, orgId\) => exportRegistry\(tx, orgId\)\)/);
+    expect(read('src/app/export-hooks.ts')).toMatch(/^  GiftEntry: '/m);
+  });
+  it('the couple\'s pages reach the ledger only through the loader, and the store hands back no amount', () => {
+    const imports = giftPages.flatMap((f) => [...read(f).matchAll(/from '@\/lib\/knotwork\/gifts\/([\w-]+)'/g)].map((m) => m[1]!));
+    expect([...new Set(imports)].sort()).toEqual(['couple', 'ledger', 'store']);
+    // From the ledger file the actions take two constants (the bounds), and from the store four writes.
+    expect(read('src/app/o/[org]/wedding/gifts/actions.ts')).toMatch(/import \{ GIFT_MIN_CENTS, TARGET_MAX_CENTS \} from '@\/lib\/knotwork\/gifts\/ledger';/);
+    expect(giftPages.filter((f) => /gifts\/(ledger|store)'/.test(read(f)))).toEqual(['src/app/o/[org]/wedding/gifts/actions.ts']);
+    const store = strip(read('src/lib/knotwork/gifts/store.ts'));
+    expect([...store.matchAll(/^export (?:async function|type|const) (\w+)/gm)].map((m) => m[1]!).sort()).toEqual(['Contributed', 'ItemInput', 'acknowledgeThankYou', 'addItem', 'closeRegistry', 'contribute', 'updateItem']);
+    expect(store).toMatch(/export type Contributed = \{ ok: true; returned: boolean; funded: boolean \} \| \{ ok: false; code: RefusalCode \| 'not-here' \};/);
+    expect(store).toMatch(/export async function closeRegistry\(tx: Tx, ctx: Ctx\): Promise<number>/);
+  });
+  it('the loader reads the ledger in exactly two shapes: a sum per item, and distinct (item, household) pairs with only a name', () => {
+    const loader = strip(read(COUPLE_LOADER));
+    expect(loader.match(/amountCents/g)).toHaveLength(2); // the aggregate, and reading its result
+    expect(loader).toMatch(/tx\.giftEntry\.groupBy\(\{ by: \['itemId'\], where: \{ orgId \}, _sum: \{ amountCents: true \} \}\)/);
+    expect(loader).toMatch(/s\._sum\.amountCents \?\? 0/);
+    expect(loader).toMatch(/tx\.giftEntry\.findMany\(\{ where: \{ orgId \}, distinct: \['itemId', 'householdId'\], select: \{ itemId: true, household: \{ select: \{ name: true \} \} \} \}\)/);
+    expect(loader.match(/\.giftEntry\./g)).toHaveLength(2);
+    expect(loader).not.toMatch(/householdId'\][^)]*_sum|\$queryRaw|\$executeRaw|include:\s*\{[^}]*entries|entries:\s*(true|\{)/); // no per-household sum, no raw SQL, no entries pulled through an item
+    expect(loader).not.toMatch(/gifts\/(public|projection|store)|\.\/(public|projection|store|ledger)'/);
+  });
+  it('no other file on the couple\'s side pulls entries through a relation', () => {
+    for (const f of [...coupleSide, COUPLE_LOADER]) expect(strip(read(f)), f).not.toMatch(/registryItem\.[a-zA-Z]+\(\{[^;]*\bentries\b/);
+    // The thank-you list is rows of (household, item, dates): the table has no amount column at all.
+    const thankYou = /^model ThankYou \{([\s\S]*?)^\}/m.exec(read('prisma/schema/knotwork.prisma'))![1]!;
+    expect(thankYou).not.toMatch(/Cents|amount/i);
+  });
+  it('only the ledger\'s engine and the guest\'s own page ever select an entry\'s amount (Expense.amountCents is the budget\'s, another table)', () => {
+    expect(filesWith(/amountCents/).filter((f) => /gift|\/r\//.test(f))).toEqual(['src/lib/knotwork/gifts/couple.ts', 'src/lib/knotwork/gifts/ledger.ts', 'src/lib/knotwork/gifts/projection.ts', 'src/lib/knotwork/gifts/public.ts', 'src/lib/knotwork/gifts/store.ts']);
+    expect(filesWith(/\.giftEntry\./)).toEqual(['src/lib/knotwork/gifts/couple.ts', 'src/lib/knotwork/gifts/public.ts', 'src/lib/knotwork/gifts/store.ts']);
+    // A change-log line is written with logChange; none in the gift store is handed an amount.
+    const store = strip(read('src/lib/knotwork/gifts/store.ts'));
+    const logged = [...store.matchAll(/logChange\(([^;]*)\);/g)].map((m) => m[1]!);
+    expect(logged.length).toBeGreaterThanOrEqual(7);
+    for (const call of logged.filter((x) => !/'registry', '(created|updated)'/.test(x))) expect(call).not.toMatch(/Cents|\.\.\.input|line\b|plan\b|refunds\[|\br\./);
+    expect(store).toMatch(/logChange\(tx, ctx, 'gift', 'contributed', item\.id, `\$\{household\.name\} gave toward \$\{item\.title\}`, null, \{ household: household\.name, item: item\.title \}, \{ via: 'gift-link' \}\);/);
+  });
+  it('the ledger is append-only in the database, and the guest page has its own two guest-facing files', () => {
+    const sql = read('prisma/migrations/20261125000000_knotwork_gifts/migration.sql');
+    for (const t of ['GiftEntry_append_only', 'GiftEntry_guard']) expect(sql).toContain(`CREATE TRIGGER "${t}"`);
+    for (const t of ['GiftEntry_pot_check', 'RegistryItem_pot_check']) expect(sql).toContain(`CREATE CONSTRAINT TRIGGER "${t}"`);
+    expect(sql).toContain('BEFORE UPDATE OR DELETE ON "GiftEntry"');
+    for (const c of ['RegistryItem_target_check', 'GiftEntry_sign_check']) expect(sql).toContain(`ADD CONSTRAINT "${c}"`);
+    // Rule 3: the gift page and its route are built from gifts/public.ts, which is built from gifts/projection.ts.
+    const guestFacing = globSync('src/app/r/**/*.{ts,tsx}', { cwd: ROOT }).sort();
+    expect(guestFacing).toEqual(['src/app/r/[token]/gifts/contribute/route.ts', 'src/app/r/[token]/gifts/page.tsx', 'src/app/r/[token]/page.tsx', 'src/app/r/[token]/respond/route.ts']);
+    for (const f of guestFacing) {
+      expect(read(f), f).toMatch(/^\/\/ public: \S/m);
+      expect(strip(read(f)), f).not.toMatch(/@\/core\/db|gifts\/(couple|store)|guests\/store|\btx\b|withOrg|asSystem/);
+    }
+    expect(strip(read('src/lib/knotwork/gifts/public.ts'))).not.toMatch(/asSystem|gifts\/couple|\.\/couple/);
+    expect(strip(read('src/lib/knotwork/gifts/projection.ts'))).not.toMatch(/\b(list|wave\w*|priority|invitedOn|createdAt)\b/); // the words do not occur in the guest's shape at all
   });
 });

@@ -1,0 +1,98 @@
+{
+  "name": "06-race-second-tops-up",
+  "note": "With 40000 to go, two households each offer 30000 at once: the first lands whole, the second sees the true remainder (10000) and gets 20000 back.",
+  "targetCents": 50000,
+  "race": true,
+  "steps": [
+    {
+      "op": "contribute",
+      "household": "h1",
+      "offerCents": 10000
+    },
+    {
+      "op": "contribute",
+      "household": "h2",
+      "offerCents": 30000
+    },
+    {
+      "op": "contribute",
+      "household": "h3",
+      "offerCents": 30000
+    }
+  ],
+  "expect": {
+    "steps": [
+      {
+        "ok": true,
+        "lines": [
+          {
+            "kind": "contribution",
+            "amountCents": 10000
+          }
+        ],
+        "potCents": 10000,
+        "state": "open"
+      },
+      {
+        "ok": true,
+        "lines": [
+          {
+            "kind": "contribution",
+            "amountCents": 30000
+          }
+        ],
+        "potCents": 40000,
+        "state": "open"
+      },
+      {
+        "ok": true,
+        "lines": [
+          {
+            "kind": "contribution",
+            "amountCents": 30000
+          },
+          {
+            "kind": "excess_return",
+            "amountCents": -20000
+          }
+        ],
+        "potCents": 50000,
+        "state": "funded"
+      }
+    ],
+    "entries": [
+      {
+        "kind": "contribution",
+        "amountCents": 10000,
+        "householdId": "h1"
+      },
+      {
+        "kind": "contribution",
+        "amountCents": 30000,
+        "householdId": "h2"
+      },
+      {
+        "kind": "contribution",
+        "amountCents": 30000,
+        "householdId": "h3"
+      },
+      {
+        "kind": "excess_return",
+        "amountCents": -20000,
+        "householdId": "h3"
+      }
+    ],
+    "potCents": 50000,
+    "state": "funded",
+    "net": {
+      "h1": 10000,
+      "h2": 30000,
+      "h3": 10000
+    },
+    "thankYous": [
+      "h1",
+      "h2",
+      "h3"
+    ]
+  }
+}

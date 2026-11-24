@@ -1,0 +1,76 @@
+{
+  "name": "11-amount-bounds",
+  "note": "An offer below 1.00 or above 100,000.00 is refused; 1.00 exactly is taken.",
+  "targetCents": 5000000,
+  "steps": [
+    {
+      "op": "contribute",
+      "household": "h1",
+      "offerCents": 0
+    },
+    {
+      "op": "contribute",
+      "household": "h1",
+      "offerCents": 99
+    },
+    {
+      "op": "contribute",
+      "household": "h1",
+      "offerCents": 10000001
+    },
+    {
+      "op": "contribute",
+      "household": "h1",
+      "offerCents": -500
+    },
+    {
+      "op": "contribute",
+      "household": "h1",
+      "offerCents": 100
+    }
+  ],
+  "expect": {
+    "steps": [
+      {
+        "ok": false,
+        "code": "amount"
+      },
+      {
+        "ok": false,
+        "code": "amount"
+      },
+      {
+        "ok": false,
+        "code": "amount"
+      },
+      {
+        "ok": false,
+        "code": "amount"
+      },
+      {
+        "ok": true,
+        "lines": [
+          {
+            "kind": "contribution",
+            "amountCents": 100
+          }
+        ],
+        "potCents": 100,
+        "state": "open"
+      }
+    ],
+    "entries": [
+      {
+        "kind": "contribution",
+        "amountCents": 100,
+        "householdId": "h1"
+      }
+    ],
+    "potCents": 100,
+    "state": "open",
+    "net": {
+      "h1": 100
+    },
+    "thankYous": []
+  }
+}

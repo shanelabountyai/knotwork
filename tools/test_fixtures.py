@@ -117,3 +117,68 @@ def test_headcount_matches_the_oracle_and_the_hand_math():
     fx = json.loads((guest_oracle.ROOT / "headcount.json").read_text())
     assert guest_oracle.headcount(fx) == fx["expect"]
     assert fx["expect"]["costCents"] == 4 * 8700 + 2 * 3500 + 2 * 4000 == 49800
+
+
+# --- gifts: the pooled ledger (PRD P0-5) ------------------------------------------------------------------------------
+import gift_oracle
+
+GIFTS = gift_oracle.load()
+
+
+def test_there_are_gift_fixtures():
+    assert len(GIFTS) >= 12
+    assert sum(1 for _, fx in GIFTS if fx.get("race")) >= 3
+
+
+@pytest.mark.parametrize("path,fx", GIFTS, ids=[p.stem for p, _ in GIFTS])
+def test_gift_expectations_match_the_oracle(path, fx):
+    assert fx["expect"] == gift_oracle.expected(fx)
+    assert path.read_text() == gift_oracle.dump(fx), "fixture is not in canonical JSON form"
+    e = fx["expect"]
+    # The ledger's own invariants, whatever the story: integer cents, a pot between zero and its target, nobody below
+    # zero, a funded pot exactly on target, a closed one empty, and a thank-you for each household that gave to a funded gift.
+    assert all(type(x["amountCents"]) is int and x["amountCents"] != 0 for x in e["entries"])
+    assert all((x["amountCents"] > 0) == (x["kind"] == "contribution") for x in e["entries"])
+    assert 0 <= e["potCents"] <= fx["targetCents"]
+    assert e["potCents"] == sum(x["amountCents"] for x in e["entries"]) == sum(e["net"].values())
+    assert all(n >= 0 for n in e["net"].values())
+    assert (e["state"] == "funded") == (e["potCents"] == fx["targetCents"])
+    if e["state"] == "closed_unfunded":
+        assert e["potCents"] == 0 and all(n == 0 for n in e["net"].values())
+    assert e["thankYous"] == (sorted(h for h, n in e["net"].items() if n > 0) if e["state"] == "funded" else [])
+
+
+@pytest.mark.parametrize("path,fx", [(p, f) for p, f in GIFTS if f.get("race")], ids=[p.stem for p, f in GIFTS if f.get("race")])
+def test_the_race_ends_exactly_on_target_in_every_order(path, fx):
+    offered = sum(s["offerCents"] for s in fx["steps"])
+    assert offered > fx["targetCents"], "a race fixture offers more than the target"
+    for r in gift_oracle.orders(fx):
+        assert r["state"] == "funded" and r["potCents"] == fx["targetCents"]
+        taken = sum(x["amountCents"] for x in r["entries"] if x["kind"] == "contribution")
+        back = -sum(x["amountCents"] for x in r["entries"] if x["kind"] == "excess_return")
+        assert taken - back == fx["targetCents"]
+        # A refused offer took nothing: every household with no entry is at zero, and nobody is owed anything.
+        assert all(n >= 0 for n in r["net"].values())
+
+
+def test_gift_race_by_hand():
+    # Target 500.00, 300.00 in. Two households offer 250.00 each at once. First served: 250.00 in, 50.00 back. Second: refused.
+    fx = next(f for p, f in GIFTS if p.stem == "04-race-both-complete")
+    assert [s.get("lines") or s["code"] for s in fx["expect"]["steps"]] == [
+        [{"kind": "contribution", "amountCents": 30000}],
+        [{"kind": "contribution", "amountCents": 25000}, {"kind": "excess_return", "amountCents": -5000}],
+        "funded",
+    ]
+    assert fx["expect"]["net"] == {"h1": 30000, "h2": 20000}
+    assert fx["expect"]["thankYous"] == ["h1", "h2"]
+
+
+def test_gift_close_by_hand():
+    # h1 gave 100.00 and 50.00, h2 gave 150.00; at close each gets one refund of 150.00 and the pot is empty.
+    fx = next(f for p, f in GIFTS if p.stem == "08-close-with-refunds")
+    assert [x for x in fx["expect"]["entries"] if x["kind"] == "refund"] == [
+        {"kind": "refund", "amountCents": -15000, "householdId": "h1"},
+        {"kind": "refund", "amountCents": -15000, "householdId": "h2"},
+    ]
+    assert fx["expect"]["net"] == {"h1": 0, "h2": 0} and fx["expect"]["state"] == "closed_unfunded"
+    assert fx["expect"]["steps"][-1] == {"ok": False, "code": "closed"}
