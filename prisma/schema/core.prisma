@@ -134,6 +134,10 @@ model Org {
   photos Photo[] // app
   photoBlobs PhotoBlob[] // app
   vendorAttachments VendorAttachment[] // app
+  funders Funder[] // app
+  funderPledges FunderPledge[] // app
+  funderReceipts FunderReceipt[] // app
+  funderAllocations FunderAllocation[] // app
 }
 
 model Membership {

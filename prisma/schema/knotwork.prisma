@@ -71,6 +71,7 @@ enum GrantScope {
   vendors_edit
   guests_edit
   photos_moderate
+  funder
 }
 
 enum BaselineKind {
@@ -122,6 +123,10 @@ model Task {
   vendorId    String?          @db.Uuid
   vendor      Vendor?          @relation(fields: [vendorId], references: [id], onDelete: SetNull)
   notes       String           @default("")
+  /// P1-1 (ADR-001): private to this partner until the reveal point; null means shared. Never a deadline (rule 1).
+  privateToId String? @db.Uuid
+  /// The reveal point: days after the wedding date (negative: before; 0: the wedding day). Null while private: only by hand.
+  revealDays  Int?
   createdAt   DateTime         @default(now()) @db.Timestamptz(6)
   dependsOn   TaskDependency[] @relation("dependencyTask")
   dependents  TaskDependency[] @relation("dependencyOn")
@@ -171,8 +176,13 @@ model BudgetCategory {
   org           Org       @relation(fields: [orgId], references: [id], onDelete: Cascade)
   name          String
   estimateCents Int
+  /// P1-1 (ADR-001): private to this partner until the reveal point; null means shared. Never a deadline (rule 1).
+  privateToId String? @db.Uuid
+  /// The reveal point: days after the wedding date (negative: before; 0: the wedding day). Null while private: only by hand.
+  revealDays  Int?
   createdAt     DateTime  @default(now()) @db.Timestamptz(6)
   expenses      Expense[]
+  pledges       FunderPledge[]
 
   @@unique([orgId, name])
 }
@@ -193,8 +203,13 @@ model Expense {
   requestId   String?         @db.Uuid
   request     ConsentRequest? @relation(fields: [requestId], references: [id], onDelete: NoAction)
   createdById String?         @db.Uuid
+  /// P1-1 (ADR-001): private to this partner until the reveal point; null means shared. Never a deadline (rule 1).
+  privateToId String? @db.Uuid
+  /// The reveal point: days after the wedding date (negative: before; 0: the wedding day). Null while private: only by hand.
+  revealDays  Int?
   createdAt   DateTime        @default(now()) @db.Timestamptz(6)
   payment     VendorPayment?
+  allocations FunderAllocation[]
 
   @@index([orgId])
   @@index([categoryId])
@@ -242,6 +257,10 @@ model Vendor {
   countDueDaysBefore Int?
   /// Eats on site (a vendor meal in Phase 2's counts).
   onSite             Boolean         @default(false)
+  /// P1-1 (ADR-001): private to this partner until the reveal point; null means shared. Never a deadline (rule 1).
+  privateToId String? @db.Uuid
+  /// The reveal point: days after the wedding date (negative: before; 0: the wedding day). Null while private: only by hand.
+  revealDays  Int?
   createdAt          DateTime        @default(now()) @db.Timestamptz(6)
   tasks              Task[]
   payments           VendorPayment[]
@@ -748,4 +767,81 @@ model VendorAttachment {
 
   @@index([orgId])
   @@index([vendorId])
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
+// Phase 4, P1-2: the multi-funder family budget. A funder is a named source (a parent, a relative), not a member; a
+// member may be linked to one with the `funder` helper grant and then sees only what that funder gave toward.
+// Integer cents. Pledged >= received >= spent, per pledge; the database checks the sums at commit.
+
+/// A named source of money. `userId` links a helper (with the `funder` grant) who sees this funder's part only.
+model Funder {
+  id          String         @id @default(uuid()) @db.Uuid
+  orgId       String         @db.Uuid
+  org         Org            @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  name        String
+  note        String         @default("")
+  userId      String?        @db.Uuid
+  createdById String?        @db.Uuid
+  createdAt   DateTime       @default(now()) @db.Timestamptz(6)
+  pledges     FunderPledge[]
+
+  @@unique([orgId, name])
+  @@unique([orgId, userId])
+}
+
+/// What one funder promised toward one budget category.
+model FunderPledge {
+  id          String             @id @default(uuid()) @db.Uuid
+  orgId       String             @db.Uuid
+  org         Org                @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  funderId    String             @db.Uuid
+  funder      Funder             @relation(fields: [funderId], references: [id], onDelete: Cascade)
+  categoryId  String             @db.Uuid
+  category    BudgetCategory     @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  amountCents Int
+  createdById String?            @db.Uuid
+  createdAt   DateTime           @default(now()) @db.Timestamptz(6)
+  receipts    FunderReceipt[]
+  allocations FunderAllocation[]
+
+  @@unique([funderId, categoryId])
+  @@index([orgId])
+  @@index([categoryId])
+}
+
+/// Money that arrived against a pledge (may be partial).
+model FunderReceipt {
+  id          String       @id @default(uuid()) @db.Uuid
+  orgId       String       @db.Uuid
+  org         Org          @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  pledgeId    String       @db.Uuid
+  pledge      FunderPledge @relation(fields: [pledgeId], references: [id], onDelete: Cascade)
+  amountCents Int
+  /// A date of fact: the day the money arrived.
+  receivedOn  DateTime     @db.Date
+  note        String       @default("")
+  createdById String?      @db.Uuid
+  createdAt   DateTime     @default(now()) @db.Timestamptz(6)
+
+  @@index([orgId])
+  @@index([pledgeId])
+}
+
+/// Received money spent: part of an expense in the pledge's category paid from this pledge.
+model FunderAllocation {
+  id          String       @id @default(uuid()) @db.Uuid
+  orgId       String       @db.Uuid
+  org         Org          @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  pledgeId    String       @db.Uuid
+  pledge      FunderPledge @relation(fields: [pledgeId], references: [id], onDelete: Cascade)
+  expenseId   String       @db.Uuid
+  expense     Expense      @relation(fields: [expenseId], references: [id], onDelete: Cascade)
+  amountCents Int
+  createdById String?      @db.Uuid
+  createdAt   DateTime     @default(now()) @db.Timestamptz(6)
+
+  @@unique([pledgeId, expenseId])
+  @@index([orgId])
+  @@index([expenseId])
 }
