@@ -22,7 +22,7 @@ import { reminderText, type CheckedRsvp } from './projection';
 
 type Ctx = { orgId: string; userId: string | null };
 export const DEFAULT_MEALS = ['Chicken', 'Fish', 'Vegetarian'];
-/** With no booked vendor asking for a count, RSVPs are due this many days plus the chase buffer before the wedding (D-34). */
+/** With no booked vendor asking for a count, RSVPs are due this many days plus the chase buffer before the wedding (D-44). */
 export const DEFAULT_COUNT_DAYS = 14;
 
 const PLAN_DEFAULTS = { cap: 100, venueMin: null as number | null, venueMax: null as number | null, perHeadCents: 0, kidsMealCents: 0, vendorMealCents: 0, lockoutDays: 42, minBatchSeats: 4, mealOptions: DEFAULT_MEALS };

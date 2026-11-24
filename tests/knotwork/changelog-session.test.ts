@@ -91,7 +91,9 @@ describe('a scripted edit session', () => {
 
     const all = await log(c.orgId);
     // Every entity type the log knows was touched by the session, and every entry has a time.
-    expect([...new Set(all.map((e) => parseAction(e.action)!.entity))].sort()).toEqual([...ENTITIES].sort());
+    // (The five guest-list entities are covered by their own scripted session in guests-db.test.ts.)
+    const guestEntities = ['household', 'guest', 'wave', 'guestplan', 'song'];
+    expect([...new Set(all.map((e) => parseAction(e.action)!.entity))].sort()).toEqual(ENTITIES.filter((e) => !guestEntities.includes(e)).sort());
     expect(all.every((e) => e.at instanceof Date)).toBe(true);
     // An update logs only what changed: the vendor's name was posted every time and never appears as a change.
     for (const e of all.filter((x) => x.action === 'knotwork.vendor.updated')) expect(Object.keys((e.data as { after: object }).after)).not.toContain('name');

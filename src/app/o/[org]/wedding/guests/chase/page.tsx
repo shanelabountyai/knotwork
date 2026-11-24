@@ -1,0 +1,65 @@
+import Link from 'next/link';
+import { requireOrg } from '@/core/authz/guards';
+import { ActionForm } from '@/core/ui/action-form';
+import { allows } from '@/lib/knotwork/access';
+import { showDay } from '@/lib/knotwork/days';
+import { CADENCE_DAYS, CALL_FROM_DAYS } from '@/lib/knotwork/guests/chase';
+import { loadChase, loadGuestState } from '@/lib/knotwork/guests/store';
+import { NoWedding, WeddingNav } from '../../bits';
+import { view } from '../../view';
+import { markCalled, sendReminders } from '../actions';
+import { GuestNav } from '../nav';
+
+export const metadata = { title: 'Chasing RSVPs' };
+
+// PRD P0-3 (bride review #2): reminders by cadence, then a call-personally worklist as the RSVP deadline approaches.
+// The deadline is derived: the earliest booked vendor's count deadline minus the chase buffer.
+export default async function Chase({ params }: { params: Promise<{ org: string }> }) {
+  const ctx = await requireOrg((await params).org);
+  const data = await view(ctx, 'guests.view', async (tx) => ({ chase: await loadChase(tx, ctx), s: await loadGuestState(tx, ctx) }));
+  if (!data) return <NoWedding slug={ctx.slug} />;
+  const { v, chase, s } = data;
+  const canEdit = allows(v.who, 'guests.edit');
+  const by = new Map(chase.nonResponders.map((h) => [h.id, h]));
+  return (
+    <main>
+      <WeddingNav slug={ctx.slug} />
+      <GuestNav slug={ctx.slug} />
+      <h1>Chasing RSVPs</h1>
+      <ul aria-label="Chase summary">
+        <li>RSVPs are due <strong>{showDay(chase.deadline)}</strong>: {chase.daysLeft >= 0 ? `${chase.daysLeft} days from now` : `${-chase.daysLeft} days ago`}.</li>
+        <li>{s.count.responded} of {s.count.invited} invited have answered ({s.count.responseRatePct}%). {chase.nonResponders.length} households still owe an answer.</li>
+        <li>Reminders go out {CADENCE_DAYS.join(', ')} days before the deadline. From {CALL_FROM_DAYS} days before, and at once for anyone with no email, call them yourself.</li>
+      </ul>
+
+      <section aria-label="Reminders due">
+        <h2>Reminders due today</h2>
+        {chase.plan.remind.length === 0 ? <p>None.</p> : <ul>{chase.plan.remind.map((r) => <li key={r.id}>{by.get(r.id)!.name} ({by.get(r.id)!.email})</li>)}</ul>}
+        {canEdit && chase.plan.remind.length > 0 && <ActionForm action={sendReminders.bind(null, ctx.slug)}><button type="submit">Queue {chase.plan.remind.length} reminders</button></ActionForm>}
+        <p>Reminders are queued in the outbox. This project sends no real email.</p>
+      </section>
+
+      <section aria-label="Call personally">
+        <h2>Call personally</h2>
+        {chase.plan.call.length === 0 && <p>Nobody yet.</p>}
+        <ul>
+          {chase.plan.call.map((id) => {
+            const h = by.get(id)!;
+            return (
+              <li key={id} aria-label={`Call ${h.name}`}>
+                <Link href={`/o/${ctx.slug}/wedding/guests/${id}`}>{h.name}</Link>{h.phone && `, ${h.phone}`}: waiting on {h.pending.join(', ')}
+                {canEdit && <ActionForm action={markCalled.bind(null, ctx.slug)}><input type="hidden" name="id" value={id} /><button type="submit">Mark {h.name} as called</button></ActionForm>}
+              </li>
+            );
+          })}
+        </ul>
+      </section>
+
+      <h2>Everyone who has not answered</h2>
+      <table aria-label="Not answered">
+        <thead><tr><th scope="col">Household</th><th scope="col">Waiting on</th><th scope="col">Reminders sent</th><th scope="col">Called</th></tr></thead>
+        <tbody>{chase.nonResponders.map((h) => <tr key={h.id}><th scope="row">{h.name}</th><td>{h.pending.join(', ')}</td><td>{h.remindersSent.length}</td><td>{h.called ? 'yes' : ''}</td></tr>)}</tbody>
+      </table>
+    </main>
+  );
+}

@@ -273,7 +273,7 @@ describe('chasing (PRD P0-3): the worklist follows the derived deadline', () => 
   it('reminders go by the cadence, once each; the call list opens three days out; a called household leaves it', async () => {
     await ok(releaseWave(c.slug, { list: 'A' }));
     const chase = () => withOrg({ orgId: c.orgId }, (tx) => loadChase(tx, { orgId: c.orgId }));
-    // No booked vendor asks for a count, so RSVPs are due 14 + 14 days before the wedding (D-34).
+    // No booked vendor asks for a count, so RSVPs are due 14 + 14 days before the wedding (D-44).
     expect((await chase()).deadline).toBe(addDays(date, -28));
     await refused(sendReminders(c.slug, {}), /No reminder is due today/);
     advanceClock((330 - 28 - 21) * 86_400_000); // 21 days before the deadline
@@ -425,6 +425,7 @@ describe('change log: a scripted guest-list session covers every guest action', 
       }
       seen = all.length;
     }
+    expect([...new Set((await log(c.orgId)).map((e) => parseAction(e.action)!.entity))]).toEqual(expect.arrayContaining(['household', 'guest', 'wave', 'guestplan', 'song'])); // every guest-list entity
     const override = (await log(c.orgId)).find((e) => e.action === 'knotwork.household.updated' && (e.data as { after: { plusOneOverride?: string } }).after.plusOneOverride);
     expect(override!.data).toMatchObject({ before: { plusOneOverride: null, plusOneNote: '' }, after: { plusOneOverride: 'grant', plusOneNote: 'Sam asked' } }); // "per-household overrides logged"
   });

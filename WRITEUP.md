@@ -4,7 +4,7 @@
 who are equals, and the expensive mistakes are the ones one of them makes alone: a vendor booked, a contract signed, a
 large spend, the date moved. Knotwork makes those actions need both partners, and logs everything else.
 
-Status on 2026-11-23: Phase 1 of 4 built on branch `kickoff` (gate results in `NEXT.md`), not merged, not deployed, synthetic data only. Entries
+Status on 2026-11-24: Phases 1 and 2 of 4 built (Phase 1 merged; Phase 2 on branch `phase-2`; gate results in `NEXT.md`), not merged, not deployed, synthetic data only. Entries
 are added as each artifact lands. Every number in this file comes from a file in the repo or a command that was run;
 none is a benchmark or a user result, because there are no users.
 
@@ -55,6 +55,32 @@ real bug on its first run: a task made to depend on itself reached a database CH
 instead of a refusal. The plan is now validated in memory before anything is written. Two mutation checks were run by
 hand before hand-off (deleting one change-log call; deleting the "not your own request" rule): the scripted-session
 test and eight two-key tests went red, then the code was restored.
+
+## Tiered backfill that guests cannot detect (P0-4)
+
+**Problem.** Every couple has a B list, and every couple dreads a guest finding out they were on it.
+
+**What it does.** Invitations go out in waves against a headcount cap. A pending invitation holds its seat, so a
+decline frees one and an unanswered invitation does not: the B list can never be over-promised. B invitations go out
+as a batch, never one at a time, and never inside the last weeks.
+
+**Why it holds.** The cap is one function (`capState`) checked after every guest write and against an independent
+Python oracle on twelve fixtures; two releases fired at once produce exactly one wave. Undetectability is structural:
+a guest-facing page is built from one projection that has no field for list, wave or invite date, and the sweep
+serves an A household's page and a B household's and requires the same bytes once names are masked.
+
+**What it deliberately does not do.** It cannot stop guests comparing notes about when their invitations arrived.
+
+## Households invited, individuals answering (P0-3)
+
+One link per household; each person answers for themselves, with a meal, needs and a song. Every reply recomputes
+the cost and writes one line: "Hal declined: −$87.00". Vendors get counts and never a name: the caterer's brief is
+swept for every guest's name. Plus-ones are rules as data, with a logged override per household.
+
+**What the build taught.** `Referrer-Policy: no-referrer` (needed because the token is in the URL) makes browsers send
+`Origin: null` on a same-origin form post, so the template's origin check refused every real RSVP; only the browser
+test caught it. And the rules bite in ways nobody listed: remove one spouse from an invitation and the other becomes
+entitled to a guest.
 
 ## Phase gates (the meta-story)
 

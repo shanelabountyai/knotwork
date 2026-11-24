@@ -8,6 +8,7 @@ import { logChange } from '@/lib/knotwork/changelog';
 import { decide, propose } from '@/lib/knotwork/consent/store';
 import { requireWedding } from '@/lib/knotwork/context';
 import { addDays, dbOfDay, todayIn, type Day } from '@/lib/knotwork/days';
+import { applyRsvp, importHouseholds, releaseWave, savePlan } from '@/lib/knotwork/guests/store';
 import { createWedding } from '@/lib/knotwork/schedule/store';
 import { addPayment, generateBrief, updateVendor } from '@/lib/knotwork/vendors/store';
 import { DEMO_TOTP_SECRET } from '../seed-demo';
@@ -76,7 +77,7 @@ export async function seedCouple(opts: { today?: Day } = {}): Promise<string[]> 
   const vendors = new Map<string, string>();
   for (const v of [
     { name: 'Cedar Hollow Barn', category: 'venue', contactName: 'Imogen Tate', email: 'events@cedarhollow.example', phone: '918-555-0111', deliverables: 'Barn and lawn from noon to midnight, tables and chairs for the estimate, parking attendants', arriveMin: 720, departMin: 1439, countEstimate: 120, countDueDaysBefore: 21, onSite: false },
-    { name: 'Fennel & Fig Catering', category: 'caterer', contactName: 'Sam Lindqvist', email: 'sam@fennelfig.example', phone: '918-555-0142', deliverables: 'Plated dinner for the estimate, two servers, cake cutting', arriveMin: 900, departMin: 1320, countEstimate: 120, countDueDaysBefore: 14, onSite: true },
+    { name: 'Fennel & Fig Catering', category: 'caterer', contactName: 'Sam Halloran', email: 'sam@fennelfig.example', phone: '918-555-0142', deliverables: 'Plated dinner for the estimate, two servers, cake cutting', arriveMin: 900, departMin: 1320, countEstimate: 120, countDueDaysBefore: 14, onSite: true },
     { name: 'Wild Rye Flowers', category: 'florist', contactName: 'Petra Novak', email: 'hello@wildrye.example', phone: '918-555-0167', deliverables: 'Ceremony arch, twelve table arrangements, two bouquets', arriveMin: 600, departMin: 780, countEstimate: null, countDueDaysBefore: null, onSite: false },
   ] as const) {
     await withOrg({ orgId }, async (tx) => {
@@ -117,6 +118,38 @@ export async function seedCouple(opts: { today?: Day } = {}): Promise<string[]> 
     const g = await tx.helperGrant.create({ data: { orgId, userId: maple.id, scope: 'budget_view', grantedById: juniper.id } });
     await logChange(tx, a, 'grant', 'granted', g.id, `${COUPLE.maple.email}: See the budget`, null, { userId: maple.id, scope: 'budget_view' });
     await takeSnapshot(tx, a, 'After the venue deposit');
+  });
+
+  // Phase 2: the guest list. Cap 12. The A list fills it exactly (12 seats, two of them plus-ones still open); the B
+  // list waits. The Lindqvists and the Ashbys have said yes; everyone else has not answered.
+  const adult = (name: string, partnerStatus: 'none' | 'married' | 'engaged' = 'married', inWeddingParty = false) => ({ name, ageGroup: 'adult' as const, partnerStatus, inWeddingParty });
+  const hh = (name: string, list: 'A' | 'B', priority: number, email: string, phone: string, guests: ReturnType<typeof adult>[] | { name: string; ageGroup: 'adult' | 'child' | 'infant'; partnerStatus: 'none' | 'married' | 'engaged'; inWeddingParty: boolean }[]) =>
+    ({ name, list, priority, email, phone, address1: '', city: 'Tulsa', region: 'OK', postal: '', guests });
+  await withOrg({ orgId }, async (tx) => {
+    await savePlan(tx, a, { cap: 12, venueMin: 8, venueMax: 14, perHeadCents: 8_700, kidsMealCents: 3_500, vendorMealCents: 4_000, lockoutDays: 42, minBatchSeats: 2, mealOptions: ['Chicken', 'Fish', 'Vegetarian'] });
+    await importHouseholds(tx, a, [
+      hh('The Lindqvists', 'A', 1, 'linda@lindqvist.example', '918-555-0121', [adult('Linda Lindqvist'), adult('Omar Lindqvist'), { name: 'Wren Lindqvist', ageGroup: 'child', partnerStatus: 'none', inWeddingParty: false }]),
+      hh('The Ashbys', 'A', 2, 'hal@ashby.example', '918-555-0122', [adult('Hal Ashby'), adult('Io Ashby')]),
+      hh('The Vales', 'A', 3, 'ben@vale.example', '918-555-0123', [adult('Ben Vale'), adult('Cy Vale')]),
+      hh('Priya Rao', 'A', 4, 'priya@rao.example', '918-555-0124', [adult('Priya Rao', 'engaged')]),
+      hh('Dana Kim', 'A', 5, '', '918-555-0125', [adult('Dana Kim', 'none', true)]),
+      hh('Ruth Stern', 'A', 6, 'ruth@stern.example', '918-555-0126', [adult('Ruth Stern', 'none')]),
+      hh('The Okoros', 'B', 10, 'chidi@okoro.example', '918-555-0131', [adult('Chidi Okoro'), adult('Ngozi Okoro')]),
+      hh('The Trans', 'B', 11, 'mai@tran.example', '918-555-0132', [adult('Mai Tran'), adult('Huy Tran')]),
+      hh('Sam Webb', 'B', 12, 'sam@webb.example', '918-555-0133', [adult('Sam Webb', 'none')]),
+    ]);
+    await releaseWave(tx, a, 'A');
+    const yes = async (household: string, answers: Record<string, { meal: string | null; dietary?: string[]; accessibility?: string[]; song?: string }>) => {
+      const h = await tx.household.findFirstOrThrow({ where: { orgId, name: household }, include: { guests: true } });
+      await applyRsvp(tx, { orgId, userId: null }, h.id, { ok: true, plusOneName: null, responses: h.guests.map((g) => ({ guestId: g.id, attending: true, meal: answers[g.name]!.meal, dietary: answers[g.name]!.dietary ?? [], accessibility: answers[g.name]!.accessibility ?? [], songRequest: answers[g.name]!.song ?? '' })) });
+    };
+    await yes('The Lindqvists', { 'Linda Lindqvist': { meal: 'Fish', dietary: ['gluten_free'], song: 'September' }, 'Omar Lindqvist': { meal: 'Chicken' }, 'Wren Lindqvist': { meal: null, dietary: ['nut_allergy'] } });
+    await yes('The Ashbys', { 'Hal Ashby': { meal: 'Chicken', accessibility: ['step_free'] }, 'Io Ashby': { meal: 'Vegetarian', dietary: ['vegetarian'], song: 'Dancing Queen' } });
+    const song = await tx.doNotPlay.create({ data: { orgId, title: 'Macarena', addedById: juniper.id } });
+    await logChange(tx, a, 'song', 'created', song.id, 'Do not play: Macarena', null, { title: 'Macarena', artist: '' });
+  });
+
+  await withOrg({ orgId }, async (tx) => {
     for (const id of vendors.values()) await generateBrief(tx, a, id);
   });
 
@@ -126,9 +159,11 @@ export async function seedCouple(opts: { today?: Day } = {}): Promise<string[]> 
     booked: await tx.vendor.count({ where: { orgId, status: 'booked' } }),
     requests: await tx.consentRequest.count({ where: { orgId } }),
     expenses: await tx.expense.count({ where: { orgId } }),
+    households: await tx.household.count({ where: { orgId } }),
+    guests: await tx.guest.count({ where: { orgId } }),
   }));
   return [
-    `${COUPLE.name} (/o/${COUPLE.slug}): wedding on ${date}, ${counts.tasks} tasks, ${counts.vendors} vendors (${counts.booked} booked), ${counts.expenses} spends, ${counts.requests} approved requests`,
+    `${COUPLE.name} (/o/${COUPLE.slug}): wedding on ${date}, ${counts.tasks} tasks, ${counts.vendors} vendors (${counts.booked} booked), ${counts.expenses} spends, ${counts.requests} approved requests, ${counts.households} households (${counts.guests} guests)`,
     `${COUPLE.juniper.email}  owner (partner)  (TOTP)`,
     `${COUPLE.rowan.email}  owner (partner)  (TOTP)`,
     `${COUPLE.maple.email}  member (helper: sees the budget)`,
