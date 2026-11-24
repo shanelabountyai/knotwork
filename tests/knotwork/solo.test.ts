@@ -236,3 +236,16 @@ describe('pairing is latched when the second partner joins, not when someone nex
   });
 });
 
+// Review 2026-11-24 (S4): the append-only log said `twoKey: true` for an action one partner took alone.
+describe('what the log says about a solo action', () => {
+  it('a solo booking, contract, spend and rule change are logged as solo, not as two keys', async () => {
+    await ok(proposeBooking(slug, { id: vendorId }));
+    await ok(proposeContract(slug, { id: vendorId, total: '9,000' }));
+    await ok(addExpense(slug, { categoryId, vendorId, description: 'Venue deposit', amount: '2,000', paidOn: '' }));
+    await ok(proposeSettings(slug, { spendThreshold: '750', consentExpiryDays: '10', chaseBufferDays: '14' }));
+    const entries = (await log(orgId)).filter((e) => ['knotwork.vendor.updated', 'knotwork.expense.created', 'knotwork.wedding.updated'].includes(e.action));
+    expect(entries).toHaveLength(4);
+    const flat = entries.map((e) => ({ ...(e.data as { after: object }).after, ...(e.data as object) }));
+    for (const f of flat) expect(f).toMatchObject({ twoKey: false, solo: true });
+  });
+});
