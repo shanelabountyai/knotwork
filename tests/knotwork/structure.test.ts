@@ -71,7 +71,16 @@ describe('rule 2: designated actions only through the consent module', () => {
     expect(filesWith(/bookedRequestId:\s*(?!true)/)).toEqual([EXECUTE]);
     expect(filesWith(/contractRequestId:\s*(?!true)/)).toEqual([EXECUTE]);
     expect(filesWith(/data:\s*\{[^}]*contractSignedOn/)).toEqual([EXECUTE]); // elsewhere it is only read (the brief, the pages)
-    expect(filesWith(/data:\s*\{[^}]*status:\s*'booked'/)).toEqual([EXECUTE]); // elsewhere 'booked' is only a read filter
+    expect(read('src/lib/knotwork/vendors/store.ts')).not.toMatch(/status:\s*'booked'/);
+    // The two files besides the executor that say status: 'booked' only read it: syncRsvpTask in the schedule store, and
+    // the on-site vendor count in the guest store. (Review 2026-11-24, M4: this list had been replaced by the narrower
+    // `data: {…}` check below, which a write built in a variable would slip past. Both checks now hold.)
+    const READS_BOOKED = ['src/lib/knotwork/guests/store.ts', 'src/lib/knotwork/schedule/store.ts'];
+    expect(filesWith(/status:\s*'booked'/).filter((f) => !/vendors\/(scope|store)\.ts$/.test(f))).toEqual([EXECUTE, ...READS_BOOKED]);
+    for (const f of READS_BOOKED) expect(read(f).match(/status:\s*'booked'/g)).toHaveLength(1);
+    expect(read('src/lib/knotwork/guests/store.ts')).toMatch(/tx\.vendor\.count\(\{ where: \{ \.\.\.inOrg\(ctx\), status: 'booked', onSite: true \} \}\)/);
+    expect(read('src/lib/knotwork/guests/store.ts')).not.toMatch(/\.vendor\.(create|createMany|update|updateMany|upsert|delete|deleteMany)\(/);
+    expect(filesWith(/data:\s*\{[^}]*status:\s*'booked'/)).toEqual([EXECUTE]);
   });
   it('only the executor removes a guest, and nothing ever deletes a guest or a household', () => {
     expect(filesWith(/data:\s*\{[^}]*removedAt/)).toEqual([EXECUTE]);
