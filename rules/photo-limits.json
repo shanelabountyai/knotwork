@@ -1,0 +1,10 @@
+{
+  "note": "Photo wall upload limits (PRD P0-6, D-78). Fixed windows, counted in Postgres by src/core/rate-limit.ts. Checked in this order for every upload, before the file is read: device, address, event. A venue shares one address, so the address limit is generous; the device limit is what holds one phone back.",
+  "upload": {
+    "perDevice": { "limit": 30, "windowMinutes": 10 },
+    "perAddress": { "limit": 300, "windowMinutes": 10 },
+    "perEvent": { "limit": 1500, "windowMinutes": 60 }
+  },
+  "pagePerAddress": { "limit": 3000, "windowMinutes": 15 },
+  "maxPhotosPerEvent": 5000
+}

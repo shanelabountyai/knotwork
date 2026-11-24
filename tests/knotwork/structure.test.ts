@@ -3,7 +3,7 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { ROOT } from './fixtures';
 
-// CLAUDE.md rules 1 and 2 as scans, so a later change that breaks either fails here by name.
+// CLAUDE.md's four build rules as scans, so a later change that breaks one fails here by name.
 const read = (rel: string) => readFileSync(join(ROOT, rel), 'utf8');
 const src = globSync('src/**/*.{ts,tsx}', { cwd: ROOT }).filter((f) => !f.startsWith('src/generated/')).sort();
 const filesWith = (re: RegExp) => src.filter((f) => re.test(read(f).replace(/\/\/[^\n]*|\/\*[\s\S]*?\*\//g, ''))); // comments do not count
@@ -38,10 +38,25 @@ describe('rule 1: all deadlines derive from the anchor (no free-floating dates)'
     'RegistryItem.fundedOn': 'a date of fact: the day the pot reached its target', 'RegistryItem.closedOn': 'a date of fact: the day the registry was closed with the gift unfunded',
     'RegistryItem.createdAt': 'row timestamp', 'GiftEntry.createdAt': 'row timestamp: when the entry was written (the ledger is append-only)',
     'ThankYou.createdAt': 'row timestamp: when the thank-you became owed', 'ThankYou.acknowledgedOn': 'a date of fact: when a partner marked it as sent',
+    // Phase 3, photos. When an upload link stops and when photos are purged are NOT here: both are derived from
+    // Wedding.date (PhotoEvent.uploadDays, PhotoEvent.retentionDays are whole numbers of days, like Task.bufferDays).
+    'PhotoEvent.createdAt': 'row timestamp', 'PhotoDevice.createdAt': 'row timestamp: when the device first added a photo',
+    'PhotoDevice.blockedAt': 'a date of fact: when a moderator blocked the device', 'Photo.createdAt': 'row timestamp: when the photo was stored',
+    'Photo.purgedAt': 'a date of fact: when the retention purge deleted its bytes (the day it falls due is derived, never stored)',
+    'VendorAttachment.createdAt': 'row timestamp',
   };
 
-  it('finds the clone\'s twenty-three models', () => {
-    expect(models.map((m) => m.name)).toHaveLength(23); // twenty from Phases 1 and 2, three for gifting
+  it('finds the clone\'s twenty-eight models', () => {
+    expect(models.map((m) => m.name)).toHaveLength(28); // twenty from Phases 1 and 2, three for gifting, five for photos and attachments
+  });
+  it('a photo event stores day counts, and both of its days are worked out from the wedding date', () => {
+    const event = models.find((m) => m.name === 'PhotoEvent')!.body;
+    expect(event).toMatch(/uploadDays\s+Int/);
+    expect(event).toMatch(/retentionDays\s+Int/);
+    expect(dateFields.filter((f) => f.startsWith('PhotoEvent.'))).toEqual(['PhotoEvent.createdAt']);
+    const dates = read('src/lib/knotwork/photos/dates.ts');
+    expect(dates).toMatch(/lastUploadDay = \(weddingDate: Day, uploadDays: number\): Day => addDays\(weddingDate, uploadDays\)/);
+    expect(dates).toMatch(/lastKeptDay = \(weddingDate: Day, retentionDays: number\): Day => addDays\(weddingDate, retentionDays\)/);
   });
   it('every date column is on the list with its reason; a new one fails until someone decides what it is', () => {
     expect(dateFields.sort()).toEqual(Object.keys(ALLOWED).sort());
@@ -116,12 +131,147 @@ describe('rule 2: designated actions only through the consent module', () => {
   });
 });
 
-describe('rules 3 and 4 have nothing to guard yet', () => {
-  it('Phase 1 has no guest-facing route and accepts no upload', () => {
-    const routes = globSync('src/app/**/{page,route}.{ts,tsx}', { cwd: ROOT });
-    const publicKnotwork = routes.filter((f) => /wedding|rsvp|guest|wall|upload/i.test(f) && /^\/\/ public:/m.test(read(f)));
-    expect(publicKnotwork).toEqual([]);
-    expect(filesWith(/type="file"|formData\(\)\.get\([^)]*\) as File|multipart\/form-data/).filter((f) => f.includes('wedding') || f.includes('knotwork'))).toEqual([]);
+// Until Phase 3 this block was one test, "rules 3 and 4 have nothing to guard yet": no public Knotwork route and no
+// file input anywhere. Both now exist on purpose (the RSVP and gift pages since Phase 2; the photo link and contract
+// attachments in Phase 3), so the blanket "none" is replaced by closed lists: exactly which routes are guest-facing,
+// and exactly which files may touch an uploaded file. Anything outside either list fails here by name.
+describe('rule 3: the guest-facing surfaces are a closed list', () => {
+  const strip = (text: string) => text.replace(/\/\/[^\n]*|\/\*[\s\S]*?\*\//g, '');
+  const GUEST_FACING = ['src/app/p/[token]/page.tsx', 'src/app/p/[token]/upload/route.ts', 'src/app/r/[token]/gifts/contribute/route.ts', 'src/app/r/[token]/gifts/page.tsx', 'src/app/r/[token]/page.tsx', 'src/app/r/[token]/respond/route.ts'];
+
+  it('the public Knotwork routes are exactly /r/[token] (+ respond, gifts, gifts/contribute) and /p/[token] (+ upload)', () => {
+    const routes = globSync('src/app/**/{page,route}.{ts,tsx}', { cwd: ROOT }).sort();
+    const isPublic = (f: string) => /^\/\/ public: \S/m.test(read(f));
+    expect(routes.filter((f) => /^src\/app\/(r|p)\//.test(f))).toEqual(GUEST_FACING);
+    for (const f of GUEST_FACING) expect(isPublic(f), f).toBe(true);
+    // Nothing under the signed-in tree is public, whatever it is called.
+    expect(routes.filter((f) => f.startsWith('src/app/o/') && isPublic(f))).toEqual([]);
+    expect(routes.filter((f) => /^src\/app\/(o|r|p)\//.test(f) && isPublic(f))).toEqual(GUEST_FACING);
+  });
+  it('the photo link\'s two files touch no database and no store: only photos/public.ts, which shows only the projection', () => {
+    for (const f of GUEST_FACING.slice(0, 2)) expect(strip(read(f)), f).not.toMatch(/@\/core\/db|photos\/(store|blobs|qr)|guests\/(store|public)|gifts\/|\btx\b|withOrg|asSystem/);
+    expect([...read('src/app/p/[token]/page.tsx').matchAll(/from '@\/lib\/knotwork\/([\w/-]+)'/g)].map((m) => m[1]!)).toEqual(['photos/projection', 'photos/public']);
+    // The guest's whole view is two strings. No list, wave, date, guest or household exists in the shape.
+    const projection = strip(read('src/lib/knotwork/photos/projection.ts'));
+    expect(projection).toMatch(/export type UploadView = \{ weddingTitle: string; eventName: string \};/);
+    expect(projection).not.toMatch(/\b(list|wave\w*|priority|invitedOn|createdAt|household\w*|guest\w*|date)\b/i);
+    const pub = strip(read('src/lib/knotwork/photos/public.ts'));
+    expect(pub).toMatch(/Promise<UploadView \| 'limited' \| null>/);
+    expect(pub).not.toMatch(/\.(household|guest|inviteWave|guestPlan|giftEntry|registryItem)\./);
+  });
+  it('the only two Knotwork files that read across orgs are the two token lookups', () => {
+    expect(filesWith(/\basSystem\s*\(/).filter((f) => f.includes('knotwork') || /^src\/app\/(o|r|p)\//.test(f))).toEqual(['src/lib/knotwork/guests/public.ts', 'src/lib/knotwork/photos/public.ts']);
+  });
+  it('/p/:path* carries the same three headers as /r/:path* (the token is in the URL)', () => {
+    const config = read('next.config.ts');
+    for (const source of ['/r/:path*', '/p/:path*']) {
+      const block = config.slice(config.indexOf(`source: '${source}'`)).split('},\n    //')[0]!;
+      expect(block, source).toContain(`{ key: 'Referrer-Policy', value: 'no-referrer' }`);
+      expect(block, source).toContain(`{ key: 'X-Robots-Tag', value: 'noindex, nofollow' }`);
+      expect(block, source).toContain(`{ key: 'Cache-Control', value: 'private, no-store, max-age=0' }`);
+    }
+  });
+});
+
+describe('rule 4: uploads are hostile input: one pipeline, and nothing else reads a file', () => {
+  const strip = (text: string) => text.replace(/\/\/[^\n]*|\/\*[\s\S]*?\*\//g, '');
+  const READ = 'src/lib/knotwork/uploads/read.ts';
+  const PROCESS = 'src/lib/knotwork/uploads/process.ts';
+  const UPLOAD_ROUTES = ['src/app/o/[org]/wedding/vendors/[id]/attachments/route.ts', 'src/app/p/[token]/upload/route.ts'];
+  const FORMS = ['src/app/o/[org]/wedding/vendors/[id]/page.tsx', 'src/app/p/[token]/page.tsx'];
+  // Knotwork's own code: the library, and everything served under /o, /r and /p.
+  const ours = (files: string[]) => files.filter((f) => /^src\/(lib\/knotwork|app\/(o\/\[org\]\/wedding|r|p))\//.test(f));
+
+  it('only uploads/read.ts takes a file, or raw bytes, out of a request', () => {
+    expect(ours(filesWith(/\.arrayBuffer\(\)|\.blob\(\)|\.bytes\(\)|\breq(uest)?\.body\b|getReader\(|\bFile\b|\bBlob\b/))).toEqual([READ]);
+    // formData() elsewhere is the two plain-text guest forms from Phase 2, which keep only strings.
+    const TEXT_FORMS = ['src/app/r/[token]/gifts/contribute/route.ts', 'src/app/r/[token]/respond/route.ts'];
+    expect(ours(filesWith(/\.formData\(\)/))).toEqual([...TEXT_FORMS, READ]);
+    for (const f of TEXT_FORMS) {
+      expect(strip(read(f)).match(/form\.get(All)?\(/g)!.length, f).toBeGreaterThan(0);
+      expect(strip(read(f)), f).toMatch(/typeof form\.get\(k\) === 'string'/);
+      expect(strip(read(f)), f).not.toMatch(/as (File|Blob)|instanceof/);
+    }
+  });
+  it('a file input exists on exactly two forms, each posting multipart to its own upload route', () => {
+    expect(filesWith(/type="file"/)).toEqual(FORMS);
+    expect(filesWith(/multipart\/form-data/)).toEqual(FORMS);
+    expect(read(READ)).toContain(String.raw`if (!/^multipart\/form-data\b/i.test(type)) return { ok: false, code: 'empty', text: none };`);
+    expect(read(FORMS[0]!)).toMatch(/<form method="post" action=\{attachBase\} encType="multipart\/form-data">/);
+    expect(read(FORMS[0]!)).toMatch(/const attachBase = `\/o\/\$\{ctx\.slug\}\/wedding\/vendors\/\$\{x\.id\}\/attachments`;/);
+    expect(read(FORMS[1]!)).toMatch(/<form method="post" action=\{`\/p\/\$\{token\}\/upload`\} encType="multipart\/form-data">/);
+    for (const f of FORMS) expect(read(f), f).toMatch(/accept="image\/jpeg,image\/png,image\/webp"/);
+  });
+  it('every upload route calls the pipeline, never reads the body itself, and nothing else calls it', () => {
+    expect(filesWith(/\breceiveImage\(/)).toEqual([...UPLOAD_ROUTES, READ]);
+    expect(filesWith(/\bprocessUpload\(/)).toEqual([PROCESS, READ]);
+    for (const f of UPLOAD_ROUTES) {
+      const text = strip(read(f));
+      expect(text.match(/await receiveImage\(req, /g), f).toHaveLength(1);
+      expect(text, f).not.toMatch(/formData|arrayBuffer|\.body\b|\.text\(\)|\.json\(\)|\.blob\(\)|\.bytes\b|Uint8Array|Buffer/);
+      expect(text, f).toMatch(/got\.image\b/); // what is stored is what the pipeline returned
+    }
+    // A route under the signed-in tree that takes a POST and is not on the list would be a second way in.
+    const posts = globSync('src/app/{o,r,p}/**/route.{ts,tsx}', { cwd: ROOT }).sort().filter((f) => /export async function POST\b/.test(read(f)));
+    expect(posts).toEqual([UPLOAD_ROUTES[0]!, UPLOAD_ROUTES[1]!, 'src/app/r/[token]/gifts/contribute/route.ts', 'src/app/r/[token]/respond/route.ts']);
+  });
+  it('the pipeline is sniff, cap, decode, re-encode, inspect: in that order, in one function', () => {
+    const text = strip(read(PROCESS));
+    const order = ['precheck(raw)', 'limitInputPixels: MAX_PIXELS', '.rotate()', '.jpeg(JPEG)', 'every(clean)'].map((needle) => text.indexOf(needle));
+    expect(order.every((at) => at >= 0), JSON.stringify(order)).toBe(true);
+    const body = text.slice(text.indexOf('export async function processUpload'));
+    expect(['precheck(raw)', 'open().metadata()', 'upright()', 'every(clean)', 'ok: true'].map((n) => body.indexOf(n))).toEqual([...['precheck(raw)', 'open().metadata()', 'upright()', 'every(clean)', 'ok: true'].map((n) => body.indexOf(n))].sort((a, b) => a - b));
+    expect(text).toMatch(/inspect\(r\.bytes\)\.length > 0\) return false/); // one finding in the OUTPUT fails the ingest
+    expect(text).toMatch(/failOn: 'error', animated: false, pages: 1/);
+    // The allowlist is by magic bytes: sniff takes bytes and nothing else, and no upload code reads a name or a declared type.
+    expect(strip(read('src/lib/knotwork/uploads/sniff.ts'))).toMatch(/export function sniff\(b: Uint8Array\): ImageType \| null/);
+    for (const f of [READ, PROCESS, ...UPLOAD_ROUTES]) expect(strip(read(f)), f).not.toMatch(/file\.(name|type)\b|\.mimetype|\.filename/);
+    // The byte cap is applied while reading: the reader stops, and cancels, as soon as the total passes it.
+    expect(strip(read(READ))).toMatch(/total \+= value\.byteLength;\s+if \(total > cap\) \{\s+await reader\.cancel\(\)/);
+  });
+  it('sharp is imported by the pipeline alone, and is never asked to keep or write metadata', () => {
+    expect(filesWith(/from 'sharp'/)).toEqual([PROCESS]);
+    expect(filesWith(/withMetadata|keepMetadata|keepExif|keepIccProfile|keepXmp|withExif|withExifMerge|withIccProfile|withXmp/)).toEqual([]);
+  });
+  it('nothing stores raw request bytes: a bytes column takes only a Processed image, which only the pipeline can make', () => {
+    const schema = read('prisma/schema/knotwork.prisma');
+    const bytes = [...schema.matchAll(/^model (\w+) \{([\s\S]*?)^\}/gm)].flatMap((m) => [...m[2]!.matchAll(/^\s*(\w+)\s+Bytes\??\s/gm)].map((f) => `${m[1]}.${f[1]}`));
+    expect(bytes).toEqual(['PhotoBlob.bytes', 'VendorAttachment.bytes']);
+    const BLOBS = 'src/lib/knotwork/photos/blobs.ts';
+    const ATTACHMENTS = 'src/lib/knotwork/vendors/attachments.ts';
+    expect(filesWith(/\.photoBlob\.(create|createMany|createManyAndReturn|update|updateMany|upsert)\(/)).toEqual([BLOBS]);
+    expect(filesWith(/\.vendorAttachment\.(create|createMany|createManyAndReturn|update|updateMany|upsert)\(/)).toEqual([ATTACHMENTS]);
+    expect(filesWith(/\$executeRaw|\$queryRaw/).filter((f) => /photos|uploads|attachments/.test(f))).toEqual([]);
+    // Each writer's bytes come from its `image: Processed` argument and from nowhere else.
+    expect(strip(read(BLOBS))).toMatch(/export async function writeBlobs\(tx: Tx, orgId: string, photoId: string, image: Processed\)/);
+    expect(strip(read(BLOBS)).match(/bytes:/g)).toHaveLength(2); // the write (from image.renditions[kind]) and the read's select
+    expect(strip(read(BLOBS))).toMatch(/const r = image\.renditions\[kind\];\s+await tx\.photoBlob\.create\(\{ data: \{ orgId, photoId, kind, bytes: new Uint8Array\(r\.bytes\)/);
+    expect(strip(read(ATTACHMENTS))).toMatch(/export async function addAttachment\(tx: Tx, ctx: Ctx, vendorId: string, label: string, image: Processed\)/);
+    expect(strip(read(ATTACHMENTS))).toMatch(/const full = image\.renditions\.full;/);
+    expect(strip(read(ATTACHMENTS))).toMatch(/bytes: new Uint8Array\(full\.bytes\)/);
+    for (const f of [BLOBS, ATTACHMENTS]) expect(strip(read(f)), f).not.toMatch(/Request|formData|uploads\/read/);
+    // `Processed` carries a symbol key that is not exported, so no other file can construct one.
+    const process = strip(read(PROCESS));
+    expect(process).toMatch(/^const PROCESSED: unique symbol = Symbol\(/m);
+    expect(process).not.toMatch(/export (const|\{)[^;]*\bPROCESSED\b/);
+    expect(process).toMatch(/readonly \[PROCESSED\]: true/);
+    expect(filesWith(/as (unknown as )?Processed\b/)).toEqual([]);
+    // The pipeline itself has no database to write to.
+    for (const f of src.filter((x) => x.startsWith('src/lib/knotwork/uploads/'))) expect(strip(read(f)), f).not.toMatch(/@\/core\/db|\btx\b|prisma/i);
+  });
+  it('the database holds its half: only a JPEG of its true length, inside the cap and the rendition\'s box', () => {
+    const sql = read('prisma/migrations/20261125000002_knotwork_photos/migration.sql');
+    for (const c of ['Photo_mime_check', 'PhotoBlob_bytes_check', 'PhotoBlob_box_check', 'VendorAttachment_bytes_check', 'VendorAttachment_box_check']) expect(sql).toContain(`ADD CONSTRAINT "${c}"`);
+    for (const t of ['PhotoDevice_guard', 'Photo_guard', 'PhotoBlob_guard', 'Photo_purge_guard', 'VendorAttachment_guard']) expect(sql).toContain(`CREATE TRIGGER "${t}"`);
+    expect(sql).toContain(`substring("bytes" from 1 for 3) = '\\xffd8ff'::bytea AND "size" = octet_length("bytes") AND "size" <= 10485760`);
+  });
+  it('each guard has its fixture: the allowlist, both caps, and every kind of metadata', () => {
+    const manifest = JSON.parse(read('fixtures/photos/strip/manifest.json')) as { cases: { expect: { result: string; before: string[]; after?: string[] } }[] };
+    const results = new Set(manifest.cases.map((c) => c.expect.result));
+    for (const code of ['ok', 'type', 'pdf', 'too-big', 'pixels', 'animated', 'unreadable', 'empty']) expect(results.has(code), code).toBe(true);
+    const found = new Set(manifest.cases.flatMap((c) => c.expect.before));
+    for (const kind of ['exif', 'gps', 'xmp', 'icc', 'iptc', 'comment', 'text', 'time', 'trailing']) expect(found.has(kind), kind).toBe(true);
+    for (const c of manifest.cases.filter((x) => x.expect.result === 'ok')) expect(c.expect.after).toEqual([]);
   });
 });
 

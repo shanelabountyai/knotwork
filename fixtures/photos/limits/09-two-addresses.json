@@ -1,0 +1,63 @@
+{
+  "name": "09-two-addresses",
+  "note": "Small limits. The address limit is per address: a second address has its own eight.",
+  "limits": {
+    "perDevice": {
+      "limit": 3,
+      "windowMinutes": 10
+    },
+    "perAddress": {
+      "limit": 8,
+      "windowMinutes": 10
+    },
+    "perEvent": {
+      "limit": 12,
+      "windowMinutes": 60
+    }
+  },
+  "steps": [
+    {
+      "from": 0,
+      "every": 1,
+      "count": 9,
+      "devices": [
+        "d01",
+        "d02",
+        "d03"
+      ],
+      "address": "venue"
+    },
+    {
+      "from": 20,
+      "every": 1,
+      "count": 3,
+      "devices": [
+        "h01",
+        "h02",
+        "h03"
+      ],
+      "address": "hotel"
+    }
+  ],
+  "expect": {
+    "attempts": 12,
+    "totals": {
+      "address": 1,
+      "ok": 11
+    },
+    "runs": [
+      [
+        "ok",
+        8
+      ],
+      [
+        "address",
+        1
+      ],
+      [
+        "ok",
+        3
+      ]
+    ]
+  }
+}

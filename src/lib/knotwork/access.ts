@@ -4,7 +4,7 @@
 // actions go through consent whoever asks. Every other role is a helper (D-08): a helper can always read the schedule
 // and update their own tasks, and gets anything else only by a grant.
 
-export const GRANT_SCOPES = ['schedule_edit', 'budget_view', 'budget_edit', 'vendors_view', 'vendors_edit', 'guests_edit'] as const;
+export const GRANT_SCOPES = ['schedule_edit', 'budget_view', 'budget_edit', 'vendors_view', 'vendors_edit', 'guests_edit', 'photos_moderate'] as const;
 export type GrantScope = (typeof GRANT_SCOPES)[number];
 
 export const SCOPE_LABEL: Record<GrantScope, string> = {
@@ -14,6 +14,7 @@ export const SCOPE_LABEL: Record<GrantScope, string> = {
   vendors_view: 'See vendors',
   vendors_edit: 'Edit vendors',
   guests_edit: 'See and edit the guest list',
+  photos_moderate: 'See and moderate the photo wall',
 };
 
 export type Capability =
@@ -22,6 +23,7 @@ export type Capability =
   | 'vendors.view' | 'vendors.edit'
   | 'guests.view' | 'guests.edit'
   | 'gifts.view' | 'gifts.edit'
+  | 'photos.view' | 'photos.moderate' | 'photos.manage'
   | 'consent.view' | 'consent.propose' | 'consent.decide'
   | 'activity.view' | 'helpers.manage' | 'wedding.create';
 
@@ -42,6 +44,11 @@ const HELPER: Record<Capability, (g: readonly GrantScope[]) => boolean> = {
   // Gifting is the partners' alone: no grant reaches it (who gave toward what is the couple's to know, P0-5).
   'gifts.view': () => false,
   'gifts.edit': () => false,
+  // The photo wall (P0-6): one grant lets a helper see the album and the wall and moderate them. Making an event,
+  // its link, its settings and the retention purge stay with the partners.
+  'photos.view': (g) => g.includes('photos_moderate'),
+  'photos.moderate': (g) => g.includes('photos_moderate'),
+  'photos.manage': () => false,
   'consent.view': () => false,
   'consent.propose': () => false,
   'consent.decide': () => false,
@@ -60,6 +67,7 @@ const ENTITY_CAP: Record<string, Capability> = {
   request: 'consent.view', grant: 'helpers.manage',
   household: 'guests.view', guest: 'guests.view', wave: 'guests.view', guestplan: 'guests.view', song: 'guests.view',
   registry: 'gifts.view', gift: 'gifts.view', thankyou: 'gifts.view',
+  photoevent: 'photos.view', photo: 'photos.view', photodevice: 'photos.view', attachment: 'vendors.view',
 };
 export const canSeeEntity = (who: Who, entity: string): boolean => {
   const cap = ENTITY_CAP[entity];

@@ -1,0 +1,67 @@
+{
+  "name": "05-event-over",
+  "note": "Small limits so the event cap is reachable: 12 per event per hour. Three addresses, six devices, 15 uploads: the 13th to 15th are refused by the event limit although no device and no address is over.",
+  "limits": {
+    "perDevice": {
+      "limit": 3,
+      "windowMinutes": 10
+    },
+    "perAddress": {
+      "limit": 8,
+      "windowMinutes": 10
+    },
+    "perEvent": {
+      "limit": 12,
+      "windowMinutes": 60
+    }
+  },
+  "steps": [
+    {
+      "from": 0,
+      "every": 60,
+      "count": 5,
+      "devices": [
+        "d01",
+        "d02"
+      ],
+      "address": "a1"
+    },
+    {
+      "from": 300,
+      "every": 60,
+      "count": 5,
+      "devices": [
+        "d03",
+        "d04"
+      ],
+      "address": "a2"
+    },
+    {
+      "from": 660,
+      "every": 60,
+      "count": 5,
+      "devices": [
+        "d05",
+        "d06"
+      ],
+      "address": "a3"
+    }
+  ],
+  "expect": {
+    "attempts": 15,
+    "totals": {
+      "event": 3,
+      "ok": 12
+    },
+    "runs": [
+      [
+        "ok",
+        12
+      ],
+      [
+        "event",
+        3
+      ]
+    ]
+  }
+}

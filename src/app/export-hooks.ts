@@ -37,10 +37,17 @@ export const exportTables: readonly ExportTable[] = [
   // its contributors' names (built by gifts/couple.ts), and the thank-yous. The ledger itself is skipped, below.
   whole('RegistryItem', (tx, orgId) => exportRegistry(tx, orgId)),
   whole('ThankYou', (tx, orgId) => tx.thankYou.findMany({ where: { orgId }, orderBy: { createdAt: 'asc' } })),
+  // Phase 3, photos and contract attachments. Facts only: no image bytes (the gallery zip is the way out, D-64), no
+  // upload-link hash or sealed copy, no device-cookie hash.
+  whole('PhotoEvent', (tx, orgId) => tx.photoEvent.findMany({ where: { orgId }, omit: { uploadTokenHash: true, uploadTokenSealed: true }, orderBy: { createdAt: 'asc' } })),
+  whole('PhotoDevice', (tx, orgId) => tx.photoDevice.findMany({ where: { orgId }, omit: { tokenHash: true }, orderBy: { createdAt: 'asc' } })),
+  whole('Photo', (tx, orgId) => tx.photo.findMany({ where: { orgId }, orderBy: { createdAt: 'asc' } })),
+  whole('VendorAttachment', (tx, orgId) => tx.vendorAttachment.findMany({ where: { orgId }, omit: { bytes: true }, orderBy: { createdAt: 'asc' } })),
 ];
 
 // An org-owned table left out on purpose, with the reason. INV-34 fails on any model with an orgId column that is in
 // neither list, so a new table cannot silently drop out of every export.
 export const exportSkipped: Readonly<Record<string, string>> = {
   GiftEntry: 'the gift ledger holds what each household gave, which the couple never sees (PRD P0-5); RegistryItem carries each item\'s total and contributor names instead',
+  PhotoBlob: 'image bytes (three renditions of every photo): far too large for a JSON export, and the gallery download (a zip of the album) is the way photos leave (D-64). Photo carries each photo\'s facts. VendorAttachment is exported the same way: its facts, without its bytes',
 };

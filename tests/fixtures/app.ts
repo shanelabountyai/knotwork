@@ -4,7 +4,7 @@ import { dbSystem as db } from '@/core/db/system';
 // CLONE-OWNED. The INV-01..04 harness seeds these rows in both fixture orgs, so it can drive
 // actions whose inputs use ref('<model>') for the clone's own tables. Return { model: id } for
 // one row of each model, owned by `org.orgId`. INV-29 (RLS enforce) calls it too, so every org-owned clone table has rows to scope.
-// Knotwork: one row in each of the thirteen Phase 1 tables and the seven Phase 2 tables, and the three gifting tables. Fixed ids: the harness re-seeds before every call, and a
+// Knotwork: one row in each of the thirteen Phase 1 tables and the seven Phase 2 tables, the three gifting tables, and the five photo and attachment tables. Fixed ids: the harness re-seeds before every call, and a
 // ref minted once must still resolve. The wedding is far in the future so nothing in the harness plan is late.
 const id = (key: 'a' | 'b', n: number) => `00000000-0000-4000-8000-${String((key === 'a' ? 7000 : 7500) + n).padStart(12, '0')}`;
 
@@ -41,11 +41,20 @@ export async function seedApp(org: { orgId: string; userId: string }, key: 'a' |
   const registryItem = await db.registryItem.create({ data: { id: id(key, 23), orgId, title: `harness gift ${key}`, targetCents: 10_000 } });
   const giftEntry = await db.giftEntry.create({ data: { id: id(key, 24), orgId, itemId: registryItem.id, householdId: household.id, kind: 'contribution', amountCents: 2_500 } });
   const thankYou = await db.thankYou.create({ data: { id: id(key, 25), orgId, itemId: registryItem.id, householdId: household.id } });
+  // Phase 3, photos and attachments: an event (pre-moderated, link open), a device, a live photo with one tiny blob,
+  // and one attachment. The bytes are the shortest thing the database's rule-4 check lets in: a JPEG start and end marker.
+  const jpeg = new Uint8Array([0xff, 0xd8, 0xff, 0xd9]);
+  const photoEvent = await db.photoEvent.create({ data: { id: id(key, 26), orgId, name: `harness event ${key}`, mode: 'pre', uploadTokenHash: `harness-photo-link-${key}`, uploadTokenSealed: 'harness' } });
+  const photoDevice = await db.photoDevice.create({ data: { id: id(key, 27), orgId, eventId: photoEvent.id, tokenHash: `harness-device-${key}` } });
+  const photo = await db.photo.create({ data: { id: id(key, 28), orgId, eventId: photoEvent.id, deviceId: photoDevice.id, status: 'live', mime: 'image/jpeg', width: 1, height: 1 } });
+  const photoBlob = await db.photoBlob.create({ data: { id: id(key, 29), orgId, photoId: photo.id, kind: 'thumb', bytes: jpeg, size: jpeg.length, width: 1, height: 1 } });
+  const vendorAttachment = await db.vendorAttachment.create({ data: { id: id(key, 30), orgId, vendorId: vendor.id, label: 'harness contract', mime: 'image/jpeg', size: jpeg.length, width: 1, height: 1, bytes: jpeg } });
   return {
     wedding: wedding.id, task: task.id, taskDependency: dependency.id, scheduleBaseline: baseline.id, budgetCategory: category.id, expense: expense.id, budgetSnapshot: snapshot.id,
     vendor: vendor.id, vendorPayment: payment.id, vendorFlag: flag.id, vendorBrief: brief.id, consentRequest: request.id, helperGrant: grant.id,
     guestPlan: guestPlan.id, inviteWave: wave.id, household: household.id, guest: guest.id, headcountDelta: delta.id, chaseEvent: chase.id, doNotPlay: song.id,
     registryItem: registryItem.id, giftEntry: giftEntry.id, thankYou: thankYou.id,
+    photoEvent: photoEvent.id, photoDevice: photoDevice.id, photo: photo.id, photoBlob: photoBlob.id, vendorAttachment: vendorAttachment.id,
   };
 }
 

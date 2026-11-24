@@ -4,33 +4,43 @@ import { ActionForm } from '@/core/ui/action-form';
 import { allows, isPartner } from '@/lib/knotwork/access';
 import { addDays, dayOfDb, showDay } from '@/lib/knotwork/days';
 import { usd } from '@/lib/knotwork/money';
+import { isUploadProblem, UPLOAD_PROBLEM } from '@/lib/knotwork/uploads/caps';
+import { ATTACHMENT_PROBLEM, ATTACHMENTS_PER_VENDOR, listAttachments } from '@/lib/knotwork/vendors/attachments';
 import { VENDOR_CATEGORIES } from '@/lib/knotwork/vendors/brief';
 import { hhmm } from '@/lib/knotwork/vendors/scope';
 import { flagText } from '@/lib/knotwork/vendors/store';
 import { acknowledgeFlag, addVendorPayment, payVendorPayment, proposeBooking, proposeContract, regenerateBrief, updateVendor } from '../../actions';
 import { NoWedding, WeddingNav } from '../../bits';
-import { view } from '../../view';
+import { nameOf, view } from '../../view';
+import { removeVendorAttachment } from '../actions';
 
 export const metadata = { title: 'Vendor' };
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 // One vendor: contact, scope (a change here on a booked vendor raises a re-confirmation flag), the two designated
-// steps (book, sign), scheduled payments and the brief.
-export default async function VendorPage({ params }: { params: Promise<{ org: string; id: string }> }) {
+// steps (book, sign), scheduled payments, the brief, and contract attachments (images only, D-65; rule 4: the form
+// posts the file to ./attachments, a route handler that hands it to src/lib/knotwork/uploads).
+export default async function VendorPage({ params, searchParams }: { params: Promise<{ org: string; id: string }>; searchParams: Promise<{ e?: string; attached?: string }> }) {
   const ctx = await requireOrg((await params).org);
   const { id } = await params;
+  const q = await searchParams;
   if (!UUID.test(id)) notFound();
   const data = await view(ctx, 'vendors.view', async (tx) => ({
     vendor: await tx.vendor.findFirst({ where: { id, ...inOrg(ctx) }, include: { payments: { orderBy: { dueDaysBefore: 'desc' } }, flags: { where: { ackAt: null }, orderBy: { raisedAt: 'asc' } }, briefs: { orderBy: { version: 'desc' }, take: 1 } } }),
     categories: await tx.budgetCategory.findMany({ where: inOrg(ctx), select: { id: true, name: true }, orderBy: { name: 'asc' } }),
+    attachments: await listAttachments(tx, ctx, id),
   }));
   if (!data) return <NoWedding slug={ctx.slug} />;
-  const { v, vendor: x, categories } = data;
+  const { v, vendor: x, categories, attachments } = data;
   if (!x) notFound();
   const canEdit = allows(v.who, 'vendors.edit');
   const partner = isPartner(ctx.role);
   const bind = <A extends unknown[], R>(fn: (slug: string, ...a: A) => R) => fn.bind(null, ctx.slug);
   const brief = x.briefs[0];
+  // The query carries a code from a closed list; the sentence comes from here. Unknown codes show nothing.
+  const problems: Record<string, string> = { ...UPLOAD_PROBLEM, ...ATTACHMENT_PROBLEM };
+  const problem = typeof q.e === 'string' && (isUploadProblem(q.e) || Object.hasOwn(ATTACHMENT_PROBLEM, q.e)) ? problems[q.e] : null;
+  const attachBase = `/o/${ctx.slug}/wedding/vendors/${x.id}/attachments`;
 
   return (
     <main>
@@ -145,6 +155,35 @@ export default async function VendorPage({ params }: { params: Promise<{ org: st
             <input type="hidden" name="id" value={x.id} />
             <button type="submit">{brief ? 'Regenerate brief' : 'Generate brief'}</button>
           </ActionForm>
+        )}
+      </section>
+
+      <section aria-label="Contract attachments" id="attachments">
+        <h2>Contract attachments</h2>
+        {problem && <p role="alert">{problem} Nothing was attached.</p>}
+        {!problem && q.attached === '1' && <p role="status">Attached.</p>}
+        {attachments.length === 0 ? <p>Nothing attached yet.</p> : (
+          <ul aria-label="Attachments">
+            {attachments.map((a) => (
+              <li key={a.id} aria-label={`Attachment ${a.label}`}>
+                <a href={`${attachBase}/${a.id}`}>{a.label}</a> <small>({a.width}×{a.height}, {Math.ceil(a.size / 1024)} KB, added by {nameOf(v, a.uploadedById)})</small>
+                {canEdit && (
+                  <ActionForm action={bind(removeVendorAttachment)}>
+                    <input type="hidden" name="id" value={a.id} />
+                    <button type="submit" aria-label={`Remove ${a.label}`}>Remove</button>
+                  </ActionForm>
+                )}
+              </li>
+            ))}
+          </ul>
+        )}
+        {canEdit && (
+          <form method="post" action={attachBase} encType="multipart/form-data">
+            <label>A photo or scan of a contract page <input type="file" name="file" accept="image/jpeg,image/png,image/webp" required /></label>
+            <label>Label <input name="label" maxLength={80} placeholder="Contract, page 1" /></label>
+            <button type="submit">Attach</button>
+            <p><small>JPEG, PNG or WebP images, up to 10 MB each, {ATTACHMENTS_PER_VENDOR} per vendor. PDFs are not accepted yet: attach a photo or a scan of each page. What is stored is a re-encoded copy with nothing but the picture in it.</small></p>
+          </form>
         )}
       </section>
     </main>

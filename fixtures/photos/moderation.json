@@ -1,0 +1,1065 @@
+{
+  "note": "Every state × action × mode of the photo moderation machine (src/lib/knotwork/photos/moderation.ts), each also for a purged photo, and what is visible where. Written by the machine; tools/photo_limits.py holds an independent copy of the table.",
+  "initial": {
+    "pre": "pending",
+    "post": "live"
+  },
+  "moves": [
+    {
+      "mode": "pre",
+      "state": {
+        "status": "pending",
+        "removedFrom": null
+      },
+      "action": "approve",
+      "purged": false,
+      "expect": {
+        "ok": true,
+        "next": {
+          "status": "live",
+          "removedFrom": null
+        }
+      }
+    },
+    {
+      "mode": "pre",
+      "state": {
+        "status": "pending",
+        "removedFrom": null
+      },
+      "action": "approve",
+      "purged": true,
+      "expect": {
+        "ok": false,
+        "code": "purged"
+      }
+    },
+    {
+      "mode": "pre",
+      "state": {
+        "status": "pending",
+        "removedFrom": null
+      },
+      "action": "reject",
+      "purged": false,
+      "expect": {
+        "ok": true,
+        "next": {
+          "status": "removed",
+          "removedFrom": "pending"
+        }
+      }
+    },
+    {
+      "mode": "pre",
+      "state": {
+        "status": "pending",
+        "removedFrom": null
+      },
+      "action": "reject",
+      "purged": true,
+      "expect": {
+        "ok": false,
+        "code": "purged"
+      }
+    },
+    {
+      "mode": "pre",
+      "state": {
+        "status": "pending",
+        "removedFrom": null
+      },
+      "action": "take_down",
+      "purged": false,
+      "expect": {
+        "ok": false,
+        "code": "not-live"
+      }
+    },
+    {
+      "mode": "pre",
+      "state": {
+        "status": "pending",
+        "removedFrom": null
+      },
+      "action": "take_down",
+      "purged": true,
+      "expect": {
+        "ok": false,
+        "code": "purged"
+      }
+    },
+    {
+      "mode": "pre",
+      "state": {
+        "status": "pending",
+        "removedFrom": null
+      },
+      "action": "undo",
+      "purged": false,
+      "expect": {
+        "ok": false,
+        "code": "not-removed"
+      }
+    },
+    {
+      "mode": "pre",
+      "state": {
+        "status": "pending",
+        "removedFrom": null
+      },
+      "action": "undo",
+      "purged": true,
+      "expect": {
+        "ok": false,
+        "code": "purged"
+      }
+    },
+    {
+      "mode": "pre",
+      "state": {
+        "status": "live",
+        "removedFrom": null
+      },
+      "action": "approve",
+      "purged": false,
+      "expect": {
+        "ok": false,
+        "code": "not-pending"
+      }
+    },
+    {
+      "mode": "pre",
+      "state": {
+        "status": "live",
+        "removedFrom": null
+      },
+      "action": "approve",
+      "purged": true,
+      "expect": {
+        "ok": false,
+        "code": "purged"
+      }
+    },
+    {
+      "mode": "pre",
+      "state": {
+        "status": "live",
+        "removedFrom": null
+      },
+      "action": "reject",
+      "purged": false,
+      "expect": {
+        "ok": false,
+        "code": "not-pending"
+      }
+    },
+    {
+      "mode": "pre",
+      "state": {
+        "status": "live",
+        "removedFrom": null
+      },
+      "action": "reject",
+      "purged": true,
+      "expect": {
+        "ok": false,
+        "code": "purged"
+      }
+    },
+    {
+      "mode": "pre",
+      "state": {
+        "status": "live",
+        "removedFrom": null
+      },
+      "action": "take_down",
+      "purged": false,
+      "expect": {
+        "ok": true,
+        "next": {
+          "status": "removed",
+          "removedFrom": "live"
+        }
+      }
+    },
+    {
+      "mode": "pre",
+      "state": {
+        "status": "live",
+        "removedFrom": null
+      },
+      "action": "take_down",
+      "purged": true,
+      "expect": {
+        "ok": false,
+        "code": "purged"
+      }
+    },
+    {
+      "mode": "pre",
+      "state": {
+        "status": "live",
+        "removedFrom": null
+      },
+      "action": "undo",
+      "purged": false,
+      "expect": {
+        "ok": false,
+        "code": "not-removed"
+      }
+    },
+    {
+      "mode": "pre",
+      "state": {
+        "status": "live",
+        "removedFrom": null
+      },
+      "action": "undo",
+      "purged": true,
+      "expect": {
+        "ok": false,
+        "code": "purged"
+      }
+    },
+    {
+      "mode": "pre",
+      "state": {
+        "status": "removed",
+        "removedFrom": "pending"
+      },
+      "action": "approve",
+      "purged": false,
+      "expect": {
+        "ok": false,
+        "code": "not-pending"
+      }
+    },
+    {
+      "mode": "pre",
+      "state": {
+        "status": "removed",
+        "removedFrom": "pending"
+      },
+      "action": "approve",
+      "purged": true,
+      "expect": {
+        "ok": false,
+        "code": "purged"
+      }
+    },
+    {
+      "mode": "pre",
+      "state": {
+        "status": "removed",
+        "removedFrom": "pending"
+      },
+      "action": "reject",
+      "purged": false,
+      "expect": {
+        "ok": false,
+        "code": "not-pending"
+      }
+    },
+    {
+      "mode": "pre",
+      "state": {
+        "status": "removed",
+        "removedFrom": "pending"
+      },
+      "action": "reject",
+      "purged": true,
+      "expect": {
+        "ok": false,
+        "code": "purged"
+      }
+    },
+    {
+      "mode": "pre",
+      "state": {
+        "status": "removed",
+        "removedFrom": "pending"
+      },
+      "action": "take_down",
+      "purged": false,
+      "expect": {
+        "ok": false,
+        "code": "not-live"
+      }
+    },
+    {
+      "mode": "pre",
+      "state": {
+        "status": "removed",
+        "removedFrom": "pending"
+      },
+      "action": "take_down",
+      "purged": true,
+      "expect": {
+        "ok": false,
+        "code": "purged"
+      }
+    },
+    {
+      "mode": "pre",
+      "state": {
+        "status": "removed",
+        "removedFrom": "pending"
+      },
+      "action": "undo",
+      "purged": false,
+      "expect": {
+        "ok": true,
+        "next": {
+          "status": "pending",
+          "removedFrom": null
+        }
+      }
+    },
+    {
+      "mode": "pre",
+      "state": {
+        "status": "removed",
+        "removedFrom": "pending"
+      },
+      "action": "undo",
+      "purged": true,
+      "expect": {
+        "ok": false,
+        "code": "purged"
+      }
+    },
+    {
+      "mode": "pre",
+      "state": {
+        "status": "removed",
+        "removedFrom": "live"
+      },
+      "action": "approve",
+      "purged": false,
+      "expect": {
+        "ok": false,
+        "code": "not-pending"
+      }
+    },
+    {
+      "mode": "pre",
+      "state": {
+        "status": "removed",
+        "removedFrom": "live"
+      },
+      "action": "approve",
+      "purged": true,
+      "expect": {
+        "ok": false,
+        "code": "purged"
+      }
+    },
+    {
+      "mode": "pre",
+      "state": {
+        "status": "removed",
+        "removedFrom": "live"
+      },
+      "action": "reject",
+      "purged": false,
+      "expect": {
+        "ok": false,
+        "code": "not-pending"
+      }
+    },
+    {
+      "mode": "pre",
+      "state": {
+        "status": "removed",
+        "removedFrom": "live"
+      },
+      "action": "reject",
+      "purged": true,
+      "expect": {
+        "ok": false,
+        "code": "purged"
+      }
+    },
+    {
+      "mode": "pre",
+      "state": {
+        "status": "removed",
+        "removedFrom": "live"
+      },
+      "action": "take_down",
+      "purged": false,
+      "expect": {
+        "ok": false,
+        "code": "not-live"
+      }
+    },
+    {
+      "mode": "pre",
+      "state": {
+        "status": "removed",
+        "removedFrom": "live"
+      },
+      "action": "take_down",
+      "purged": true,
+      "expect": {
+        "ok": false,
+        "code": "purged"
+      }
+    },
+    {
+      "mode": "pre",
+      "state": {
+        "status": "removed",
+        "removedFrom": "live"
+      },
+      "action": "undo",
+      "purged": false,
+      "expect": {
+        "ok": true,
+        "next": {
+          "status": "live",
+          "removedFrom": null
+        }
+      }
+    },
+    {
+      "mode": "pre",
+      "state": {
+        "status": "removed",
+        "removedFrom": "live"
+      },
+      "action": "undo",
+      "purged": true,
+      "expect": {
+        "ok": false,
+        "code": "purged"
+      }
+    },
+    {
+      "mode": "post",
+      "state": {
+        "status": "pending",
+        "removedFrom": null
+      },
+      "action": "approve",
+      "purged": false,
+      "expect": {
+        "ok": true,
+        "next": {
+          "status": "live",
+          "removedFrom": null
+        }
+      }
+    },
+    {
+      "mode": "post",
+      "state": {
+        "status": "pending",
+        "removedFrom": null
+      },
+      "action": "approve",
+      "purged": true,
+      "expect": {
+        "ok": false,
+        "code": "purged"
+      }
+    },
+    {
+      "mode": "post",
+      "state": {
+        "status": "pending",
+        "removedFrom": null
+      },
+      "action": "reject",
+      "purged": false,
+      "expect": {
+        "ok": true,
+        "next": {
+          "status": "removed",
+          "removedFrom": "pending"
+        }
+      }
+    },
+    {
+      "mode": "post",
+      "state": {
+        "status": "pending",
+        "removedFrom": null
+      },
+      "action": "reject",
+      "purged": true,
+      "expect": {
+        "ok": false,
+        "code": "purged"
+      }
+    },
+    {
+      "mode": "post",
+      "state": {
+        "status": "pending",
+        "removedFrom": null
+      },
+      "action": "take_down",
+      "purged": false,
+      "expect": {
+        "ok": false,
+        "code": "not-live"
+      }
+    },
+    {
+      "mode": "post",
+      "state": {
+        "status": "pending",
+        "removedFrom": null
+      },
+      "action": "take_down",
+      "purged": true,
+      "expect": {
+        "ok": false,
+        "code": "purged"
+      }
+    },
+    {
+      "mode": "post",
+      "state": {
+        "status": "pending",
+        "removedFrom": null
+      },
+      "action": "undo",
+      "purged": false,
+      "expect": {
+        "ok": false,
+        "code": "not-removed"
+      }
+    },
+    {
+      "mode": "post",
+      "state": {
+        "status": "pending",
+        "removedFrom": null
+      },
+      "action": "undo",
+      "purged": true,
+      "expect": {
+        "ok": false,
+        "code": "purged"
+      }
+    },
+    {
+      "mode": "post",
+      "state": {
+        "status": "live",
+        "removedFrom": null
+      },
+      "action": "approve",
+      "purged": false,
+      "expect": {
+        "ok": false,
+        "code": "not-pending"
+      }
+    },
+    {
+      "mode": "post",
+      "state": {
+        "status": "live",
+        "removedFrom": null
+      },
+      "action": "approve",
+      "purged": true,
+      "expect": {
+        "ok": false,
+        "code": "purged"
+      }
+    },
+    {
+      "mode": "post",
+      "state": {
+        "status": "live",
+        "removedFrom": null
+      },
+      "action": "reject",
+      "purged": false,
+      "expect": {
+        "ok": false,
+        "code": "not-pending"
+      }
+    },
+    {
+      "mode": "post",
+      "state": {
+        "status": "live",
+        "removedFrom": null
+      },
+      "action": "reject",
+      "purged": true,
+      "expect": {
+        "ok": false,
+        "code": "purged"
+      }
+    },
+    {
+      "mode": "post",
+      "state": {
+        "status": "live",
+        "removedFrom": null
+      },
+      "action": "take_down",
+      "purged": false,
+      "expect": {
+        "ok": true,
+        "next": {
+          "status": "removed",
+          "removedFrom": "live"
+        }
+      }
+    },
+    {
+      "mode": "post",
+      "state": {
+        "status": "live",
+        "removedFrom": null
+      },
+      "action": "take_down",
+      "purged": true,
+      "expect": {
+        "ok": false,
+        "code": "purged"
+      }
+    },
+    {
+      "mode": "post",
+      "state": {
+        "status": "live",
+        "removedFrom": null
+      },
+      "action": "undo",
+      "purged": false,
+      "expect": {
+        "ok": false,
+        "code": "not-removed"
+      }
+    },
+    {
+      "mode": "post",
+      "state": {
+        "status": "live",
+        "removedFrom": null
+      },
+      "action": "undo",
+      "purged": true,
+      "expect": {
+        "ok": false,
+        "code": "purged"
+      }
+    },
+    {
+      "mode": "post",
+      "state": {
+        "status": "removed",
+        "removedFrom": "pending"
+      },
+      "action": "approve",
+      "purged": false,
+      "expect": {
+        "ok": false,
+        "code": "not-pending"
+      }
+    },
+    {
+      "mode": "post",
+      "state": {
+        "status": "removed",
+        "removedFrom": "pending"
+      },
+      "action": "approve",
+      "purged": true,
+      "expect": {
+        "ok": false,
+        "code": "purged"
+      }
+    },
+    {
+      "mode": "post",
+      "state": {
+        "status": "removed",
+        "removedFrom": "pending"
+      },
+      "action": "reject",
+      "purged": false,
+      "expect": {
+        "ok": false,
+        "code": "not-pending"
+      }
+    },
+    {
+      "mode": "post",
+      "state": {
+        "status": "removed",
+        "removedFrom": "pending"
+      },
+      "action": "reject",
+      "purged": true,
+      "expect": {
+        "ok": false,
+        "code": "purged"
+      }
+    },
+    {
+      "mode": "post",
+      "state": {
+        "status": "removed",
+        "removedFrom": "pending"
+      },
+      "action": "take_down",
+      "purged": false,
+      "expect": {
+        "ok": false,
+        "code": "not-live"
+      }
+    },
+    {
+      "mode": "post",
+      "state": {
+        "status": "removed",
+        "removedFrom": "pending"
+      },
+      "action": "take_down",
+      "purged": true,
+      "expect": {
+        "ok": false,
+        "code": "purged"
+      }
+    },
+    {
+      "mode": "post",
+      "state": {
+        "status": "removed",
+        "removedFrom": "pending"
+      },
+      "action": "undo",
+      "purged": false,
+      "expect": {
+        "ok": true,
+        "next": {
+          "status": "pending",
+          "removedFrom": null
+        }
+      }
+    },
+    {
+      "mode": "post",
+      "state": {
+        "status": "removed",
+        "removedFrom": "pending"
+      },
+      "action": "undo",
+      "purged": true,
+      "expect": {
+        "ok": false,
+        "code": "purged"
+      }
+    },
+    {
+      "mode": "post",
+      "state": {
+        "status": "removed",
+        "removedFrom": "live"
+      },
+      "action": "approve",
+      "purged": false,
+      "expect": {
+        "ok": false,
+        "code": "not-pending"
+      }
+    },
+    {
+      "mode": "post",
+      "state": {
+        "status": "removed",
+        "removedFrom": "live"
+      },
+      "action": "approve",
+      "purged": true,
+      "expect": {
+        "ok": false,
+        "code": "purged"
+      }
+    },
+    {
+      "mode": "post",
+      "state": {
+        "status": "removed",
+        "removedFrom": "live"
+      },
+      "action": "reject",
+      "purged": false,
+      "expect": {
+        "ok": false,
+        "code": "not-pending"
+      }
+    },
+    {
+      "mode": "post",
+      "state": {
+        "status": "removed",
+        "removedFrom": "live"
+      },
+      "action": "reject",
+      "purged": true,
+      "expect": {
+        "ok": false,
+        "code": "purged"
+      }
+    },
+    {
+      "mode": "post",
+      "state": {
+        "status": "removed",
+        "removedFrom": "live"
+      },
+      "action": "take_down",
+      "purged": false,
+      "expect": {
+        "ok": false,
+        "code": "not-live"
+      }
+    },
+    {
+      "mode": "post",
+      "state": {
+        "status": "removed",
+        "removedFrom": "live"
+      },
+      "action": "take_down",
+      "purged": true,
+      "expect": {
+        "ok": false,
+        "code": "purged"
+      }
+    },
+    {
+      "mode": "post",
+      "state": {
+        "status": "removed",
+        "removedFrom": "live"
+      },
+      "action": "undo",
+      "purged": false,
+      "expect": {
+        "ok": true,
+        "next": {
+          "status": "live",
+          "removedFrom": null
+        }
+      }
+    },
+    {
+      "mode": "post",
+      "state": {
+        "status": "removed",
+        "removedFrom": "live"
+      },
+      "action": "undo",
+      "purged": true,
+      "expect": {
+        "ok": false,
+        "code": "purged"
+      }
+    }
+  ],
+  "visibility": [
+    {
+      "status": "pending",
+      "hiddenFromWall": false,
+      "hiddenFromAlbum": false,
+      "purged": false,
+      "wall": false,
+      "album": false
+    },
+    {
+      "status": "pending",
+      "hiddenFromWall": false,
+      "hiddenFromAlbum": false,
+      "purged": true,
+      "wall": false,
+      "album": false
+    },
+    {
+      "status": "pending",
+      "hiddenFromWall": false,
+      "hiddenFromAlbum": true,
+      "purged": false,
+      "wall": false,
+      "album": false
+    },
+    {
+      "status": "pending",
+      "hiddenFromWall": false,
+      "hiddenFromAlbum": true,
+      "purged": true,
+      "wall": false,
+      "album": false
+    },
+    {
+      "status": "pending",
+      "hiddenFromWall": true,
+      "hiddenFromAlbum": false,
+      "purged": false,
+      "wall": false,
+      "album": false
+    },
+    {
+      "status": "pending",
+      "hiddenFromWall": true,
+      "hiddenFromAlbum": false,
+      "purged": true,
+      "wall": false,
+      "album": false
+    },
+    {
+      "status": "pending",
+      "hiddenFromWall": true,
+      "hiddenFromAlbum": true,
+      "purged": false,
+      "wall": false,
+      "album": false
+    },
+    {
+      "status": "pending",
+      "hiddenFromWall": true,
+      "hiddenFromAlbum": true,
+      "purged": true,
+      "wall": false,
+      "album": false
+    },
+    {
+      "status": "live",
+      "hiddenFromWall": false,
+      "hiddenFromAlbum": false,
+      "purged": false,
+      "wall": true,
+      "album": true
+    },
+    {
+      "status": "live",
+      "hiddenFromWall": false,
+      "hiddenFromAlbum": false,
+      "purged": true,
+      "wall": false,
+      "album": false
+    },
+    {
+      "status": "live",
+      "hiddenFromWall": false,
+      "hiddenFromAlbum": true,
+      "purged": false,
+      "wall": true,
+      "album": false
+    },
+    {
+      "status": "live",
+      "hiddenFromWall": false,
+      "hiddenFromAlbum": true,
+      "purged": true,
+      "wall": false,
+      "album": false
+    },
+    {
+      "status": "live",
+      "hiddenFromWall": true,
+      "hiddenFromAlbum": false,
+      "purged": false,
+      "wall": false,
+      "album": true
+    },
+    {
+      "status": "live",
+      "hiddenFromWall": true,
+      "hiddenFromAlbum": false,
+      "purged": true,
+      "wall": false,
+      "album": false
+    },
+    {
+      "status": "live",
+      "hiddenFromWall": true,
+      "hiddenFromAlbum": true,
+      "purged": false,
+      "wall": false,
+      "album": false
+    },
+    {
+      "status": "live",
+      "hiddenFromWall": true,
+      "hiddenFromAlbum": true,
+      "purged": true,
+      "wall": false,
+      "album": false
+    },
+    {
+      "status": "removed",
+      "hiddenFromWall": false,
+      "hiddenFromAlbum": false,
+      "purged": false,
+      "wall": false,
+      "album": false
+    },
+    {
+      "status": "removed",
+      "hiddenFromWall": false,
+      "hiddenFromAlbum": false,
+      "purged": true,
+      "wall": false,
+      "album": false
+    },
+    {
+      "status": "removed",
+      "hiddenFromWall": false,
+      "hiddenFromAlbum": true,
+      "purged": false,
+      "wall": false,
+      "album": false
+    },
+    {
+      "status": "removed",
+      "hiddenFromWall": false,
+      "hiddenFromAlbum": true,
+      "purged": true,
+      "wall": false,
+      "album": false
+    },
+    {
+      "status": "removed",
+      "hiddenFromWall": true,
+      "hiddenFromAlbum": false,
+      "purged": false,
+      "wall": false,
+      "album": false
+    },
+    {
+      "status": "removed",
+      "hiddenFromWall": true,
+      "hiddenFromAlbum": false,
+      "purged": true,
+      "wall": false,
+      "album": false
+    },
+    {
+      "status": "removed",
+      "hiddenFromWall": true,
+      "hiddenFromAlbum": true,
+      "purged": false,
+      "wall": false,
+      "album": false
+    },
+    {
+      "status": "removed",
+      "hiddenFromWall": true,
+      "hiddenFromAlbum": true,
+      "purged": true,
+      "wall": false,
+      "album": false
+    }
+  ]
+}

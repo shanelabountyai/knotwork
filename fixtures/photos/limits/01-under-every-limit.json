@@ -1,0 +1,29 @@
+{
+  "name": "01-under-every-limit",
+  "note": "Shipped limits. Three phones on the venue's address send five photos each over five minutes: all accepted.",
+  "steps": [
+    {
+      "from": 0,
+      "every": 20,
+      "count": 15,
+      "devices": [
+        "d01",
+        "d02",
+        "d03"
+      ],
+      "address": "venue"
+    }
+  ],
+  "expect": {
+    "attempts": 15,
+    "totals": {
+      "ok": 15
+    },
+    "runs": [
+      [
+        "ok",
+        15
+      ]
+    ]
+  }
+}

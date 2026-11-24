@@ -11,6 +11,7 @@ const ENTITY_TEXT: Record<string, string> = {
   wedding: 'the wedding', task: 'a task', baseline: 'the plan', category: 'a budget category', expense: 'a spend', snapshot: 'a budget snapshot',
   vendor: 'a vendor', payment: 'a vendor payment', flag: 'a re-confirmation flag', brief: 'a vendor brief', request: 'a request', grant: 'a helper permission',
   registry: 'a gift', gift: 'toward a gift', thankyou: 'a thank-you',
+  photoevent: 'a photo event', photo: 'a photo', photodevice: 'a photo device', attachment: 'a contract attachment',
 };
 const show = (v: unknown) => (v === null || v === undefined || v === '' ? 'nothing' : typeof v === 'object' ? JSON.stringify(v) : String(v));
 

@@ -182,3 +182,57 @@ def test_gift_close_by_hand():
     ]
     assert fx["expect"]["net"] == {"h1": 0, "h2": 0} and fx["expect"]["state"] == "closed_unfunded"
     assert fx["expect"]["steps"][-1] == {"ok": False, "code": "closed"}
+
+
+# --- photos: upload limits and the moderation table (PRD P0-6) --------------------------------------------------------
+import photo_limits
+
+PHOTO_LIMITS = photo_limits.load()
+
+
+def test_there_are_photo_limit_fixtures():
+    assert len(PHOTO_LIMITS) >= 8
+    seen = {k for _, fx in PHOTO_LIMITS for k in fx["expect"]["totals"]}
+    assert seen == {"ok", "blocked", "device", "address", "event"}, "every outcome appears in some fixture"
+
+
+@pytest.mark.parametrize("path,fx", PHOTO_LIMITS, ids=[p.stem for p, _ in PHOTO_LIMITS])
+def test_photo_limit_expectations_match_the_oracle(path, fx):
+    assert fx["expect"] == photo_limits.expected(fx)
+    assert path.read_text() == photo_limits.dump(fx), "fixture is not in canonical JSON form"
+    assert sum(fx["expect"]["totals"].values()) == fx["expect"]["attempts"] == sum(n for _, n in fx["expect"]["runs"])
+
+
+def test_photo_load_case_by_hand():
+    # 200 uploads, 20 devices taking turns, one every 3 seconds: 597 seconds, inside one 10-minute window. Each device
+    # sends 10 (limit 30), the address carries 200 (limit 300), the event 200 (limit 1500 an hour). Nothing is refused.
+    fx = next(f for p, f in PHOTO_LIMITS if p.stem == "03-load-200-from-20-devices")
+    attempts = photo_limits.expand(fx["steps"])
+    assert len(attempts) == 200 and len({a["device"] for a in attempts}) == 20 and attempts[-1]["t"] == 597 < 600
+    assert "limits" not in fx, "the load case runs against the shipped limits"
+    assert fx["expect"] == {"attempts": 200, "totals": {"ok": 200}, "runs": [["ok", 200]]}
+    up = photo_limits.RULES["upload"]
+    assert up["perDevice"]["limit"] >= 10 and up["perAddress"]["limit"] >= 200 and up["perEvent"]["limit"] >= 200
+
+
+def test_photo_device_limit_by_hand():
+    # One phone, 35 tries ten seconds apart (0..340 s), limit 30 per 10 minutes: 30 in, 5 refused; at 600 s a new window.
+    fx = next(f for p, f in PHOTO_LIMITS if p.stem == "02-one-device-over")
+    assert fx["expect"]["runs"] == [["ok", 30], ["device", 5], ["ok", 1]]
+
+
+def test_photo_moderation_table_matches_the_oracle():
+    fx = json.loads(photo_limits.MODERATION.read_text())
+    assert fx["initial"] == photo_limits.INITIAL
+    assert len(fx["moves"]) == 2 * 4 * 4 * 2  # mode x state x action x purged
+    assert len({json.dumps([m["mode"], m["state"], m["action"], m["purged"]]) for m in fx["moves"]}) == len(fx["moves"])
+    for m in fx["moves"]:
+        assert m["expect"] == photo_limits.move(m["state"], m["action"], m["purged"]), m
+    assert len(fx["visibility"]) == 3 * 2 * 2 * 2
+    for v in fx["visibility"]:
+        assert (v["wall"], v["album"]) == photo_limits.visible(v), v
+    # Takedown then undo is the identity, and so is reject then undo.
+    for state, first in ((("live", None), "take_down"), (("pending", None), "reject")):
+        s = {"status": state[0], "removedFrom": state[1]}
+        down = photo_limits.move(s, first, False)["next"]
+        assert down["status"] == "removed" and photo_limits.move(down, "undo", False)["next"] == s

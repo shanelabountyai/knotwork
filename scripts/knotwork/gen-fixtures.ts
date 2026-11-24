@@ -3,13 +3,15 @@
 // means two implementations that share no code agree byte for byte (decisions D-23, D-25). Fixture 12 is the shipped
 // default template; its tasks are written from src/lib/knotwork/schedule/template.ts so the two cannot drift.
 // The same goes for fixtures/gifts/ (Phase 3): the TypeScript ledger writes each expect block, and tools/gift_oracle.py
-// recomputes it independently under pytest.
-import { readdirSync, readFileSync, writeFileSync } from 'node:fs';
+// recomputes it independently under pytest. The photo fixtures (strip verification, the moderation table, the upload
+// limits) are in gen-photo-fixtures.ts; tools/photo_limits.py is the oracle for the last two.
+import { existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { computeSchedule, previewMove, type PlanTask } from '../../src/lib/knotwork/schedule/engine';
 import { replay, type Step } from '../../src/lib/knotwork/gifts/ledger';
 import { templatePlan } from '../../src/lib/knotwork/schedule/template';
+import { LIMITS_DIR, MODERATION_FILE, regenerateLimits, regenerateModeration, regenerateStrip, STRIP_DIR, writeStripImages, type LimitFx } from './gen-photo-fixtures';
 
 const DIR = 'fixtures/schedule';
 type Fx = { name: string; note: string; weddingDate: string; today: string; tasks: PlanTask[]; expect?: unknown; move?: { to: string; expect?: unknown } };
@@ -62,6 +64,22 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
       if (write) writeFileSync(join(GIFT_DIR, f), next);
     }
     console.log(`${next === text ? 'same ' : write ? 'wrote' : 'DIFF '} gifts/${f}`);
+  }
+  // Photos. Images are written only when missing, or with --images (their bytes depend on the encoder's version).
+  for (const name of await writeStripImages(process.argv.includes('--images'))) console.log(`wrote photos/strip/${name}`);
+  const check = (label: string, path: string, text: string, next: string) => {
+    if (next !== text) {
+      diffs++;
+      if (write) writeFileSync(path, next);
+    }
+    console.log(`${next === text ? 'same ' : write ? 'wrote' : 'DIFF '} ${label}`);
+  };
+  const manifest = join(STRIP_DIR, 'manifest.json');
+  check('photos/strip/manifest.json', manifest, readFileSync(manifest, 'utf8'), await regenerateStrip(readFileSync(manifest, 'utf8')));
+  check('photos/moderation.json', MODERATION_FILE, existsSync(MODERATION_FILE) ? readFileSync(MODERATION_FILE, 'utf8') : '', regenerateModeration());
+  for (const f of readdirSync(LIMITS_DIR).filter((n) => n.endsWith('.json')).sort()) {
+    const text = readFileSync(join(LIMITS_DIR, f), 'utf8');
+    check(`photos/limits/${f}`, join(LIMITS_DIR, f), text, regenerateLimits(JSON.parse(text) as LimitFx));
   }
   if (diffs && !write) process.exit(1);
 }
