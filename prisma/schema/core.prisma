@@ -138,6 +138,9 @@ model Org {
   funderPledges FunderPledge[] // app
   funderReceipts FunderReceipt[] // app
   funderAllocations FunderAllocation[] // app
+  giftLogs GiftLog[] // app
+  registryLinks RegistryLink[] // app
+  registryClaims RegistryClaim[] // app
 }
 
 model Membership {

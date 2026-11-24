@@ -4,7 +4,7 @@ import { dbSystem as db } from '@/core/db/system';
 // CLONE-OWNED. The INV-01..04 harness seeds these rows in both fixture orgs, so it can drive
 // actions whose inputs use ref('<model>') for the clone's own tables. Return { model: id } for
 // one row of each model, owned by `org.orgId`. INV-29 (RLS enforce) calls it too, so every org-owned clone table has rows to scope.
-// Knotwork: one row in each of the thirteen Phase 1 tables and the seven Phase 2 tables, the three gifting tables, the five photo and attachment tables, and the four Phase 4 funding tables. Fixed ids: the harness re-seeds before every call, and a
+// Knotwork: one row in each of the thirteen Phase 1 tables and the seven Phase 2 tables, the three gifting tables, the five photo and attachment tables, the four Phase 4 funding tables, and the three for the thank-you ledger and store items. Fixed ids: the harness re-seeds before every call, and a
 // ref minted once must still resolve. The wedding is far in the future so nothing in the harness plan is late.
 const id = (key: 'a' | 'b', n: number) => `00000000-0000-4000-8000-${String((key === 'a' ? 7000 : 7500) + n).padStart(12, '0')}`;
 
@@ -55,6 +55,10 @@ export async function seedApp(org: { orgId: string; userId: string }, key: 'a' |
   const pledge = await db.funderPledge.create({ data: { id: id(key, 32), orgId, funderId: funder.id, categoryId: category.id, amountCents: 100 } });
   const receipt = await db.funderReceipt.create({ data: { id: id(key, 33), orgId, pledgeId: pledge.id, amountCents: 100, receivedOn: new Date('2026-11-01T00:00:00Z') } });
   const allocation = await db.funderAllocation.create({ data: { id: id(key, 34), orgId, pledgeId: pledge.id, expenseId: expense.id, amountCents: 100 } });
+  // Phase 4 (P1-3, P1-8): a gift logged by hand, a store item wanting two, and the harness household's claim of one.
+  const giftLog = await db.giftLog.create({ data: { id: id(key, 35), orgId, householdId: household.id, what: `harness gift log ${key}`, receivedOn: new Date('2026-11-01T00:00:00Z') } });
+  const registryLink = await db.registryLink.create({ data: { id: id(key, 36), orgId, title: `harness store item ${key}`, store: 'Example Store', url: 'https://www.example.com/item', quantityWanted: 2 } });
+  const registryClaim = await db.registryClaim.create({ data: { id: id(key, 37), orgId, linkId: registryLink.id, householdId: household.id, quantity: 1, claimedOn: new Date('2026-11-01T00:00:00Z') } });
   return {
     wedding: wedding.id, task: task.id, taskDependency: dependency.id, scheduleBaseline: baseline.id, budgetCategory: category.id, expense: expense.id, budgetSnapshot: snapshot.id,
     vendor: vendor.id, vendorPayment: payment.id, vendorFlag: flag.id, vendorBrief: brief.id, consentRequest: request.id, helperGrant: grant.id,
@@ -62,6 +66,7 @@ export async function seedApp(org: { orgId: string; userId: string }, key: 'a' |
     registryItem: registryItem.id, giftEntry: giftEntry.id, thankYou: thankYou.id,
     photoEvent: photoEvent.id, photoDevice: photoDevice.id, photo: photo.id, photoBlob: photoBlob.id, vendorAttachment: vendorAttachment.id,
     funder: funder.id, funderPledge: pledge.id, funderReceipt: receipt.id, funderAllocation: allocation.id,
+    giftLog: giftLog.id, registryLink: registryLink.id, registryClaim: registryClaim.id,
   };
 }
 

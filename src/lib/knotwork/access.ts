@@ -76,6 +76,8 @@ const ENTITY_CAP: Record<string, Capability> = {
   photoevent: 'photos.view', photo: 'photos.view', photodevice: 'photos.view', attachment: 'vendors.view',
   // P1-2: the funding entries are the budget's; a funder-only helper sees none of them in the feed.
   funder: 'budget.view', pledge: 'budget.view', receipt: 'budget.view', allocation: 'budget.view',
+  // P1-3 and P1-8: the gift log, store items and households' claims are gifting, the partners' alone.
+  giftlog: 'gifts.view', registrylink: 'gifts.view', claim: 'gifts.view',
 };
 export const canSeeEntity = (who: Who, entity: string): boolean => {
   const cap = ENTITY_CAP[entity];

@@ -11,6 +11,7 @@ const ENTITY_TEXT: Record<string, string> = {
   registry: 'a gift', gift: 'toward a gift', thankyou: 'a thank-you',
   photoevent: 'a photo event', photo: 'a photo', photodevice: 'a photo device', attachment: 'a contract attachment',
   funder: 'a funder', pledge: 'a pledge', receipt: 'money received', allocation: 'a payment from a pledge',
+  giftlog: 'a gift received', registrylink: 'a store item', claim: 'a store item bought',
 };
 const show = (v: unknown) => (v === null || v === undefined || v === '' ? 'nothing' : typeof v === 'object' ? JSON.stringify(v) : String(v));
 

@@ -51,6 +51,11 @@ export const exportTables: readonly ExportTable[] = [
   whole('FunderPledge', (tx, orgId) => tx.funderPledge.findMany({ where: { orgId }, orderBy: { createdAt: 'asc' } })),
   whole('FunderReceipt', (tx, orgId) => tx.funderReceipt.findMany({ where: { orgId }, orderBy: { createdAt: 'asc' } })),
   whole('FunderAllocation', (tx, orgId) => tx.funderAllocation.findMany({ where: { orgId }, orderBy: { createdAt: 'asc' } })),
+  // Phase 4, P1-3 and P1-8: the gift log, the store items and households' claims, whole (who, what, days of fact; a
+  // store item's price is the couple's own figure; no amount anyone gave, no secret).
+  whole('GiftLog', (tx, orgId) => tx.giftLog.findMany({ where: { orgId }, orderBy: [{ createdAt: 'asc' }, { id: 'asc' }] })),
+  whole('RegistryLink', (tx, orgId) => tx.registryLink.findMany({ where: { orgId }, orderBy: [{ createdAt: 'asc' }, { id: 'asc' }] })),
+  whole('RegistryClaim', (tx, orgId) => tx.registryClaim.findMany({ where: { orgId }, orderBy: [{ createdAt: 'asc' }, { id: 'asc' }] })),
 ];
 
 // An org-owned table left out on purpose, with the reason. INV-34 fails on any model with an orgId column that is in

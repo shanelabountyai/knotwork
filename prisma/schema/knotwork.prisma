@@ -469,6 +469,8 @@ model Household {
   chaseEvents       ChaseEvent[]
   giftEntries       GiftEntry[]
   thankYous         ThankYou[]
+  giftLogs          GiftLog[]
+  registryClaims    RegistryClaim[]
 
   @@unique([orgId, name])
 }
@@ -844,4 +846,70 @@ model FunderAllocation {
   @@unique([pledgeId, expenseId])
   @@index([orgId])
   @@index([expenseId])
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
+// Phase 4, P1-3 and P1-8: the thank-you ledger and link-out registry items. RULE 1: every date here is a date of fact
+// (a gift arrived, a household said it bought something, a partner sent the note); how long a thank-you has been owed
+// is computed on read (src/lib/knotwork/thanks/aging.ts) and never stored.
+
+/// P1-3: a gift the couple records by hand (the gift log): from a household or from a named person, never both.
+model GiftLog {
+  id               String     @id @default(uuid()) @db.Uuid
+  orgId            String     @db.Uuid
+  org              Org        @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  householdId      String?    @db.Uuid
+  household        Household? @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  giverName        String     @default("")
+  what             String
+  /// A date of fact: the day the gift arrived. The thank-you ages from here.
+  receivedOn       DateTime   @db.Date
+  /// A date of fact: the day a partner marked the thank-you as sent.
+  acknowledgedOn   DateTime?  @db.Date
+  acknowledgedById String?    @db.Uuid
+  createdById      String?    @db.Uuid
+  createdAt        DateTime   @default(now()) @db.Timestamptz(6)
+
+  @@index([orgId])
+  @@index([householdId])
+}
+
+/// P1-8: a registry item bought from a store. The URL is https only and checked (registry/links.ts); nothing is ever
+/// fetched from it. Guests mark "I bought this" through their household link.
+model RegistryLink {
+  id             String          @id @default(uuid()) @db.Uuid
+  orgId          String          @db.Uuid
+  org            Org             @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  title          String
+  store          String
+  url            String
+  priceCents     Int?
+  quantityWanted Int
+  createdById    String?         @db.Uuid
+  createdAt      DateTime        @default(now()) @db.Timestamptz(6)
+  claims         RegistryClaim[]
+
+  @@unique([orgId, title])
+}
+
+/// One household's "I bought this" against a link-out item. It is also a gift on the thank-you ledger (P1-3).
+model RegistryClaim {
+  id               String       @id @default(uuid()) @db.Uuid
+  orgId            String       @db.Uuid
+  org              Org          @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  linkId           String       @db.Uuid
+  link             RegistryLink @relation(fields: [linkId], references: [id], onDelete: Cascade)
+  householdId      String       @db.Uuid
+  household        Household    @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  quantity         Int
+  /// A date of fact: the day the household said it bought the item. The thank-you ages from here.
+  claimedOn        DateTime     @db.Date
+  /// A date of fact: the day a partner marked the thank-you as sent.
+  acknowledgedOn   DateTime?    @db.Date
+  acknowledgedById String?      @db.Uuid
+  createdAt        DateTime     @default(now()) @db.Timestamptz(6)
+
+  @@unique([linkId, householdId])
+  @@index([orgId])
+  @@index([householdId])
 }
