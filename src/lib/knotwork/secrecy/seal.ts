@@ -24,7 +24,8 @@ export async function seenOf(tx: Tx, orgId: string, viewerId: string): Promise<S
 /**
  * The compartments each row sits in, by the change log's entity name: its own, and the ones it inherits (a task from
  * its vendor; an expense from its category and its vendor; a payment, flag, brief or attachment from its vendor; a
- * pledge, receipt or allocation from its category, and an allocation also from its expense). Other entities: none.
+ * pledge, receipt or allocation from its category, and an allocation also from its expense; an unshared name change
+ * is its own partner's). Other entities: none.
  */
 export async function compartmentsOf(tx: Tx, orgId: string, entity: string, ids: readonly string[]): Promise<Map<string, Cs>> {
   const where = { orgId, id: { in: [...new Set(ids)].filter((x) => UUID.test(x)) } };
@@ -66,6 +67,10 @@ export async function compartmentsOf(tx: Tx, orgId: string, entity: string, ids:
       for (const r of await tx.funderAllocation.findMany({ where, select: { id: true, pledge: { select: { category: { select: SEL } } }, expense: { select: { ...SEL, category: { select: SEL }, vendor: { select: SEL } } } } })) {
         put(r.id, [r.pledge.category, r.expense, r.expense.category, r.expense.vendor]);
       }
+      break;
+    case 'namechange':
+      // P1-4 (D-114): an unshared name change is its partner's own compartment, with no reveal day (sharing is the reveal).
+      for (const r of await tx.nameChange.findMany({ where, select: { id: true, userId: true, shared: true } })) put(r.id, [r.shared ? null : { privateToId: r.userId, revealDays: null }]);
       break;
   }
   return out;

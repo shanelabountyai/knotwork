@@ -14,6 +14,7 @@ import { dayOfDb, type Day } from '../days';
 import { fundingByCategory } from '../funding/store';
 import { loadSchedule, previewDateMove } from '../schedule/store';
 import { listAttachments, readAttachment } from '../vendors/attachments';
+import type { World } from '../contingency/preview';
 import type { Seen } from './compartment';
 import { lens, type Hidden, type Lensed } from './lens';
 import { compartmentsOf, seenOf } from './seal';
@@ -172,5 +173,29 @@ export async function fundingOptions(tx: Tx, ctx: OrgCtx, v: V) {
   return {
     categories: categories.filter((c) => !L.category(c).hidden).map((c) => ({ id: c.id, name: c.name })),
     expenses: expenses.filter((e) => !L.expense(e).hidden).map((e) => ({ id: e.id, categoryId: e.categoryId, label: `${e.description} (${e.category.name}, ${dayOfDb(e.paidOn)})`, amountCents: e.amountCents })),
+  };
+}
+
+// ---- contingency plans (P1-6) ------------------------------------------------------------------------------------------
+
+/**
+ * What previewing or executing a branch may draw on, for the person doing it: the plan as it is (for the new tasks'
+ * dates; titles of hidden tasks are replaced), the booked vendors they may see (booked vendors are never private,
+ * and the lens is applied anyway), and the budget categories they may see, each marked when it is private to them.
+ * Takes a Seen rather than a View so the execute action, which has no page, builds it the same way.
+ */
+export async function contingencyWorld(tx: Tx, ctx: { orgId: string }, wedding: WeddingRow, s: Seen): Promise<World> {
+  const L = lens(s);
+  const { rows, plan } = await loadSchedule(tx, ctx, wedding);
+  const vendors = (await tx.vendor.findMany({ where: inOrg(ctx), select: { id: true, name: true, category: true, phone: true, email: true, status: true, ...C }, orderBy: [{ name: 'asc' }, { id: 'asc' }] }))
+    .filter((x) => x.status === 'booked' && !L.vendor(x).hidden);
+  const categories = await tx.budgetCategory.findMany({ where: inOrg(ctx), select: { id: true, name: true, ...C }, orderBy: { name: 'asc' } });
+  return {
+    weddingDay: s.weddingDay, today: s.today, plan: L.plan(plan, rows), thresholdCents: wedding.spendThresholdCents,
+    vendors: vendors.map((x) => ({ id: x.id, name: x.name, category: x.category, phone: x.phone, email: x.email })),
+    categories: categories.flatMap((c) => {
+      const seen = L.category(c);
+      return seen.hidden ? [] : [{ id: c.id, name: c.name, sealed: seen.mine !== null }];
+    }),
   };
 }

@@ -28,6 +28,7 @@ export type Capability =
   | 'gifts.view' | 'gifts.edit'
   | 'photos.view' | 'photos.moderate' | 'photos.manage'
   | 'consent.view' | 'consent.propose' | 'consent.decide'
+  | 'namechange.own' | 'contingency.view' | 'contingency.edit'
   | 'activity.view' | 'helpers.manage' | 'wedding.create';
 
 /** `role` is the template's membership role: owner, admin, member or scorekeeper. */
@@ -58,6 +59,11 @@ const HELPER: Record<Capability, (g: readonly GrantScope[]) => boolean> = {
   'consent.view': () => false,
   'consent.propose': () => false,
   'consent.decide': () => false,
+  // P1-4: a name change is one partner's own (private unless shared with the other partner); no grant reaches it.
+  'namechange.own': () => false,
+  // P1-6: contingency plans are the partners' (a branch may propose a spend through consent, and names vendors).
+  'contingency.view': () => false,
+  'contingency.edit': () => false,
   'activity.view': () => true, // filtered per entry by canSeeEntity
   'helpers.manage': () => false,
   'wedding.create': () => false,
@@ -78,6 +84,8 @@ const ENTITY_CAP: Record<string, Capability> = {
   funder: 'budget.view', pledge: 'budget.view', receipt: 'budget.view', allocation: 'budget.view',
   // P1-3 and P1-8: the gift log, store items and households' claims are gifting, the partners' alone.
   giftlog: 'gifts.view', registrylink: 'gifts.view', claim: 'gifts.view',
+  // P1-4 and P1-6: partners only. A name change's entries are also masked at write while it is unshared (D-114).
+  namechange: 'namechange.own', contingency: 'contingency.view',
 };
 export const canSeeEntity = (who: Who, entity: string): boolean => {
   const cap = ENTITY_CAP[entity];

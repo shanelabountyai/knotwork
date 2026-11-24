@@ -52,10 +52,14 @@ describe('rule 1: all deadlines derive from the anchor (no free-floating dates)'
     'GiftLog.receivedOn': 'a date of fact: the day the gift arrived', 'GiftLog.acknowledgedOn': 'a date of fact: when a partner marked the thank-you as sent', 'GiftLog.createdAt': 'row timestamp',
     'RegistryLink.createdAt': 'row timestamp',
     'RegistryClaim.claimedOn': 'a date of fact: the day the household said it bought the item', 'RegistryClaim.acknowledgedOn': 'a date of fact: when a partner marked the thank-you as sent', 'RegistryClaim.createdAt': 'row timestamp',
+    // P1-4: a step's "from" day is the wedding date plus the rules' startAfterDays, worked out on read (namechange/workflow.ts).
+    'NameChange.createdAt': 'row timestamp', 'NameChangeStep.completedOn': 'a date of fact: the day the step was marked done', 'NameChangeArtifact.createdAt': 'row timestamp: when the document was marked held',
+    // P1-6: tasks a plan adds are ordinary tasks (leadDays, bufferDays); nothing in a plan is a date.
+    'ContingencyPlan.createdAt': 'row timestamp', 'ContingencyRun.executedAt': 'a date of fact: when the branch was put into action', 'ContingencyItem.doneOn': 'a date of fact: the day the line was ticked off',
   };
 
-  it('finds the clone\'s thirty-five models', () => {
-    expect(models.map((m) => m.name)).toHaveLength(35); // twenty from Phases 1 and 2, three for gifting, five for photos and attachments, four for funding (P1-2), three for the gift log and store items (P1-3, P1-8)
+  it('finds the clone\'s forty-one models', () => {
+    expect(models.map((m) => m.name)).toHaveLength(41); // twenty from Phases 1 and 2, three for gifting, five for photos and attachments, four for funding (P1-2), three for the gift log and store items (P1-3, P1-8), three for name changes (P1-4), three for contingency plans (P1-6)
   });
   it('a photo event stores day counts, and both of its days are worked out from the wedding date', () => {
     const event = models.find((m) => m.name === 'PhotoEvent')!.body;
@@ -382,7 +386,7 @@ describe('P1-1 secrecy: every view of a task, expense, vendor or category passes
   it('every loader in views.ts builds its answer with lens(); the funding reader does too', () => {
     const views = strip(read(VIEWS));
     const loaders = [...views.matchAll(/export async function (\w+)\(/g)].map((m) => m[1]!);
-    expect(loaders.sort()).toEqual(['activityView', 'attachmentFile', 'budgetView', 'flagsView', 'fundingOptions', 'movePreview', 'overviewView', 'scheduleView', 'vendorView', 'vendorVisible', 'vendorsView']);
+    expect(loaders.sort()).toEqual(['activityView', 'attachmentFile', 'budgetView', 'contingencyWorld', 'flagsView', 'fundingOptions', 'movePreview', 'overviewView', 'scheduleView', 'vendorView', 'vendorVisible', 'vendorsView']);
     for (const name of loaders) {
       const body = views.slice(views.indexOf(`export async function ${name}(`)).split(/\nexport /)[0]!;
       expect(body, name).toMatch(/lens\(|flagsView\(|vendorVisible\(/); // overview reuses flagsView; attachmentFile reuses vendorVisible

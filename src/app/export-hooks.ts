@@ -1,6 +1,7 @@
 import { moduleExportTables } from '@/app/modules';
 import type { ExportTable } from '@/core/tenancy/export';
 import { exportRegistry } from '@/lib/knotwork/gifts/couple';
+import { exportNameChangeArtifacts, exportNameChanges, exportNameChangeSteps } from '@/lib/knotwork/namechange/store';
 import { exportBaselines, exportBudgetSnapshots, exportCategories, exportExpenses, exportTasks, exportVendorAttachments, exportVendorBriefs, exportVendorPayments, exportVendors } from '@/lib/knotwork/secrecy/export';
 
 // Clone-owned (v1.6.0), like org-hooks.ts: which tables a data export holds beyond the template's core ones
@@ -56,6 +57,15 @@ export const exportTables: readonly ExportTable[] = [
   whole('GiftLog', (tx, orgId) => tx.giftLog.findMany({ where: { orgId }, orderBy: [{ createdAt: 'asc' }, { id: 'asc' }] })),
   whole('RegistryLink', (tx, orgId) => tx.registryLink.findMany({ where: { orgId }, orderBy: [{ createdAt: 'asc' }, { id: 'asc' }] })),
   whole('RegistryClaim', (tx, orgId) => tx.registryClaim.findMany({ where: { orgId }, orderBy: [{ createdAt: 'asc' }, { id: 'asc' }] })),
+  // Phase 4, P1-4: name changes, built for nobody like ADR-001's tables (D-114): one that is private to its partner
+  // keeps its ids, statuses and days of fact and loses which rules it follows and which steps and documents it names.
+  whole('NameChange', exportNameChanges),
+  whole('NameChangeStep', exportNameChangeSteps),
+  whole('NameChangeArtifact', exportNameChangeArtifacts),
+  // P1-6: contingency plans, their runs and checklists, whole (a tree of text, what was done, days of fact; no secret).
+  whole('ContingencyPlan', (tx, orgId) => tx.contingencyPlan.findMany({ where: { orgId }, orderBy: [{ createdAt: 'asc' }, { id: 'asc' }] })),
+  whole('ContingencyRun', (tx, orgId) => tx.contingencyRun.findMany({ where: { orgId }, orderBy: [{ executedAt: 'asc' }, { id: 'asc' }] })),
+  whole('ContingencyItem', (tx, orgId) => tx.contingencyItem.findMany({ where: { orgId }, orderBy: [{ runId: 'asc' }, { position: 'asc' }] })),
 ];
 
 // An org-owned table left out on purpose, with the reason. INV-34 fails on any model with an orgId column that is in

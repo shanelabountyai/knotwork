@@ -127,3 +127,13 @@ not blind), `secrecy-pure.test.ts`, `funders-db.test.ts`, the structure tests, o
 | Designated actions | booking, signing, a large spend kept secret | revealed on proposal; refused for a large private spend; database checks |
 | Name probing | a duplicate category name | accepted, recorded (D-98) |
 | Arithmetic | total minus visible lines | accepted, recorded (D-94) |
+
+## Addendum (Phase 4, slice C): name changes and contingency plans
+
+Two later features meet this model; neither changes it. Decisions D-114, D-119 and D-122.
+
+| Path | What could leak | How it is closed |
+|---|---|---|
+| Name change page (P1-4) | one partner's name change (rules followed, steps, documents) | private to its partner by default: the other partner's page does not read an unshared one; helpers get a 404 shared or not |
+| Change log, Activity page, audit CSV, export (P1-4) | the same | an unshared name change is a compartment of its partner with no reveal day (`compartmentsOf`, case `namechange`), so entries are written as "a private item"; the export blanks it for nobody |
+| Contingency preview and run (P1-6) | a private vendor told about a plan; a private category named by a spend | only booked vendors are told (never private, D-102), read through `contingencyWorld` with the lens; a private category does not exist for anyone else, and a designated spend into one's own private category is refused rather than revealed |
