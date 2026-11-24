@@ -154,3 +154,17 @@ describe('M3: an approved removal cannot push held seats past the cap', () => {
     expect(vales.id).toBeTruthy();
   });
 });
+
+describe('S1: every change a reply makes is in the change log', () => {
+  it('a reply that changes only dietary needs, access needs or the song is logged with before and after', async () => {
+    const ruth = await guest('Ruth Stern');
+    const token = await tokenOf('The Sterns');
+    const ada = await guest('Ada Stern');
+    const send = (extra: Parameters<typeof reply>[2]) => submitRsvp(token, IP, { responses: [reply(ruth, true, extra), reply(ada, true)], plusOneName: '' });
+    expect(await send({ dietary: ['nut_allergy'], accessibility: ['step_free'], songRequest: 'September' })).toEqual({ ok: true });
+    const before = (await log(c.orgId)).length;
+    expect(await send({ dietary: [], accessibility: ['step_free'], songRequest: 'Dancing Queen' })).toEqual({ ok: true });
+    const added = (await log(c.orgId)).slice(before).filter((e) => e.targetId === ruth.id);
+    expect(added).toMatchObject([{ action: 'knotwork.guest.updated', data: { before: { dietary: ['nut_allergy'], songRequest: 'September' }, after: { dietary: [], songRequest: 'Dancing Queen' } } }]);
+  });
+});

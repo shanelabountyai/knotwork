@@ -153,7 +153,7 @@ export async function applyRsvp(tx: Tx, ctx: Ctx, householdId: string, checked: 
     if (!g) throw new Refused('That reply names someone who is not on this invitation.');
     const rsvp = r.attending ? 'attending' : 'declined';
     await tx.guest.update({ where: { id: g.id }, data: { rsvp, meal: r.meal, dietary: r.dietary, accessibility: r.accessibility, songRequest: r.songRequest, respondedAt: t } });
-    await logChange(tx, ctx, 'guest', 'updated', g.id, `${g.name} (${h.name})`, { rsvp: g.rsvp, meal: g.meal }, { rsvp, meal: r.meal }, { via: ctx.userId ? 'couple' : 'rsvp-link' });
+    await logChange(tx, ctx, 'guest', 'updated', g.id, `${g.name} (${h.name})`, { rsvp: g.rsvp, meal: g.meal, dietary: g.dietary, accessibility: g.accessibility, songRequest: g.songRequest }, { rsvp, meal: r.meal, dietary: r.dietary, accessibility: r.accessibility, songRequest: r.songRequest }, { via: ctx.userId ? 'couple' : 'rsvp-link' });
     if (g.rsvp !== rsvp) await step(firstName(g.name), r.attending ? 'accepted' : 'declined');
   }
   if (checked.plusOneName) {
