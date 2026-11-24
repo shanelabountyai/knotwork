@@ -7,6 +7,7 @@ import { asSystem, withOrg, type Tx } from '@/core/db/rls';
 import { hit } from '@/core/rate-limit';
 import { hashToken } from '@/core/tokens';
 import { requireWedding, weddingDay } from '../context';
+import { lockWedding } from '../schedule/store';
 import { entitlement } from './plus-one';
 import { checkRsvp, rsvpView, type RsvpSubmission, type RsvpView } from './projection';
 import { applyRsvp, loadPlan, rsvpDeadline, toIn } from './store';
@@ -48,6 +49,10 @@ export async function submitRsvp(token: string, ip: string, submission: RsvpSubm
   const h = await find(token);
   if (!h) return null;
   return withOrg({ orgId: h.orgId }, async (tx) => {
+    // The wedding lock comes BEFORE the view is read: the reply is checked against what is true once every earlier
+    // reply has committed. Checked first and locked after, several replies sent at once each saw "no guest named yet"
+    // and each added one (review 2026-11-24, M2).
+    await lockWedding(tx, h.orgId);
     const view = await viewOf(tx, h.orgId, h.id);
     if (!view) return null;
     const checked = checkRsvp(view, submission);
