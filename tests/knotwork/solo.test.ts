@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { addCategory, addExpense, addVendor, approveRequest, createWedding, proposeBooking, proposeContract, proposeDateMove, proposeSettings } from '@/app/o/[org]/wedding/actions';
 import { now } from '@/core/clock';
@@ -158,5 +159,41 @@ describe('the database checks the solo mark (raw SQL as the owner role)', () => 
     await expect(sql(`UPDATE "ConsentRequest" SET status = 'approved', solo = true, "deciderId" = '${helper}', "decidedAt" = now(), "executedAt" = now() WHERE id = '${mine.id}'`)).rejects.toThrow(/ConsentRequest_solo_check/);
     await expect(sql(`UPDATE "ConsentRequest" SET solo = true WHERE id = '${mine.id}'`)).rejects.toThrow(/ConsentRequest_solo_check/);
     await expect(sql(`INSERT INTO "ConsentRequest" (id, "orgId", kind, status, solo, payload, summary, "proposerId", "expiresAt", "decidedAt", "executedAt") VALUES (gen_random_uuid(), '${orgId}', 'spend', 'approved', true, '{}', 'x', '${a}', now(), now(), now())`)).rejects.toThrow(/a request starts pending/);
+  });
+});
+
+// Review 2026-11-24 (M1): the solo migration added `pairedAt` as NULL on every existing wedding, so a couple who were
+// already two partners before it ran could remove one another and act alone. The backfill marks them paired.
+describe('workspaces that already had two partners before solo mode existed', () => {
+  const backfill = () => db.$executeRawUnsafe(readFileSync('prisma/migrations/20261124000003_knotwork_pairing_backfill/migration.sql', 'utf8'));
+  const raw = (id: string, deciderId: string) =>
+    db.$executeRawUnsafe(`UPDATE "ConsentRequest" SET status = 'declined', "deciderId" = '${deciderId}', "decidedAt" = now() WHERE id = '${id}'`);
+
+  it('two partners today: paired by the migration, so removing one does not bring solo back', async () => {
+    const b = await joinPartner();
+    expect((await wedding()).pairedAt).toBeNull(); // the state the solo migration left behind
+    await backfill();
+    expect((await wedding()).pairedAt).not.toBeNull();
+    await db.membership.delete({ where: { orgId_userId: { orgId, userId: b } } });
+    await as(a);
+    await ok(proposeBooking(slug, { id: vendorId }));
+    expect(await requests()).toMatchObject([{ status: 'pending', solo: false }]);
+  });
+
+  it('one partner today, but a second partner once decided a request: paired by the migration', async () => {
+    const b = await joinPartner();
+    const r = await db.consentRequest.create({ data: { orgId, kind: 'book_vendor', payload: { vendorId }, summary: 'raw', proposerId: a, expiresAt: new Date(now().getTime() + 86_400_000) } });
+    await raw(r.id, b);
+    await db.membership.delete({ where: { orgId_userId: { orgId, userId: b } } });
+    expect((await wedding()).pairedAt).toBeNull();
+    await backfill();
+    expect((await wedding()).pairedAt).not.toBeNull();
+  });
+
+  it('a workspace that never had two partners is left solo', async () => {
+    await backfill();
+    expect((await wedding()).pairedAt).toBeNull();
+    await ok(proposeBooking(slug, { id: vendorId }));
+    expect(await requests()).toMatchObject([{ status: 'approved', solo: true }]);
   });
 });
