@@ -358,3 +358,56 @@ def test_namechange_gating_by_hand():
     r = NAME_RULES["generic"]
     assert namechange_oracle.answer(r, {}, set(), "start", "ssa") == {"ok": False, "code": "artifacts", "keys": ["marriage-certificate", "proof-of-identity"]}
     assert namechange_oracle.answer(r, {}, {"marriage-certificate", "proof-of-identity"}, "start", "dmv") == {"ok": False, "code": "prerequisites", "keys": ["ssa"]}
+
+
+# --- seating: generate, score, repair (P1-5) -----------------------------------------------------------------------------
+from collections import Counter
+
+import seating_oracle
+
+SEATING = seating_oracle.load()
+
+
+def test_there_are_seating_fixtures():
+    assert len(SEATING) >= 10
+    claims = Counter(fx["claim"] for _, fx in SEATING)
+    assert claims["optimal"] >= 6 and claims["infeasible"] >= 3 and claims["unsolved"] >= 1
+    codes = {r["code"] for _, fx in SEATING for r in fx["expect"]["reasons"]}
+    assert {"capacity", "group-too-big", "apart-in-group", "locked-apart"} <= codes
+    assert any(fx["locked"] for _, fx in SEATING)
+
+
+@pytest.mark.parametrize("path,fx", SEATING, ids=[p.stem for p, _ in SEATING])
+def test_seating_expectations_match_the_oracle(path, fx):
+    assert path.read_text() == seating_oracle.dump(fx), "fixture is not in canonical JSON form"
+    e = fx["expect"]
+    best = seating_oracle.brute(fx)
+    if fx["claim"] == "infeasible":
+        # Reported, not half-made: no seats, no score, at least one reason; and truly nothing keeps every hard rule.
+        assert e["status"] == "infeasible" and e["seats"] == {} and e["score"] is None and e["reasons"]
+        assert best["hard"] > 0
+        return
+    # A seating: every seat at a real table, no table over capacity, every lock kept, and the score the engine reports
+    # is the score the oracle computes from the seats alone.
+    assert seating_oracle.problems(fx, e["seats"]) == []
+    s = seating_oracle.score(fx, e["seats"])
+    assert {k: e["score"][k] for k in ("hard", "soft", "total")} == s
+    assert sum(v["count"] for v in e["score"]["violations"] if v["hard"]) == s["hard"]
+    if fx["claim"] == "optimal":
+        assert e["status"] == "ok" and set(e["seats"]) == {g["id"] for g in fx["guests"]}
+        assert s["total"] == best["total"], f"engine {s['total']}, best possible {best['total']}"
+    else:  # unsolved: the search kept no seating that breaks a hard rule quietly, and brute force proves none exists
+        assert e["status"] == "unsolved" and s["hard"] > 0 and best["hard"] > 0
+        assert all(v["hard"] for v in e["score"]["violations"] if v["code"] in ("apart", "together") and v["guests"])
+
+
+def test_seating_score_by_hand():
+    fx = next(f for p, f in SEATING if p.stem == "11-soft-apart-beats-household")
+    # Ben and Cy together: the soft "apart" wish is broken (3), and here Priya and Raj are split (2). Ben and Cy apart:
+    # their household loses one member (2), and nothing else is broken.
+    together = {"ben": "t1", "cy": "t1", "hal": "t2", "io": "t2", "priya": "t1", "raj": "t2"}
+    apart = {"ben": "t1", "cy": "t2", "hal": "t2", "io": "t2", "priya": "t1", "raj": "t1"}
+    assert seating_oracle.score(fx, together) == {"hard": 0, "soft": 3 + 2, "total": 5}
+    assert seating_oracle.score(fx, apart) == {"hard": 0, "soft": 2, "total": 2}
+    # A guest with no seat and a table over capacity are each hard.
+    assert seating_oracle.score(fx, {"ben": "t1", "cy": "t1", "hal": "t1", "io": "t1"})["hard"] == 1 + 2

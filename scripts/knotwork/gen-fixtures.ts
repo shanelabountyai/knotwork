@@ -8,7 +8,9 @@
 // (P1-2, the pledge arithmetic) is written by the TypeScript replay and recomputed by tools/funding_oracle.py;
 // fixtures/thanks/ (P1-3, aging of the thank-you ledger) by thanks/aging.ts, recomputed by tools/thanks_oracle.py;
 // fixtures/namechange/ (P1-4, ordering and gating) by namechange/workflow.ts against the rules files, recomputed by
-// tools/namechange_oracle.py, which also re-checks the order of every file in rules/name-change/.
+// tools/namechange_oracle.py, which also re-checks the order of every file in rules/name-change/; fixtures/seating/
+// (P1-5, generate-score-repair) by seating/engine.ts, re-scored (and, being small, solved by brute force) by
+// tools/seating_oracle.py.
 import { existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
@@ -19,6 +21,7 @@ import { templatePlan } from '../../src/lib/knotwork/schedule/template';
 import { ledger, type Obligation } from '../../src/lib/knotwork/thanks/aging';
 import { RULESETS } from '../../src/lib/knotwork/namechange/rules';
 import { board, invariantProblems, replay as replayNameChange, type Op as NameOp } from '../../src/lib/knotwork/namechange/workflow';
+import { generate, type Problem as SeatingProblem } from '../../src/lib/knotwork/seating/engine';
 import { LIMITS_DIR, MODERATION_FILE, regenerateLimits, regenerateModeration, regenerateStrip, STRIP_DIR, writeStripImages, type LimitFx } from './gen-photo-fixtures';
 
 const DIR = 'fixtures/schedule';
@@ -84,6 +87,15 @@ export function regenerateNameChange(fx: NameChangeFx): string {
   return `${JSON.stringify({ name: fx.name, note: fx.note, rules: fx.rules, weddingDate: fx.weddingDate, ops: fx.ops, expect }, null, 2)}\n`;
 }
 
+const SEATING_DIR = 'fixtures/seating';
+export type SeatingFx = SeatingProblem & { name: string; note: string; claim: 'optimal' | 'infeasible' | 'unsolved'; seed: number; expect?: unknown };
+
+/** A seating fixture with its expect block recomputed: the status, any reasons it cannot work, the seats and the score. */
+export function regenerateSeating(fx: SeatingFx): string {
+  const { name, note, claim, seed, tables, guests, rules, locked } = fx;
+  return `${JSON.stringify({ name, note, claim, seed, tables, guests, rules, locked, expect: generate({ tables, guests, rules, locked }, seed) }, null, 2)}\n`;
+}
+
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const write = process.argv.includes('--write');
   if (write) writeFileSync(join(DIR, `${TEMPLATE_FIXTURE.name}.json`), regenerate(TEMPLATE_FIXTURE));
@@ -132,6 +144,15 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
       if (write) writeFileSync(join(NAMECHANGE_DIR, f), next);
     }
     console.log(`${next === text ? 'same ' : write ? 'wrote' : 'DIFF '} namechange/${f}`);
+  }
+  for (const f of readdirSync(SEATING_DIR).filter((n) => n.endsWith('.json')).sort()) {
+    const text = readFileSync(join(SEATING_DIR, f), 'utf8');
+    const next = regenerateSeating(JSON.parse(text) as SeatingFx);
+    if (next !== text) {
+      diffs++;
+      if (write) writeFileSync(join(SEATING_DIR, f), next);
+    }
+    console.log(`${next === text ? 'same ' : write ? 'wrote' : 'DIFF '} seating/${f}`);
   }
   // Photos. Images are written only when missing, or with --images (their bytes depend on the encoder's version).
   for (const name of await writeStripImages(process.argv.includes('--images'))) console.log(`wrote photos/strip/${name}`);

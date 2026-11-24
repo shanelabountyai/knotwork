@@ -1,0 +1,86 @@
+{
+  "name": "02-hard-apart-splits-a-household",
+  "note": "Six cousins in one household at two tables of three, and two of them must sit apart (hard). The household has to split; the best split costs 3 members away (6).",
+  "claim": "optimal",
+  "seed": 1,
+  "tables": [
+    {
+      "id": "t1",
+      "name": "Table 1",
+      "capacity": 3
+    },
+    {
+      "id": "t2",
+      "name": "Table 2",
+      "capacity": 3
+    }
+  ],
+  "guests": [
+    {
+      "id": "ada",
+      "name": "Ada",
+      "household": "kim"
+    },
+    {
+      "id": "bo",
+      "name": "Bo",
+      "household": "kim"
+    },
+    {
+      "id": "cal",
+      "name": "Cal",
+      "household": "kim"
+    },
+    {
+      "id": "dee",
+      "name": "Dee",
+      "household": "kim"
+    },
+    {
+      "id": "ed",
+      "name": "Ed",
+      "household": "kim"
+    },
+    {
+      "id": "fay",
+      "name": "Fay",
+      "household": "kim"
+    }
+  ],
+  "rules": [
+    {
+      "a": "ada",
+      "b": "bo",
+      "kind": "apart",
+      "hard": true
+    }
+  ],
+  "locked": {},
+  "expect": {
+    "status": "ok",
+    "reasons": [],
+    "seats": {
+      "ada": "t1",
+      "bo": "t2",
+      "cal": "t1",
+      "dee": "t1",
+      "ed": "t2",
+      "fay": "t2"
+    },
+    "score": {
+      "hard": 0,
+      "soft": 6,
+      "total": 6,
+      "violations": [
+        {
+          "code": "household",
+          "hard": false,
+          "guests": [],
+          "table": null,
+          "household": "kim",
+          "count": 3
+        }
+      ]
+    }
+  }
+}

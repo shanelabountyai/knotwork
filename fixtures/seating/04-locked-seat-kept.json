@@ -1,0 +1,88 @@
+{
+  "name": "04-locked-seat-kept",
+  "note": "Ruth is locked at Table 2. A regenerate keeps her there and seats everyone else around her: the best seating under the lock.",
+  "claim": "optimal",
+  "seed": 1,
+  "tables": [
+    {
+      "id": "t1",
+      "name": "Table 1",
+      "capacity": 3
+    },
+    {
+      "id": "t2",
+      "name": "Table 2",
+      "capacity": 3
+    }
+  ],
+  "guests": [
+    {
+      "id": "ruth",
+      "name": "Ruth",
+      "household": "stern"
+    },
+    {
+      "id": "hal",
+      "name": "Hal",
+      "household": "ash"
+    },
+    {
+      "id": "io",
+      "name": "Io",
+      "household": "ash"
+    },
+    {
+      "id": "mai",
+      "name": "Mai",
+      "household": "tran"
+    },
+    {
+      "id": "huy",
+      "name": "Huy",
+      "household": "tran"
+    },
+    {
+      "id": "kim",
+      "name": "Kim",
+      "household": "tran"
+    }
+  ],
+  "rules": [
+    {
+      "a": "ruth",
+      "b": "hal",
+      "kind": "apart",
+      "hard": true
+    }
+  ],
+  "locked": {
+    "ruth": "t2"
+  },
+  "expect": {
+    "status": "ok",
+    "reasons": [],
+    "seats": {
+      "ruth": "t2",
+      "hal": "t1",
+      "io": "t1",
+      "mai": "t2",
+      "huy": "t1",
+      "kim": "t2"
+    },
+    "score": {
+      "hard": 0,
+      "soft": 2,
+      "total": 2,
+      "violations": [
+        {
+          "code": "household",
+          "hard": false,
+          "guests": [],
+          "table": null,
+          "household": "tran",
+          "count": 1
+        }
+      ]
+    }
+  }
+}

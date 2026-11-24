@@ -1,0 +1,86 @@
+{
+  "name": "11-soft-apart-beats-household",
+  "note": "Two members of a household would rather sit apart (soft, 3) and the household would rather sit together (2 per member away): the best seating splits them.",
+  "claim": "optimal",
+  "seed": 1,
+  "tables": [
+    {
+      "id": "t1",
+      "name": "Table 1",
+      "capacity": 3
+    },
+    {
+      "id": "t2",
+      "name": "Table 2",
+      "capacity": 3
+    }
+  ],
+  "guests": [
+    {
+      "id": "ben",
+      "name": "Ben",
+      "household": "vale"
+    },
+    {
+      "id": "cy",
+      "name": "Cy",
+      "household": "vale"
+    },
+    {
+      "id": "hal",
+      "name": "Hal",
+      "household": "ash"
+    },
+    {
+      "id": "io",
+      "name": "Io",
+      "household": "ash"
+    },
+    {
+      "id": "priya",
+      "name": "Priya",
+      "household": "rao"
+    },
+    {
+      "id": "raj",
+      "name": "Raj",
+      "household": "rao"
+    }
+  ],
+  "rules": [
+    {
+      "a": "ben",
+      "b": "cy",
+      "kind": "apart",
+      "hard": false
+    }
+  ],
+  "locked": {},
+  "expect": {
+    "status": "ok",
+    "reasons": [],
+    "seats": {
+      "ben": "t1",
+      "cy": "t2",
+      "hal": "t2",
+      "io": "t2",
+      "priya": "t1",
+      "raj": "t1"
+    },
+    "score": {
+      "hard": 0,
+      "soft": 2,
+      "total": 2,
+      "violations": [
+        {
+          "code": "household",
+          "hard": false,
+          "guests": [],
+          "table": null,
+          "household": "vale",
+          "count": 1
+        }
+      ]
+    }
+  }
+}
