@@ -78,6 +78,43 @@ describe('S7: the reply route sends back a code, never a sentence or a name', ()
   });
 });
 
+describe('M1: a reply the cap cannot take is answered, never a crash', () => {
+  // Priya (engaged) may bring a guest. She accepts without naming one, so the seat held for her guest is released and
+  // the B list takes it. When she comes back to name her guest there is no seat.
+  const fillTheRoom = async () => {
+    await answer('The Vales', false);
+    await answer('The Sterns', false);
+    expect(await answer('Priya Rao', true)).toEqual({ ok: true });
+    await ok(releaseWave(c.slug, { list: 'B' }));
+    expect((await state()).cap).toMatchObject({ held: 8, available: 0 });
+  };
+
+  it('naming a plus-one when the room is full: a plain refusal, nothing saved, no numbers', async () => {
+    await fillTheRoom();
+    const before = await snapshot();
+    const priya = await household('Priya Rao');
+    const r = await submitRsvp(await tokenOf('Priya Rao'), IP, { responses: [reply(priya.guests[0]!, true)], plusOneName: 'Robin Rao' });
+    expect(r).toEqual({ ok: false, message: RSVP_PROBLEM.full });
+    expect(JSON.stringify(r)).not.toMatch(/\d|cap|seat/i);
+    expect(await snapshot()).toBe(before);
+  });
+
+  it('a guest who declined and changes their mind after the seat went to someone else: the same', async () => {
+    await fillTheRoom();
+    const before = await snapshot();
+    expect(await answer('The Sterns', true)).toEqual({ ok: false, message: RSVP_PROBLEM.full });
+    expect(await snapshot()).toBe(before);
+  });
+
+  it('the public route answers 303 back to the page, not 500', async () => {
+    await fillTheRoom();
+    const token = await tokenOf('Priya Rao');
+    const priya = await household('Priya Rao');
+    const res = await post(token, [[`attending:${priya.guests[0]!.id}`, 'yes'], [`meal:${priya.guests[0]!.id}`, 'Fish'], ['plusOneName', 'Robin Rao']]);
+    expect(res).toMatchObject({ status: 303, location: `/r/${token}?e=full` });
+  });
+});
+
 describe('M2: one plus-one per invitation, however many replies arrive at once', () => {
   it('six simultaneous replies each naming a different guest add exactly one', async () => {
     await answer('The Vales', false); // room for more than one, so only the rule can stop them

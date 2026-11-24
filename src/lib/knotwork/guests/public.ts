@@ -5,11 +5,12 @@
 import { inOrg } from '@/core/authz/guards';
 import { asSystem, withOrg, type Tx } from '@/core/db/rls';
 import { hit } from '@/core/rate-limit';
+import { Refused } from '@/core/errors';
 import { hashToken } from '@/core/tokens';
 import { requireWedding, weddingDay } from '../context';
 import { lockWedding } from '../schedule/store';
 import { entitlement } from './plus-one';
-import { checkGuestReply, rsvpView, type RsvpSubmission, type RsvpView } from './projection';
+import { checkGuestReply, RSVP_PROBLEM, rsvpView, type RsvpSubmission, type RsvpView } from './projection';
 import { applyRsvp, loadPlan, rsvpDeadline, toIn } from './store';
 
 /** Generous for a family filling in a form, tight for someone guessing tokens. Per IP. */
@@ -48,7 +49,7 @@ export async function submitRsvp(token: string, ip: string, submission: RsvpSubm
   if (!(await hit(`rsvp:ip:${ip}`, RSVP_LIMIT))) return 'limited';
   const h = await find(token);
   if (!h) return null;
-  return withOrg({ orgId: h.orgId }, async (tx) => {
+  const saved = withOrg({ orgId: h.orgId }, async (tx) => {
     // The wedding lock comes BEFORE the view is read: the reply is checked against what is true once every earlier
     // reply has committed. Checked first and locked after, several replies sent at once each saw "no guest named yet"
     // and each added one (review 2026-11-24, M2).
@@ -59,5 +60,12 @@ export async function submitRsvp(token: string, ip: string, submission: RsvpSubm
     if (!checked.ok) return checked;
     await applyRsvp(tx, { orgId: h.orgId, userId: null }, h.id, checked);
     return { ok: true as const };
+  });
+  // A refusal from the store (no seat left for this reply) rolled the transaction back. The guest gets one neutral
+  // sentence: never the cap, never a count, and the same words whatever list they are on (rule 3). Before the review
+  // of 2026-11-24 (M1) this escaped as an unhandled error, a 500 on the guest's own invitation.
+  return saved.catch((e: unknown) => {
+    if (e instanceof Refused) return { ok: false as const, message: RSVP_PROBLEM.full };
+    throw e;
   });
 }
