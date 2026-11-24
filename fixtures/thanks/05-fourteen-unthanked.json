@@ -1,0 +1,358 @@
+{
+  "name": "05-fourteen-unthanked",
+  "note": "The headline from the PRD: fourteen unthanked for more than three weeks, two not yet (one of them exactly three weeks), one sent.",
+  "today": "2027-09-30",
+  "obligations": [
+    {
+      "source": "logged",
+      "id": "g01",
+      "giver": "Guest 01",
+      "what": "a card",
+      "receivedOn": "2027-08-01",
+      "acknowledgedOn": null
+    },
+    {
+      "source": "logged",
+      "id": "g02",
+      "giver": "Guest 02",
+      "what": "a card",
+      "receivedOn": "2027-08-02",
+      "acknowledgedOn": null
+    },
+    {
+      "source": "logged",
+      "id": "g03",
+      "giver": "Guest 03",
+      "what": "a card",
+      "receivedOn": "2027-08-03",
+      "acknowledgedOn": null
+    },
+    {
+      "source": "logged",
+      "id": "g04",
+      "giver": "Guest 04",
+      "what": "a card",
+      "receivedOn": "2027-08-04",
+      "acknowledgedOn": null
+    },
+    {
+      "source": "logged",
+      "id": "g05",
+      "giver": "Guest 05",
+      "what": "a card",
+      "receivedOn": "2027-08-05",
+      "acknowledgedOn": null
+    },
+    {
+      "source": "logged",
+      "id": "g06",
+      "giver": "Guest 06",
+      "what": "a card",
+      "receivedOn": "2027-08-06",
+      "acknowledgedOn": null
+    },
+    {
+      "source": "logged",
+      "id": "g07",
+      "giver": "Guest 07",
+      "what": "a card",
+      "receivedOn": "2027-08-07",
+      "acknowledgedOn": null
+    },
+    {
+      "source": "logged",
+      "id": "g08",
+      "giver": "Guest 08",
+      "what": "a card",
+      "receivedOn": "2027-08-08",
+      "acknowledgedOn": null
+    },
+    {
+      "source": "logged",
+      "id": "g09",
+      "giver": "Guest 09",
+      "what": "a card",
+      "receivedOn": "2027-08-09",
+      "acknowledgedOn": null
+    },
+    {
+      "source": "logged",
+      "id": "g10",
+      "giver": "Guest 10",
+      "what": "a card",
+      "receivedOn": "2027-08-10",
+      "acknowledgedOn": null
+    },
+    {
+      "source": "logged",
+      "id": "g11",
+      "giver": "Guest 11",
+      "what": "a card",
+      "receivedOn": "2027-08-11",
+      "acknowledgedOn": null
+    },
+    {
+      "source": "logged",
+      "id": "g12",
+      "giver": "Guest 12",
+      "what": "a card",
+      "receivedOn": "2027-08-12",
+      "acknowledgedOn": null
+    },
+    {
+      "source": "logged",
+      "id": "g13",
+      "giver": "Guest 13",
+      "what": "a card",
+      "receivedOn": "2027-08-13",
+      "acknowledgedOn": null
+    },
+    {
+      "source": "logged",
+      "id": "g14",
+      "giver": "Guest 14",
+      "what": "a card",
+      "receivedOn": "2027-08-14",
+      "acknowledgedOn": null
+    },
+    {
+      "source": "logged",
+      "id": "g15",
+      "giver": "Guest 15",
+      "what": "a card",
+      "receivedOn": "2027-09-29",
+      "acknowledgedOn": null
+    },
+    {
+      "source": "claimed",
+      "id": "c1",
+      "giver": "The Okoros",
+      "what": "Stand mixer",
+      "receivedOn": "2027-09-09",
+      "acknowledgedOn": null
+    },
+    {
+      "source": "pooled",
+      "id": "p1",
+      "giver": "The Trans",
+      "what": "Canoe trip",
+      "receivedOn": "2027-07-01",
+      "acknowledgedOn": "2027-07-02"
+    }
+  ],
+  "expect": {
+    "owed": [
+      {
+        "source": "logged",
+        "id": "g01",
+        "giver": "Guest 01",
+        "what": "a card",
+        "receivedOn": "2027-08-01",
+        "acknowledgedOn": null,
+        "ageDays": 60,
+        "bucket": "later",
+        "overdue": true
+      },
+      {
+        "source": "logged",
+        "id": "g02",
+        "giver": "Guest 02",
+        "what": "a card",
+        "receivedOn": "2027-08-02",
+        "acknowledgedOn": null,
+        "ageDays": 59,
+        "bucket": "later",
+        "overdue": true
+      },
+      {
+        "source": "logged",
+        "id": "g03",
+        "giver": "Guest 03",
+        "what": "a card",
+        "receivedOn": "2027-08-03",
+        "acknowledgedOn": null,
+        "ageDays": 58,
+        "bucket": "later",
+        "overdue": true
+      },
+      {
+        "source": "logged",
+        "id": "g04",
+        "giver": "Guest 04",
+        "what": "a card",
+        "receivedOn": "2027-08-04",
+        "acknowledgedOn": null,
+        "ageDays": 57,
+        "bucket": "later",
+        "overdue": true
+      },
+      {
+        "source": "logged",
+        "id": "g05",
+        "giver": "Guest 05",
+        "what": "a card",
+        "receivedOn": "2027-08-05",
+        "acknowledgedOn": null,
+        "ageDays": 56,
+        "bucket": "later",
+        "overdue": true
+      },
+      {
+        "source": "logged",
+        "id": "g06",
+        "giver": "Guest 06",
+        "what": "a card",
+        "receivedOn": "2027-08-06",
+        "acknowledgedOn": null,
+        "ageDays": 55,
+        "bucket": "later",
+        "overdue": true
+      },
+      {
+        "source": "logged",
+        "id": "g07",
+        "giver": "Guest 07",
+        "what": "a card",
+        "receivedOn": "2027-08-07",
+        "acknowledgedOn": null,
+        "ageDays": 54,
+        "bucket": "later",
+        "overdue": true
+      },
+      {
+        "source": "logged",
+        "id": "g08",
+        "giver": "Guest 08",
+        "what": "a card",
+        "receivedOn": "2027-08-08",
+        "acknowledgedOn": null,
+        "ageDays": 53,
+        "bucket": "later",
+        "overdue": true
+      },
+      {
+        "source": "logged",
+        "id": "g09",
+        "giver": "Guest 09",
+        "what": "a card",
+        "receivedOn": "2027-08-09",
+        "acknowledgedOn": null,
+        "ageDays": 52,
+        "bucket": "later",
+        "overdue": true
+      },
+      {
+        "source": "logged",
+        "id": "g10",
+        "giver": "Guest 10",
+        "what": "a card",
+        "receivedOn": "2027-08-10",
+        "acknowledgedOn": null,
+        "ageDays": 51,
+        "bucket": "later",
+        "overdue": true
+      },
+      {
+        "source": "logged",
+        "id": "g11",
+        "giver": "Guest 11",
+        "what": "a card",
+        "receivedOn": "2027-08-11",
+        "acknowledgedOn": null,
+        "ageDays": 50,
+        "bucket": "later",
+        "overdue": true
+      },
+      {
+        "source": "logged",
+        "id": "g12",
+        "giver": "Guest 12",
+        "what": "a card",
+        "receivedOn": "2027-08-12",
+        "acknowledgedOn": null,
+        "ageDays": 49,
+        "bucket": "later",
+        "overdue": true
+      },
+      {
+        "source": "logged",
+        "id": "g13",
+        "giver": "Guest 13",
+        "what": "a card",
+        "receivedOn": "2027-08-13",
+        "acknowledgedOn": null,
+        "ageDays": 48,
+        "bucket": "later",
+        "overdue": true
+      },
+      {
+        "source": "logged",
+        "id": "g14",
+        "giver": "Guest 14",
+        "what": "a card",
+        "receivedOn": "2027-08-14",
+        "acknowledgedOn": null,
+        "ageDays": 47,
+        "bucket": "later",
+        "overdue": true
+      },
+      {
+        "source": "claimed",
+        "id": "c1",
+        "giver": "The Okoros",
+        "what": "Stand mixer",
+        "receivedOn": "2027-09-09",
+        "acknowledgedOn": null,
+        "ageDays": 21,
+        "bucket": "weeks",
+        "overdue": false
+      },
+      {
+        "source": "logged",
+        "id": "g15",
+        "giver": "Guest 15",
+        "what": "a card",
+        "receivedOn": "2027-09-29",
+        "acknowledgedOn": null,
+        "ageDays": 1,
+        "bucket": "fresh",
+        "overdue": false
+      }
+    ],
+    "thanked": [
+      {
+        "source": "pooled",
+        "id": "p1",
+        "giver": "The Trans",
+        "what": "Canoe trip",
+        "receivedOn": "2027-07-01",
+        "acknowledgedOn": "2027-07-02"
+      }
+    ],
+    "total": 17,
+    "overdue": 14,
+    "headline": "14 unthanked > 3 weeks",
+    "buckets": [
+      {
+        "key": "fresh",
+        "label": "Under a week",
+        "count": 1
+      },
+      {
+        "key": "weeks",
+        "label": "1 to 3 weeks",
+        "count": 1
+      },
+      {
+        "key": "late",
+        "label": "3 to 6 weeks",
+        "count": 0
+      },
+      {
+        "key": "later",
+        "label": "Over 6 weeks",
+        "count": 14
+      }
+    ]
+  }
+}

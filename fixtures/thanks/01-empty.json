@@ -1,0 +1,35 @@
+{
+  "name": "01-empty",
+  "note": "No gifts yet: nothing owed, every bucket empty, and the headline still reads as a count.",
+  "today": "2027-06-01",
+  "obligations": [],
+  "expect": {
+    "owed": [],
+    "thanked": [],
+    "total": 0,
+    "overdue": 0,
+    "headline": "0 unthanked > 3 weeks",
+    "buckets": [
+      {
+        "key": "fresh",
+        "label": "Under a week",
+        "count": 0
+      },
+      {
+        "key": "weeks",
+        "label": "1 to 3 weeks",
+        "count": 0
+      },
+      {
+        "key": "late",
+        "label": "3 to 6 weeks",
+        "count": 0
+      },
+      {
+        "key": "later",
+        "label": "Over 6 weeks",
+        "count": 0
+      }
+    ]
+  }
+}

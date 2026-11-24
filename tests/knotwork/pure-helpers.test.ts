@@ -12,7 +12,7 @@ import { readJson, ROOT } from './fixtures';
 
 describe('the pure files stay pure', () => {
   // Engines import nothing from the database, the template's core, or Next; so they run anywhere and test without Postgres.
-  const PURE = ['days.ts', 'money.ts', 'budget.ts', 'access.ts', 'changelog-diff.ts', 'schedule/engine.ts', 'schedule/template.ts', 'schedule/rsvp.ts', 'consent/machine.ts', 'vendors/scope.ts', 'vendors/brief.ts', 'guests/plus-one.ts', 'guests/backfill.ts', 'guests/headcount.ts', 'guests/chase.ts', 'guests/csv.ts', 'guests/projection.ts', 'gifts/ledger.ts', 'gifts/projection.ts', 'uploads/sniff.ts', 'uploads/inspect.ts', 'uploads/caps.ts', 'photos/moderation.ts', 'photos/wall.ts', 'photos/zip.ts', 'photos/limits.ts', 'photos/dates.ts', 'photos/projection.ts', 'secrecy/compartment.ts', 'secrecy/lens.ts', 'funding/ledger.ts'];
+  const PURE = ['days.ts', 'money.ts', 'budget.ts', 'access.ts', 'changelog-diff.ts', 'schedule/engine.ts', 'schedule/template.ts', 'schedule/rsvp.ts', 'consent/machine.ts', 'vendors/scope.ts', 'vendors/brief.ts', 'guests/plus-one.ts', 'guests/backfill.ts', 'guests/headcount.ts', 'guests/chase.ts', 'guests/csv.ts', 'guests/projection.ts', 'gifts/ledger.ts', 'gifts/projection.ts', 'uploads/sniff.ts', 'uploads/inspect.ts', 'uploads/caps.ts', 'photos/moderation.ts', 'photos/wall.ts', 'photos/zip.ts', 'photos/limits.ts', 'photos/dates.ts', 'photos/projection.ts', 'secrecy/compartment.ts', 'secrecy/lens.ts', 'funding/ledger.ts', 'registry/links.ts', 'thanks/aging.ts'];
   it.each(PURE)('%s', (f) => {
     const src = readFileSync(join(ROOT, 'src/lib/knotwork', f), 'utf8');
     const imports = [...src.matchAll(/from '([^']+)'/g)].map((m) => m[1]!);
@@ -21,7 +21,7 @@ describe('the pure files stay pure', () => {
   });
   it('every file in src/lib/knotwork is either on the pure list or a store', () => {
     const all = globSync('**/*.ts', { cwd: join(ROOT, 'src/lib/knotwork') }).sort();
-    const stores = ['changelog.ts', 'consent/execute.ts', 'consent/store.ts', 'schedule/store.ts', 'vendors/store.ts', 'context.ts', 'budget-store.ts', 'guests/store.ts', 'guests/public.ts', 'guests/same-site.ts', 'gifts/store.ts', 'gifts/couple.ts', 'gifts/public.ts', 'uploads/process.ts', 'uploads/read.ts', 'photos/blobs.ts', 'photos/qr.ts', 'photos/store.ts', 'photos/public.ts', 'vendors/attachments.ts', 'secrecy/seal.ts', 'secrecy/store.ts', 'secrecy/views.ts', 'secrecy/export.ts', 'funding/store.ts'];
+    const stores = ['changelog.ts', 'consent/execute.ts', 'consent/store.ts', 'schedule/store.ts', 'vendors/store.ts', 'context.ts', 'budget-store.ts', 'guests/store.ts', 'guests/public.ts', 'guests/same-site.ts', 'gifts/store.ts', 'gifts/couple.ts', 'gifts/public.ts', 'uploads/process.ts', 'uploads/read.ts', 'photos/blobs.ts', 'photos/qr.ts', 'photos/store.ts', 'photos/public.ts', 'vendors/attachments.ts', 'secrecy/seal.ts', 'secrecy/store.ts', 'secrecy/views.ts', 'secrecy/export.ts', 'funding/store.ts', 'registry/store.ts', 'thanks/store.ts'];
     expect(all.filter((f) => !PURE.includes(f) && !stores.includes(f))).toEqual([]);
   });
 });

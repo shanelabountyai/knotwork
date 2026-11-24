@@ -273,3 +273,38 @@ def test_funding_two_funders_by_hand():
     assert [s.get("code", "ok") for s in fx["expect"]["steps"]][-2:] == ["over-expense", "ok"]
     venue = fx["expect"]["categories"][0]
     assert (venue["pledgedCents"], venue["receivedCents"], venue["spentCents"]) == (1_200_000, 1_200_000, 1_000_000)
+
+
+# --- thanks: the thank-you obligation ledger's aging (P1-3) ------------------------------------------------------------
+import thanks_oracle
+
+THANKS = thanks_oracle.load()
+
+
+def test_there_are_thanks_fixtures():
+    assert len(THANKS) >= 7
+    buckets = {o["bucket"] for _, fx in THANKS for o in fx["expect"]["owed"]}
+    assert buckets == {"fresh", "weeks", "late", "later"}
+    assert {o["source"] for _, fx in THANKS for o in fx["obligations"]} == {"pooled", "claimed", "logged"}
+
+
+@pytest.mark.parametrize("path,fx", THANKS, ids=[p.stem for p, _ in THANKS])
+def test_thanks_expectations_match_the_oracle(path, fx):
+    assert fx["expect"] == thanks_oracle.expected(fx)
+    assert path.read_text() == thanks_oracle.dump(fx), "fixture is not in canonical JSON form"
+    e = fx["expect"]
+    # Whatever the story: every obligation is either owed or thanked, the buckets add up to what is owed, no age is
+    # negative, and nothing in the ledger is an amount of money.
+    assert len(e["owed"]) + len(e["thanked"]) == e["total"] == len(fx["obligations"])
+    assert sum(b["count"] for b in e["buckets"]) == len(e["owed"])
+    assert all(o["ageDays"] >= 0 for o in e["owed"])
+    assert e["overdue"] == sum(1 for o in e["owed"] if o["ageDays"] > 21)
+    assert not any("cents" in k.lower() or "amount" in k.lower() for o in fx["obligations"] for k in o)
+
+
+def test_thanks_the_prd_headline_by_hand():
+    fx = next(f for p, f in THANKS if p.stem == "05-fourteen-unthanked")
+    assert fx["expect"]["headline"] == "14 unthanked > 3 weeks"
+    # The bucket edges: 6 days is under a week, 7 is not; 21 is not "over 3 weeks", 22 is; 42 is "3 to 6", 43 is over 6.
+    edges = next(f for p, f in THANKS if p.stem == "02-bucket-edges")["expect"]["owed"]
+    assert [(o["ageDays"], o["bucket"], o["overdue"]) for o in edges] == [(43, "later", True), (42, "late", True), (22, "late", True), (21, "weeks", False), (7, "weeks", False), (6, "fresh", False), (0, "fresh", False)]

@@ -1,0 +1,75 @@
+{
+  "name": "06-received-later-than-today",
+  "note": "A gift logged with a day after today (a clock skew, or an import) counts as owed from today: never a negative age.",
+  "today": "2027-03-01",
+  "obligations": [
+    {
+      "source": "logged",
+      "id": "g1",
+      "giver": "Ada",
+      "what": "a vase",
+      "receivedOn": "2027-03-04",
+      "acknowledgedOn": null
+    },
+    {
+      "source": "logged",
+      "id": "g2",
+      "giver": "Ben",
+      "what": "a toaster",
+      "receivedOn": "2027-02-01",
+      "acknowledgedOn": null
+    }
+  ],
+  "expect": {
+    "owed": [
+      {
+        "source": "logged",
+        "id": "g2",
+        "giver": "Ben",
+        "what": "a toaster",
+        "receivedOn": "2027-02-01",
+        "acknowledgedOn": null,
+        "ageDays": 28,
+        "bucket": "late",
+        "overdue": true
+      },
+      {
+        "source": "logged",
+        "id": "g1",
+        "giver": "Ada",
+        "what": "a vase",
+        "receivedOn": "2027-03-04",
+        "acknowledgedOn": null,
+        "ageDays": 0,
+        "bucket": "fresh",
+        "overdue": false
+      }
+    ],
+    "thanked": [],
+    "total": 2,
+    "overdue": 1,
+    "headline": "1 unthanked > 3 weeks",
+    "buckets": [
+      {
+        "key": "fresh",
+        "label": "Under a week",
+        "count": 1
+      },
+      {
+        "key": "weeks",
+        "label": "1 to 3 weeks",
+        "count": 0
+      },
+      {
+        "key": "late",
+        "label": "3 to 6 weeks",
+        "count": 1
+      },
+      {
+        "key": "later",
+        "label": "Over 6 weeks",
+        "count": 0
+      }
+    ]
+  }
+}
