@@ -104,7 +104,7 @@ export async function executeApproved(tx: Tx, ctx: Ctx, r: Approved, seen: { fin
       const t = now();
       for (const g of guests) {
         await tx.guest.update({ where: { id: g.id }, data: { removedAt: t, removedRequestId: r.id } });
-        await logChange(tx, ctx, 'guest', 'deleted', g.id, `${g.name} (${g.household.name})`, { name: g.name, rsvp: g.rsvp, removed: false }, null, { twoKey: true });
+        await logChange(tx, ctx, 'guest', 'deleted', g.id, `${g.name} (${g.household.name})`, { name: g.name, rsvp: g.rsvp, removed: false }, null, mark);
       }
       const after = await loadGuestState(tx, ctx);
       if (after.count.attending !== before.count.attending) {
