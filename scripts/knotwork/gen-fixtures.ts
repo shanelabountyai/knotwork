@@ -6,7 +6,9 @@
 // recomputes it independently under pytest. The photo fixtures (strip verification, the moderation table, the upload
 // limits) are in gen-photo-fixtures.ts; tools/photo_limits.py is the oracle for the last two. Phase 4: fixtures/funding/
 // (P1-2, the pledge arithmetic) is written by the TypeScript replay and recomputed by tools/funding_oracle.py;
-// fixtures/thanks/ (P1-3, aging of the thank-you ledger) by thanks/aging.ts, recomputed by tools/thanks_oracle.py.
+// fixtures/thanks/ (P1-3, aging of the thank-you ledger) by thanks/aging.ts, recomputed by tools/thanks_oracle.py;
+// fixtures/namechange/ (P1-4, ordering and gating) by namechange/workflow.ts against the rules files, recomputed by
+// tools/namechange_oracle.py, which also re-checks the order of every file in rules/name-change/.
 import { existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
@@ -15,6 +17,8 @@ import { replay as replayFunding, type Step as FundingStep } from '../../src/lib
 import { replay, type Step } from '../../src/lib/knotwork/gifts/ledger';
 import { templatePlan } from '../../src/lib/knotwork/schedule/template';
 import { ledger, type Obligation } from '../../src/lib/knotwork/thanks/aging';
+import { RULESETS } from '../../src/lib/knotwork/namechange/rules';
+import { board, invariantProblems, replay as replayNameChange, type Op as NameOp } from '../../src/lib/knotwork/namechange/workflow';
 import { LIMITS_DIR, MODERATION_FILE, regenerateLimits, regenerateModeration, regenerateStrip, STRIP_DIR, writeStripImages, type LimitFx } from './gen-photo-fixtures';
 
 const DIR = 'fixtures/schedule';
@@ -63,6 +67,23 @@ export function regenerateThanks(fx: ThanksFx): string {
   return `${JSON.stringify({ name: fx.name, note: fx.note, today: fx.today, obligations: fx.obligations, expect: ledger(fx.obligations, fx.today) }, null, 2)}\n`;
 }
 
+const NAMECHANGE_DIR = 'fixtures/namechange';
+export type NameChangeFx = { name: string; note: string; rules: string; weddingDate: string; ops: NameOp[]; expect?: unknown };
+
+/**
+ * A name-change fixture with its expect block recomputed: each move's answer (allowed, or the refusal and what it
+ * names), the progress it ends with, that the gating's invariants hold there, which steps could start next, and each
+ * step's "from" day (the wedding date plus its offset).
+ */
+export function regenerateNameChange(fx: NameChangeFx): string {
+  const r = RULESETS[fx.rules];
+  if (!r) throw new Error(`${fx.name}: no rules file "${fx.rules}"`);
+  const { outcomes, final } = replayNameChange(r, fx.ops);
+  const b = board(r, final, fx.weddingDate);
+  const expect = { outcomes, final, invariants: invariantProblems(r, final), next: b.next, from: Object.fromEntries(b.phases.flatMap((p) => p.steps.map((s) => [s.key, s.from]))) };
+  return `${JSON.stringify({ name: fx.name, note: fx.note, rules: fx.rules, weddingDate: fx.weddingDate, ops: fx.ops, expect }, null, 2)}\n`;
+}
+
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const write = process.argv.includes('--write');
   if (write) writeFileSync(join(DIR, `${TEMPLATE_FIXTURE.name}.json`), regenerate(TEMPLATE_FIXTURE));
@@ -102,6 +123,15 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
       if (write) writeFileSync(join(THANKS_DIR, f), next);
     }
     console.log(`${next === text ? 'same ' : write ? 'wrote' : 'DIFF '} thanks/${f}`);
+  }
+  for (const f of readdirSync(NAMECHANGE_DIR).filter((n) => n.endsWith('.json')).sort()) {
+    const text = readFileSync(join(NAMECHANGE_DIR, f), 'utf8');
+    const next = regenerateNameChange(JSON.parse(text) as NameChangeFx);
+    if (next !== text) {
+      diffs++;
+      if (write) writeFileSync(join(NAMECHANGE_DIR, f), next);
+    }
+    console.log(`${next === text ? 'same ' : write ? 'wrote' : 'DIFF '} namechange/${f}`);
   }
   // Photos. Images are written only when missing, or with --images (their bytes depend on the encoder's version).
   for (const name of await writeStripImages(process.argv.includes('--images'))) console.log(`wrote photos/strip/${name}`);

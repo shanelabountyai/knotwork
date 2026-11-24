@@ -1,0 +1,133 @@
+{
+  "name": "08-repeats-and-unknowns",
+  "note": "Moves that make no sense are refused the same way every time: an unknown step or document, starting twice, finishing twice, stopping what never started.",
+  "rules": "us-ny",
+  "weddingDate": "2027-10-09",
+  "ops": [
+    {
+      "op": "start",
+      "key": "no-such-step"
+    },
+    {
+      "op": "hold",
+      "key": "no-such-document"
+    },
+    {
+      "op": "hold",
+      "key": "marriage-certificate"
+    },
+    {
+      "op": "hold",
+      "key": "marriage-certificate"
+    },
+    {
+      "op": "release",
+      "key": "proof-of-identity"
+    },
+    {
+      "op": "stop",
+      "key": "ssa"
+    },
+    {
+      "op": "reopen",
+      "key": "ssa"
+    },
+    {
+      "op": "hold",
+      "key": "proof-of-identity"
+    },
+    {
+      "op": "start",
+      "key": "ssa"
+    },
+    {
+      "op": "start",
+      "key": "ssa"
+    },
+    {
+      "op": "finish",
+      "key": "ssa"
+    },
+    {
+      "op": "finish",
+      "key": "ssa"
+    }
+  ],
+  "expect": {
+    "outcomes": [
+      {
+        "ok": false,
+        "code": "unknown-step",
+        "keys": []
+      },
+      {
+        "ok": false,
+        "code": "unknown-artifact",
+        "keys": []
+      },
+      {
+        "ok": true
+      },
+      {
+        "ok": false,
+        "code": "already-held",
+        "keys": []
+      },
+      {
+        "ok": false,
+        "code": "not-held",
+        "keys": []
+      },
+      {
+        "ok": false,
+        "code": "not-started",
+        "keys": []
+      },
+      {
+        "ok": false,
+        "code": "not-done",
+        "keys": []
+      },
+      {
+        "ok": true
+      },
+      {
+        "ok": true
+      },
+      {
+        "ok": false,
+        "code": "not-todo",
+        "keys": []
+      },
+      {
+        "ok": true
+      },
+      {
+        "ok": false,
+        "code": "already-done",
+        "keys": []
+      }
+    ],
+    "final": {
+      "steps": {
+        "ssa": "done"
+      },
+      "held": [
+        "marriage-certificate",
+        "proof-of-identity"
+      ]
+    },
+    "invariants": [],
+    "next": [],
+    "from": {
+      "ssa": "2027-10-16",
+      "dmv": "2027-10-23",
+      "vehicle": "2027-10-23",
+      "voter": "2027-10-23",
+      "passport": "2027-10-30",
+      "employer": "2027-10-23",
+      "bank": "2027-10-30",
+      "other-accounts": "2027-11-06"
+    }
+  }
+}

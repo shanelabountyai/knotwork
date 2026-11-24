@@ -308,3 +308,53 @@ def test_thanks_the_prd_headline_by_hand():
     # The bucket edges: 6 days is under a week, 7 is not; 21 is not "over 3 weeks", 22 is; 42 is "3 to 6", 43 is over 6.
     edges = next(f for p, f in THANKS if p.stem == "02-bucket-edges")["expect"]["owed"]
     assert [(o["ageDays"], o["bucket"], o["overdue"]) for o in edges] == [(43, "later", True), (42, "late", True), (22, "late", True), (21, "weeks", False), (7, "weeks", False), (6, "fresh", False), (0, "fresh", False)]
+
+
+# --- namechange: the name-change sequence's order and gating (P1-4) ----------------------------------------------------
+import namechange_oracle
+
+NAME_RULES = namechange_oracle.load_rules()
+NAME_FIXTURES = namechange_oracle.load()
+
+
+def test_the_rules_files_are_in_an_order_that_works():
+    assert set(NAME_RULES) == {"generic", "us-ca", "us-ny", "us-tx"}
+    assert [k for k, r in NAME_RULES.items() if r["fallback"]] == ["generic"]
+    for key, r in NAME_RULES.items():
+        assert r["jurisdiction"] == key
+        assert namechange_oracle.rule_problems(r) == [], key
+        # The PRD's order: federal first, accounts last.
+        assert r["steps"][0]["phase"] == "federal" and r["steps"][-1]["phase"] == "accounts", key
+        # Illustrative content: no money and no claim about how long anything takes.
+        text = json.dumps(r).lower()
+        assert "$" not in text and "fee" not in text.replace("fees or waiting times", ""), key
+        assert "business day" not in text and "weeks" not in text, key
+
+
+def test_the_oracle_catches_a_broken_order():
+    r = json.loads(json.dumps(NAME_RULES["generic"]))
+    r["steps"].insert(0, r["steps"].pop(1))  # the state step before the federal one it waits for
+    problems = namechange_oracle.rule_problems(r)
+    assert any("not earlier" in p for p in problems) and any("phase goes backwards" in p for p in problems)
+
+
+def test_there_are_namechange_fixtures():
+    assert len(NAME_FIXTURES) >= 8
+    codes = {o["code"] for _, fx in NAME_FIXTURES for o in fx["expect"]["outcomes"] if not o["ok"]}
+    assert {"prerequisites", "artifacts", "not-produced", "produced-held", "dependents", "in-use"} <= codes
+    assert {fx["rules"] for _, fx in NAME_FIXTURES} >= {"generic", "us-ca", "us-ny"}
+
+
+@pytest.mark.parametrize("path,fx", NAME_FIXTURES, ids=[p.stem for p, _ in NAME_FIXTURES])
+def test_namechange_expectations_match_the_oracle(path, fx):
+    assert fx["expect"] == namechange_oracle.expected(fx, NAME_RULES)
+    assert path.read_text() == namechange_oracle.dump(fx), "fixture is not in canonical JSON form"
+    # Whatever the story, the gating's three facts hold where it ends.
+    assert fx["expect"]["invariants"] == []
+
+
+def test_namechange_gating_by_hand():
+    # Nothing held, nothing done: the federal step is refused for both documents, and nothing can start.
+    r = NAME_RULES["generic"]
+    assert namechange_oracle.answer(r, {}, set(), "start", "ssa") == {"ok": False, "code": "artifacts", "keys": ["marriage-certificate", "proof-of-identity"]}
+    assert namechange_oracle.answer(r, {}, {"marriage-certificate", "proof-of-identity"}, "start", "dmv") == {"ok": False, "code": "prerequisites", "keys": ["ssa"]}

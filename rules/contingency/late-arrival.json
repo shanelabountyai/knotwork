@@ -1,0 +1,103 @@
+{
+  "title": "Someone is running late",
+  "note": "A starter plan (illustrative). Copy it, then change any of it to fit your day.",
+  "root": "who",
+  "nodes": {
+    "who": {
+      "type": "question",
+      "text": "Who is running late?",
+      "branches": [
+        {
+          "label": "One of us",
+          "next": "partner"
+        },
+        {
+          "label": "The officiant",
+          "next": "officiant"
+        },
+        {
+          "label": "Guests, because of traffic",
+          "next": "guests"
+        }
+      ]
+    },
+    "partner": {
+      "type": "leaf",
+      "title": "One of us is running late",
+      "checklist": [
+        "Tell the officiant and the planner how late",
+        "Hold the processional music"
+      ],
+      "notify": [
+        {
+          "vendorCategory": "officiant",
+          "message": "One of us is running late; we will start as soon as they arrive."
+        }
+      ],
+      "tasks": [],
+      "spends": []
+    },
+    "officiant": {
+      "type": "question",
+      "text": "How late?",
+      "branches": [
+        {
+          "label": "Under thirty minutes",
+          "next": "officiant-short"
+        },
+        {
+          "label": "More than that, or no answer",
+          "next": "officiant-long"
+        }
+      ]
+    },
+    "officiant-short": {
+      "type": "leaf",
+      "title": "Wait for the officiant",
+      "checklist": [
+        "Start cocktail hour early",
+        "Ask the DJ to play another set"
+      ],
+      "notify": [
+        {
+          "vendorCategory": "dj",
+          "message": "The ceremony starts later; please keep playing."
+        }
+      ],
+      "tasks": [],
+      "spends": []
+    },
+    "officiant-long": {
+      "type": "leaf",
+      "title": "Find another officiant",
+      "checklist": [
+        "Call the back-up officiant on your list",
+        "Tell the wedding party the start time is moving"
+      ],
+      "notify": [
+        {
+          "vendorCategory": "venue",
+          "message": "Our ceremony start is moving later."
+        }
+      ],
+      "tasks": [],
+      "spends": []
+    },
+    "guests": {
+      "type": "leaf",
+      "title": "Guests are delayed by traffic",
+      "checklist": [
+        "Wait up to fifteen minutes before the processional",
+        "Ask the ushers to seat late arrivals at the back"
+      ],
+      "notify": [
+        {
+          "vendorCategory": "venue",
+          "message": "Guests are delayed by traffic; the ceremony may start a little late."
+        }
+      ],
+      "tasks": [],
+      "spends": []
+    }
+  }
+}

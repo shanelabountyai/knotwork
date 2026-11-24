@@ -1,0 +1,126 @@
+{
+  "name": "05-reopen-with-dependents",
+  "note": "A done step cannot be reopened once a later step that waits for it has begun; stopping the later step first makes it possible.",
+  "rules": "generic",
+  "weddingDate": "2027-10-09",
+  "ops": [
+    {
+      "op": "hold",
+      "key": "marriage-certificate"
+    },
+    {
+      "op": "hold",
+      "key": "proof-of-identity"
+    },
+    {
+      "op": "finish",
+      "key": "ssa"
+    },
+    {
+      "op": "hold",
+      "key": "new-ss-card"
+    },
+    {
+      "op": "start",
+      "key": "employer"
+    },
+    {
+      "op": "start",
+      "key": "dmv"
+    },
+    {
+      "op": "reopen",
+      "key": "ssa"
+    },
+    {
+      "op": "release",
+      "key": "new-ss-card"
+    },
+    {
+      "op": "stop",
+      "key": "employer"
+    },
+    {
+      "op": "stop",
+      "key": "dmv"
+    },
+    {
+      "op": "release",
+      "key": "new-ss-card"
+    },
+    {
+      "op": "reopen",
+      "key": "ssa"
+    }
+  ],
+  "expect": {
+    "outcomes": [
+      {
+        "ok": true
+      },
+      {
+        "ok": true
+      },
+      {
+        "ok": true
+      },
+      {
+        "ok": true
+      },
+      {
+        "ok": true
+      },
+      {
+        "ok": true
+      },
+      {
+        "ok": false,
+        "code": "dependents",
+        "keys": [
+          "dmv",
+          "employer"
+        ]
+      },
+      {
+        "ok": false,
+        "code": "in-use",
+        "keys": [
+          "dmv",
+          "employer"
+        ]
+      },
+      {
+        "ok": true
+      },
+      {
+        "ok": true
+      },
+      {
+        "ok": true
+      },
+      {
+        "ok": true
+      }
+    ],
+    "final": {
+      "steps": {
+        "ssa": "started"
+      },
+      "held": [
+        "marriage-certificate",
+        "proof-of-identity"
+      ]
+    },
+    "invariants": [],
+    "next": [],
+    "from": {
+      "ssa": "2027-10-16",
+      "dmv": "2027-10-23",
+      "vehicle": "2027-10-23",
+      "passport": "2027-10-30",
+      "employer": "2027-10-23",
+      "bank": "2027-10-30",
+      "other-accounts": "2027-11-06"
+    }
+  }
+}

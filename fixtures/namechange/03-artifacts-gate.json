@@ -1,0 +1,87 @@
+{
+  "name": "03-artifacts-gate",
+  "note": "The first step needs two documents; it starts only once both are marked held, and each refusal names what is missing.",
+  "rules": "generic",
+  "weddingDate": "2027-10-09",
+  "ops": [
+    {
+      "op": "start",
+      "key": "ssa"
+    },
+    {
+      "op": "hold",
+      "key": "marriage-certificate"
+    },
+    {
+      "op": "start",
+      "key": "ssa"
+    },
+    {
+      "op": "finish",
+      "key": "ssa"
+    },
+    {
+      "op": "hold",
+      "key": "proof-of-identity"
+    },
+    {
+      "op": "start",
+      "key": "ssa"
+    }
+  ],
+  "expect": {
+    "outcomes": [
+      {
+        "ok": false,
+        "code": "artifacts",
+        "keys": [
+          "marriage-certificate",
+          "proof-of-identity"
+        ]
+      },
+      {
+        "ok": true
+      },
+      {
+        "ok": false,
+        "code": "artifacts",
+        "keys": [
+          "proof-of-identity"
+        ]
+      },
+      {
+        "ok": false,
+        "code": "artifacts",
+        "keys": [
+          "proof-of-identity"
+        ]
+      },
+      {
+        "ok": true
+      },
+      {
+        "ok": true
+      }
+    ],
+    "final": {
+      "steps": {
+        "ssa": "started"
+      },
+      "held": [
+        "marriage-certificate",
+        "proof-of-identity"
+      ]
+    },
+    "invariants": [],
+    "next": [],
+    "from": {
+      "ssa": "2027-10-16",
+      "dmv": "2027-10-23",
+      "vehicle": "2027-10-23",
+      "passport": "2027-10-30",
+      "employer": "2027-10-23",
+      "bank": "2027-10-30",
+      "other-accounts": "2027-11-06"
+    }
+  }
+}

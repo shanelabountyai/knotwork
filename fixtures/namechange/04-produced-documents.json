@@ -1,0 +1,103 @@
+{
+  "name": "04-produced-documents",
+  "note": "The new Social Security card comes out of the federal step: it cannot be held before that step is done, and that step cannot be reopened while it is held.",
+  "rules": "generic",
+  "weddingDate": "2027-10-09",
+  "ops": [
+    {
+      "op": "hold",
+      "key": "new-ss-card"
+    },
+    {
+      "op": "hold",
+      "key": "marriage-certificate"
+    },
+    {
+      "op": "hold",
+      "key": "proof-of-identity"
+    },
+    {
+      "op": "finish",
+      "key": "ssa"
+    },
+    {
+      "op": "hold",
+      "key": "new-ss-card"
+    },
+    {
+      "op": "reopen",
+      "key": "ssa"
+    },
+    {
+      "op": "release",
+      "key": "new-ss-card"
+    },
+    {
+      "op": "reopen",
+      "key": "ssa"
+    },
+    {
+      "op": "stop",
+      "key": "ssa"
+    }
+  ],
+  "expect": {
+    "outcomes": [
+      {
+        "ok": false,
+        "code": "not-produced",
+        "keys": [
+          "ssa"
+        ]
+      },
+      {
+        "ok": true
+      },
+      {
+        "ok": true
+      },
+      {
+        "ok": true
+      },
+      {
+        "ok": true
+      },
+      {
+        "ok": false,
+        "code": "produced-held",
+        "keys": [
+          "new-ss-card"
+        ]
+      },
+      {
+        "ok": true
+      },
+      {
+        "ok": true
+      },
+      {
+        "ok": true
+      }
+    ],
+    "final": {
+      "steps": {},
+      "held": [
+        "marriage-certificate",
+        "proof-of-identity"
+      ]
+    },
+    "invariants": [],
+    "next": [
+      "ssa"
+    ],
+    "from": {
+      "ssa": "2027-10-16",
+      "dmv": "2027-10-23",
+      "vehicle": "2027-10-23",
+      "passport": "2027-10-30",
+      "employer": "2027-10-23",
+      "bank": "2027-10-30",
+      "other-accounts": "2027-11-06"
+    }
+  }
+}

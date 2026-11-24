@@ -1,0 +1,78 @@
+{
+  "title": "Vendor no-show",
+  "note": "A starter plan (illustrative). Copy it, then change any of it to fit your day.",
+  "root": "who",
+  "nodes": {
+    "who": {
+      "type": "question",
+      "text": "Who has not arrived, thirty minutes past their time?",
+      "branches": [
+        {
+          "label": "The caterer",
+          "next": "caterer"
+        },
+        {
+          "label": "The DJ",
+          "next": "dj"
+        },
+        {
+          "label": "The photographer",
+          "next": "photographer"
+        }
+      ]
+    },
+    "caterer": {
+      "type": "leaf",
+      "title": "The caterer is late or missing",
+      "checklist": [
+        "Call the caterer's day-of contact",
+        "Ask the venue what food it can serve if they do not come",
+        "Hold the cocktail hour open for longer"
+      ],
+      "notify": [
+        {
+          "vendorCategory": "caterer",
+          "message": "You are past your arrival time: please call us now."
+        },
+        {
+          "vendorCategory": "venue",
+          "message": "Our caterer has not arrived; what can you serve?"
+        }
+      ],
+      "tasks": [],
+      "spends": []
+    },
+    "dj": {
+      "type": "leaf",
+      "title": "The DJ is late or missing",
+      "checklist": [
+        "Call the DJ's day-of contact",
+        "Ask a friend to run a playlist from a phone through the venue's speakers"
+      ],
+      "notify": [
+        {
+          "vendorCategory": "dj",
+          "message": "You are past your arrival time: please call us now."
+        }
+      ],
+      "tasks": [],
+      "spends": []
+    },
+    "photographer": {
+      "type": "leaf",
+      "title": "The photographer is late or missing",
+      "checklist": [
+        "Call the photographer's day-of contact",
+        "Ask two guests to take the photos of the ceremony"
+      ],
+      "notify": [
+        {
+          "vendorCategory": "photographer",
+          "message": "You are past your arrival time: please call us now."
+        }
+      ],
+      "tasks": [],
+      "spends": []
+    }
+  }
+}
