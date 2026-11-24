@@ -9,6 +9,7 @@ import { logChange } from '@/lib/knotwork/changelog';
 import { decide, propose } from '@/lib/knotwork/consent/store';
 import { requireWedding } from '@/lib/knotwork/context';
 import { addDays, dbOfDay, todayIn, type Day } from '@/lib/knotwork/days';
+import { addFunder, addPledge, allocate, linkFunder, receive } from '@/lib/knotwork/funding/store';
 import { addItem, contribute } from '@/lib/knotwork/gifts/store';
 import { applyRsvp, importHouseholds, releaseWave, savePlan } from '@/lib/knotwork/guests/store';
 import { addPhoto, createEvent, moderatePhoto } from '@/lib/knotwork/photos/store';
@@ -21,6 +22,8 @@ import { DEMO_TOTP_SECRET } from '../seed-demo';
 // `npm run seed:couple` (after db:setup; independent of seed:demo): the Knotwork demo seed (PRD Phase 1 gate).
 // ONE SYNTHETIC COUPLE. Every person, vendor, address and amount here is invented; none is a real person or business.
 //   Juniper Vale and Rowan Ashby: the two partners (both owners).  Maple Okafor: a helper who can see the budget.
+//   Hazel Vale (Phase 4, P1-2): Juniper's mother, a helper linked to the funder "Hazel & Oren Vale"; she sees only what
+//   that pledge paid for. Juniper also keeps one spend private until the wedding day (P1-1).
 //   The wedding is 330 days from today (America/Chicago), from the default template, so the demo move of six weeks
 //   has room. Venue and caterer are booked, each by a real two-key request (Juniper proposes, Rowan approves); the
 //   florist is still being considered.
@@ -35,6 +38,7 @@ export const COUPLE = {
   juniper: { email: 'juniper@knotwork.demo.test', name: 'Juniper Vale' },
   rowan: { email: 'rowan@knotwork.demo.test', name: 'Rowan Ashby' },
   maple: { email: 'maple@knotwork.demo.test', name: 'Maple Okafor' },
+  hazel: { email: 'hazel@knotwork.demo.test', name: 'Hazel Vale' },
 } as const;
 
 type Ctx = { orgId: string; userId: string; role: 'owner' };
@@ -57,11 +61,11 @@ export async function seedCouple(opts: { today?: Day } = {}): Promise<string[]> 
   const old = await db.org.findUnique({ where: { slug: COUPLE.slug }, select: { id: true } });
   if (old) await withOrg({ orgId: old.id }, (tx) => tx.org.delete({ where: { id: old.id } }));
 
-  const [juniper, rowan, maple] = [await user(COUPLE.juniper, true), await user(COUPLE.rowan, true), await user(COUPLE.maple, false)];
+  const [juniper, rowan, maple, hazel] = [await user(COUPLE.juniper, true), await user(COUPLE.rowan, true), await user(COUPLE.maple, false), await user(COUPLE.hazel, false)];
   const orgId = crypto.randomUUID();
   await withOrg({ orgId }, async (tx) => {
     await tx.org.create({ data: { id: orgId, slug: COUPLE.slug, name: COUPLE.name } });
-    await tx.membership.createMany({ data: [{ orgId, userId: juniper.id, role: 'owner' }, { orgId, userId: rowan.id, role: 'owner' }, { orgId, userId: maple.id, role: 'member' }] });
+    await tx.membership.createMany({ data: [{ orgId, userId: juniper.id, role: 'owner' }, { orgId, userId: rowan.id, role: 'owner' }, { orgId, userId: maple.id, role: 'member' }, { orgId, userId: hazel.id, role: 'member' }] });
   });
   const a: Ctx = { orgId, userId: juniper.id, role: 'owner' };
   const b: Ctx = { orgId, userId: rowan.id, role: 'owner' };
@@ -123,6 +127,27 @@ export async function seedCouple(opts: { today?: Day } = {}): Promise<string[]> 
     const g = await tx.helperGrant.create({ data: { orgId, userId: maple.id, scope: 'budget_view', grantedById: juniper.id } });
     await logChange(tx, a, 'grant', 'granted', g.id, `${COUPLE.maple.email}: See the budget`, null, { userId: maple.id, scope: 'budget_view' });
     await takeSnapshot(tx, a, 'After the venue deposit');
+  });
+
+  // Phase 4, P1-1: Juniper's surprise for Rowan, a spend private to her until the wedding day. Rowan and the helpers
+  // see a "Private spend" line; its $180.00 is in every total.
+  await withOrg({ orgId }, async (tx) => {
+    await createExpense(tx, a, await requireWedding(tx, a), { categoryId: categories.get('Attire')!, vendorId: null, description: 'Engraved cufflinks for Rowan', amountCents: 18_000, paidOn: today, paymentId: null, secret: { privateToId: juniper.id, revealDays: 0 } }, null);
+  });
+
+  // Phase 4, P1-2: two families help pay. Juniper's parents pledged $5,000.00 toward the venue, sent $3,000.00 in two
+  // parts, and $2,000.00 of it paid the venue deposit; Rowan's aunt pledged $1,500.00 toward catering, nothing sent yet.
+  // Hazel's own account is linked to her funder, so she sees that part only.
+  await withOrg({ orgId }, async (tx) => {
+    const vales = await addFunder(tx, a, 'Hazel & Oren Vale', 'Juniper\'s parents');
+    const wren = await addFunder(tx, b, 'Aunt Wren Ashby', 'Rowan\'s aunt');
+    const venue = await addPledge(tx, a, vales.id, categories.get('Venue')!, 500_000);
+    await addPledge(tx, b, wren.id, categories.get('Catering')!, 150_000);
+    await receive(tx, a, venue.id, 200_000, addDays(today, -1), 'first cheque');
+    await receive(tx, a, venue.id, 100_000, today, 'second cheque');
+    const deposit = await tx.expense.findFirstOrThrow({ where: { orgId, description: 'Cedar Hollow Barn: Deposit' }, select: { id: true } });
+    await allocate(tx, a, venue.id, deposit.id, 200_000);
+    await linkFunder(tx, a, vales.id, hazel.id, COUPLE.hazel.email);
   });
 
   // Phase 2: the guest list. Cap 12. The A list fills it exactly (12 seats, two of them plus-ones still open); the B
@@ -218,6 +243,7 @@ export async function seedCouple(opts: { today?: Day } = {}): Promise<string[]> 
     `${COUPLE.juniper.email}  owner (partner)  (TOTP)`,
     `${COUPLE.rowan.email}  owner (partner)  (TOTP)`,
     `${COUPLE.maple.email}  member (helper: sees the budget)`,
+    `${COUPLE.hazel.email}  member (helper: a funder, sees only her own pledge)`,
   ];
 }
 
