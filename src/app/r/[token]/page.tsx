@@ -8,9 +8,14 @@ import { readRsvp } from '@/lib/knotwork/guests/public';
 // RULE 3: this page is guest-facing. It renders the RsvpView and nothing else: no list, wave, invite date or state
 // exists in that shape. No-store and no-referrer headers come from next.config.ts on /r/:path*.
 export const dynamic = 'force-dynamic';
-export const metadata = { title: 'RSVP', robots: { index: false, follow: false } };
+// The title says what happened, so a screen-reader user hears it when the page reloads after a reply (review 2026-11-24, S6).
+export async function generateMetadata({ searchParams }: { searchParams: Promise<{ done?: string; e?: string }> }) {
+  const q = await searchParams;
+  const title = typeof q.e === 'string' && isRsvpProblem(q.e) ? 'Not saved: RSVP' : q.done ? 'Saved: RSVP' : 'RSVP';
+  return { title, robots: { index: false, follow: false } };
+}
 
-const NOTE: Record<string, string> = { thanks: 'Thank you. Your reply is saved; you can change it here until the RSVP date.', limited: 'Too many tries. Wait a few minutes and try again.' };
+const NOTE = { thanks: 'Thank you. Your reply is saved; you can change it here until the RSVP date.' };
 
 export default async function Rsvp({ params, searchParams }: { params: Promise<{ token: string }>; searchParams: Promise<{ done?: string; e?: string }> }) {
   const { token } = await params;
@@ -25,8 +30,9 @@ export default async function Rsvp({ params, searchParams }: { params: Promise<{
       <h1>{view.wedding.title}</h1>
       <p>{view.wedding.dateText}</p>
       <p>Dear {view.householdName}, please reply by <strong>{view.rsvpByText}</strong>.</p>
-      {q.done && <p role="status">{NOTE.thanks}</p>}
-      {problem && <p role="alert">{problem}</p>}
+      {/* The message takes focus when the page loads after a reply: a live region that is already in the page at load is often not announced. */}
+      {q.done && !problem && <p role="status" tabIndex={-1} autoFocus>{NOTE.thanks}</p>}
+      {problem && <p role="alert" tabIndex={-1} autoFocus>{problem} Nothing was saved; please fill the form in again.</p>}
       <form method="post" action={`/r/${token}/respond`}>
         {view.guests.map((g) => (
           <fieldset key={g.id}>
@@ -37,10 +43,14 @@ export default async function Rsvp({ params, searchParams }: { params: Promise<{
               <label>Meal <select name={`meal:${g.id}`} defaultValue={g.meal ?? ''} aria-label={`Meal for ${g.name}`}><option value="">choose</option>{view.mealOptions.map((m) => <option key={m} value={m}>{m}</option>)}</select></label>
             )}
             {g.ageGroup === 'child' && <p>A children&apos;s meal is provided.</p>}
-            <p>Dietary needs</p>
-            {DIETARY.map((d) => <label key={d}><input type="checkbox" name={`dietary:${g.id}`} value={d} defaultChecked={g.dietary.includes(d)} /> {TAG_LABEL[d]}</label>)}
-            <p>Access needs</p>
-            {ACCESSIBILITY.map((d) => <label key={d}><input type="checkbox" name={`accessibility:${g.id}`} value={d} defaultChecked={g.accessibility.includes(d)} /> {TAG_LABEL[d]}</label>)}
+            <fieldset>
+              <legend>Dietary needs</legend>
+              {DIETARY.map((d) => <label key={d}><input type="checkbox" name={`dietary:${g.id}`} value={d} defaultChecked={g.dietary.includes(d)} /> {TAG_LABEL[d]}</label>)}
+            </fieldset>
+            <fieldset>
+              <legend>Access needs</legend>
+              {ACCESSIBILITY.map((d) => <label key={d}><input type="checkbox" name={`accessibility:${g.id}`} value={d} defaultChecked={g.accessibility.includes(d)} /> {TAG_LABEL[d]}</label>)}
+            </fieldset>
             <label>A song that gets you dancing <input name={`song:${g.id}`} maxLength={120} defaultValue={g.songRequest} /></label>
           </fieldset>
         ))}

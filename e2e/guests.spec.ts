@@ -121,6 +121,16 @@ test('a guest names their plus-one and picks a meal; a reply for someone else\'s
   const guest = await (await browser.newContext()).newPage();
   await guest.goto(links.priya);
   const priya = guest.getByRole('group', { name: 'Priya Rao' });
+  // Review 2026-11-24 (S6, S7): a reply that cannot be saved comes back with a fixed sentence that takes focus, a
+  // title that says so, and only a code in the address. Dietary and access needs are named groups.
+  await priya.getByLabel('Will attend').check();
+  await guest.getByRole('button', { name: 'Send reply' }).click();
+  await expect(guest.getByRole('alert').filter({ hasText: 'Pick a meal' })).toHaveText('Pick a meal for each person who is coming. Nothing was saved; please fill the form in again.');
+  await expect(guest.getByRole('alert').filter({ hasText: 'Pick a meal' })).toBeFocused();
+  await expect(guest).toHaveTitle(/^Not saved: RSVP/);
+  expect(new URL(guest.url()).search).toBe('?e=meal');
+  await expect(priya.getByRole('group', { name: 'Dietary needs' })).toBeVisible();
+  await expect(priya.getByRole('group', { name: 'Access needs' })).toBeVisible();
   await priya.getByLabel('Will attend').check();
   await priya.getByLabel('Meal for Priya Rao').selectOption('Vegetarian');
   await priya.getByLabel('Vegetarian', { exact: true }).check();
@@ -128,6 +138,8 @@ test('a guest names their plus-one and picks a meal; a reply for someone else\'s
   await guest.getByLabel('You are welcome to bring a guest. Their name').fill('Robin Rao');
   await guest.getByRole('button', { name: 'Send reply' }).click();
   await expect(guest.getByRole('status')).toContainText('Thank you');
+  await expect(guest.getByRole('status')).toBeFocused();
+  await expect(guest).toHaveTitle(/^Saved: RSVP/);
   await expect(guest.getByRole('group', { name: 'Robin Rao' })).toBeVisible(); // now on the invitation
   await guest.context().close();
   // A cross-site post is refused outright (no Origin match), like the template's login.
