@@ -1,11 +1,10 @@
 import Link from 'next/link';
-import { inOrg, requireOrg } from '@/core/authz/guards';
-import { now } from '@/core/clock';
+import { requireOrg } from '@/core/authz/guards';
 import { ActionForm } from '@/core/ui/action-form';
 import { allows, isPartner } from '@/lib/knotwork/access';
 import { diffDays, showDay } from '@/lib/knotwork/days';
 import { loadGuestState } from '@/lib/knotwork/guests/store';
-import { loadSchedule } from '@/lib/knotwork/schedule/store';
+import { overviewView } from '@/lib/knotwork/secrecy/views';
 import { flagText } from '@/lib/knotwork/vendors/store';
 import { createWedding } from './wedding/actions';
 import { WeddingNav } from './wedding/bits';
@@ -14,16 +13,15 @@ import { view } from './wedding/view';
 export const metadata = { title: 'Overview' };
 
 // The workspace home. No wedding yet: the form that creates one. Otherwise the four counts a couple checks first
-// (PRD P0-2: "unacknowledged flags surface on the dashboard"). The fuller P1-7 dashboard is Phase 4.
+// (PRD P0-2: "unacknowledged flags surface on the dashboard"). The fuller P1-7 dashboard is Phase 4. Tasks and flags
+// come through secrecy/views.ts (P1-1): a private task counts, unnamed.
 export default async function OrgHome({ params }: { params: Promise<{ org: string }> }) {
   const ctx = await requireOrg((await params).org);
   const data = await view(ctx, 'schedule.view', async (tx, v) => {
-    const { schedule, plan } = await loadSchedule(tx, ctx, v.wedding);
     // One at a time: these share the transaction's single connection.
-    const waiting = await tx.consentRequest.count({ where: { ...inOrg(ctx), status: 'pending', expiresAt: { gt: now() }, proposerId: { not: ctx.userId } } });
-    const flags = allows(v.who, 'vendors.view') ? await tx.vendorFlag.findMany({ where: { ...inOrg(ctx), ackAt: null }, include: { vendor: { select: { id: true, name: true } } }, orderBy: { raisedAt: 'asc' } }) : [];
+    const o = await overviewView(tx, ctx, v, allows(v.who, 'vendors.view'));
     const guests = allows(v.who, 'guests.view') ? await loadGuestState(tx, ctx) : null;
-    return { schedule, plan, waiting, flags, guests };
+    return { o, guests };
   });
 
   if (!data) {
@@ -48,9 +46,8 @@ export default async function OrgHome({ params }: { params: Promise<{ org: strin
     );
   }
 
-  const { v, schedule, plan, waiting, flags, guests } = data;
-  const states = Object.values(schedule.tasks);
-  const [late, impossible] = [states.filter((t) => t.state === 'late').length, states.filter((t) => t.state === 'impossible').length];
+  const { v, o, guests } = data;
+  const { waiting, flags, late, impossible } = o;
   const daysToGo = diffDays(v.date, v.today);
   const partner = isPartner(ctx.role);
   return (
@@ -62,19 +59,19 @@ export default async function OrgHome({ params }: { params: Promise<{ org: strin
         {partner && <> · <Link href={`/o/${ctx.slug}/wedding/date`}>Move the date</Link></>}
       </p>
       <ul aria-label="At a glance">
-        <li><Link href={`/o/${ctx.slug}/wedding/schedule`}>{plan.filter((t) => !t.done).length} open tasks</Link>: {late} late, {impossible} impossible</li>
+        <li><Link href={`/o/${ctx.slug}/wedding/schedule`}>{o.open} open tasks</Link>: {late} late, {impossible} impossible</li>
         {partner && <li><Link href={`/o/${ctx.slug}/wedding/approvals`}>{waiting} waiting for your approval</Link></li>}
         {allows(v.who, 'vendors.view') && <li><Link href={`/o/${ctx.slug}/wedding/flags`}>{flags.length} vendors need re-confirmation</Link></li>}
         {guests && guests.rows.length > 0 && <li><Link href={`/o/${ctx.slug}/wedding/guests`}>{guests.count.attending} guests attending</Link>, {guests.count.pending} not answered; {guests.cap.held} of {guests.plan.cap} seats held</li>}
-        {schedule.marginDays !== null && <li>{schedule.marginDays >= 0 ? `${schedule.marginDays} days of margin on the longest chain of tasks` : `${-schedule.marginDays} days short on the longest chain of tasks`}</li>}
+        {o.marginDays !== null && <li>{o.marginDays >= 0 ? `${o.marginDays} days of margin on the longest chain of tasks` : `${-o.marginDays} days short on the longest chain of tasks`}</li>}
       </ul>
       {flags.length > 0 && (
         <section aria-label="Needs re-confirmation">
           <h2>Needs re-confirmation</h2>
           <ul>
-            {flags.map((f) => (
-              <li key={f.id}><Link href={`/o/${ctx.slug}/wedding/vendors/${f.vendor.id}`}>{f.vendor.name}</Link>: {flagText(f.reason, f.detail)}</li>
-            ))}
+            {flags.map((f, n) => (f.hidden
+              ? <li key={`hidden-${n}`}>{f.label}: needs re-confirmation</li>
+              : <li key={f.row.id}><Link href={`/o/${ctx.slug}/wedding/vendors/${f.row.vendor.id}`}>{f.row.vendor.name}</Link>: {flagText(f.row.reason, f.row.detail)}</li>))}
           </ul>
         </section>
       )}

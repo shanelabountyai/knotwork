@@ -23,6 +23,7 @@ export function diff(before: Plain | null, after: Plain | null): { before: Plain
 const VERB_TEXT: Record<string, string> = {
   created: 'added', updated: 'changed', deleted: 'removed', proposed: 'proposed', approved: 'approved', declined: 'declined', withdrawn: 'withdrew',
   expired: 'expired', moved: 'moved', raised: 'flagged', acknowledged: 'acknowledged', generated: 'generated', granted: 'granted', revoked: 'revoked', paid: 'paid', taken: 'took',
+  hidden: 'made private', revealed: 'revealed', linked: 'linked', unlinked: 'unlinked',
 };
 
 /** 'knotwork.vendor.updated' → { entity: 'vendor', verb: 'updated', text: 'changed' }; null for an action that is not ours. */

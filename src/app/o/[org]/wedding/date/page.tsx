@@ -2,7 +2,7 @@ import { inOrg, requireOrg } from '@/core/authz/guards';
 import { now } from '@/core/clock';
 import { ActionForm } from '@/core/ui/action-form';
 import { isRealDay, showDay } from '@/lib/knotwork/days';
-import { previewDateMove } from '@/lib/knotwork/schedule/store';
+import { movePreview } from '@/lib/knotwork/secrecy/views';
 import { proposeDateMove } from '../actions';
 import { MovePreviewView, NoWedding, WeddingNav } from '../bits';
 import { view } from '../view';
@@ -15,7 +15,7 @@ export default async function MoveDate({ params, searchParams }: { params: Promi
   const ctx = await requireOrg((await params).org);
   const to = ((await searchParams).to ?? '').trim();
   const data = await view(ctx, 'consent.propose', async (tx, v) => ({
-    move: isRealDay(to) && to !== v.date ? await previewDateMove(tx, ctx, v.wedding, to) : null,
+    move: isRealDay(to) && to !== v.date ? await movePreview(tx, ctx, v, to) : null, // P1-1: private task titles masked
     waiting: await tx.consentRequest.findFirst({ where: { ...inOrg(ctx), kind: 'change_date', status: 'pending', expiresAt: { gt: now() } }, select: { summary: true } }),
   }));
   if (!data) return <NoWedding slug={ctx.slug} />;

@@ -44,10 +44,14 @@ describe('rule 1: all deadlines derive from the anchor (no free-floating dates)'
     'PhotoDevice.blockedAt': 'a date of fact: when a moderator blocked the device', 'Photo.createdAt': 'row timestamp: when the photo was stored',
     'Photo.purgedAt': 'a date of fact: when the retention purge deleted its bytes (the day it falls due is derived, never stored)',
     'VendorAttachment.createdAt': 'row timestamp',
+    // Phase 4. P1-1 adds no date: a reveal point is Task/Expense/Vendor/BudgetCategory.revealDays, a whole number of days
+    // from Wedding.date (D-92). P1-2: the day money arrived is a date of fact.
+    'Funder.createdAt': 'row timestamp', 'FunderPledge.createdAt': 'row timestamp', 'FunderAllocation.createdAt': 'row timestamp: when the payment from the pledge was recorded',
+    'FunderReceipt.receivedOn': 'a date of fact: the day the money arrived', 'FunderReceipt.createdAt': 'row timestamp',
   };
 
-  it('finds the clone\'s twenty-eight models', () => {
-    expect(models.map((m) => m.name)).toHaveLength(28); // twenty from Phases 1 and 2, three for gifting, five for photos and attachments
+  it('finds the clone\'s thirty-two models', () => {
+    expect(models.map((m) => m.name)).toHaveLength(32); // twenty from Phases 1 and 2, three for gifting, five for photos and attachments, four for funding (P1-2)
   });
   it('a photo event stores day counts, and both of its days are worked out from the wedding date', () => {
     const event = models.find((m) => m.name === 'PhotoEvent')!.body;
@@ -345,5 +349,86 @@ describe('P0-5 privacy: the couple\'s side never reads what one household gave',
     }
     expect(strip(read('src/lib/knotwork/gifts/public.ts'))).not.toMatch(/asSystem|gifts\/couple|\.\/couple/);
     expect(strip(read('src/lib/knotwork/gifts/projection.ts'))).not.toMatch(/\b(list|wave\w*|priority|invitedOn|createdAt)\b/); // the words do not occur in the guest's shape at all
+  });
+});
+
+// Phase 4, P1-1 (ADR-001): the other partner's view, and every helper's, passes through ONE masking function.
+describe('P1-1 secrecy: every view of a task, expense, vendor or category passes through the lens', () => {
+  const strip = (text: string) => text.replace(/\/\/[^\n]*|\/\*[\s\S]*?\*\//g, '');
+  const LENS = 'src/lib/knotwork/secrecy/lens.ts';
+  const VIEWS = 'src/lib/knotwork/secrecy/views.ts';
+  // Knotwork's signed-in entry points: the workspace home and everything under /wedding (pages and route handlers).
+  const entry = src.filter((f) => /^src\/app\/o\/\[org\]\/(page\.tsx|wedding\/(.+\/)?(page|route)\.tsx?)$/.test(f));
+  const READS = /\.(task|vendor|expense|budgetCategory|vendorPayment|vendorFlag|vendorBrief|vendorAttachment|budgetSnapshot|scheduleBaseline|funder|funderPledge|funderReceipt|funderAllocation)\.(findMany|findFirst|findUnique|findFirstOrThrow|findUniqueOrThrow|count|aggregate|groupBy)\(|\b(loadSchedule|loadTasks|loadBudget|changeLog|previewDateMove|listAttachments|readAttachment|briefInput|fundingByCategory)\(/;
+
+  it('no signed-in page or route reads those tables, the schedule, the budget or the change log itself', () => {
+    expect(entry.length).toBeGreaterThanOrEqual(30);
+    expect(entry.filter((f) => READS.test(strip(read(f))))).toEqual([]);
+  });
+  it('the pages that show them read them from secrecy/views.ts (or, for funding, funding/store.ts fundingView)', () => {
+    const want: Record<string, RegExp> = {
+      'src/app/o/[org]/page.tsx': /overviewView\(/, 'src/app/o/[org]/wedding/schedule/page.tsx': /scheduleView\(/, 'src/app/o/[org]/wedding/budget/page.tsx': /budgetView\(/,
+      'src/app/o/[org]/wedding/vendors/page.tsx': /vendorsView\(/, 'src/app/o/[org]/wedding/vendors/[id]/page.tsx': /vendorView\(/, 'src/app/o/[org]/wedding/flags/page.tsx': /flagsView\(/,
+      'src/app/o/[org]/wedding/activity/page.tsx': /activityView\(/, 'src/app/o/[org]/wedding/approvals/page.tsx': /movePreview\(/, 'src/app/o/[org]/wedding/date/page.tsx': /movePreview\(/,
+      'src/app/o/[org]/wedding/funding/page.tsx': /fundingView\(/, 'src/app/o/[org]/wedding/vendors/[id]/attachments/[attachment]/route.ts': /attachmentFile\(/,
+      'src/app/o/[org]/wedding/vendors/[id]/attachments/route.ts': /vendorVisible\(/,
+    };
+    for (const [f, re] of Object.entries(want)) expect(strip(read(f)), f).toMatch(re);
+  });
+  it('every loader in views.ts builds its answer with lens(); the funding reader does too', () => {
+    const views = strip(read(VIEWS));
+    const loaders = [...views.matchAll(/export async function (\w+)\(/g)].map((m) => m[1]!);
+    expect(loaders.sort()).toEqual(['activityView', 'attachmentFile', 'budgetView', 'flagsView', 'fundingOptions', 'movePreview', 'overviewView', 'scheduleView', 'vendorView', 'vendorVisible', 'vendorsView']);
+    for (const name of loaders) {
+      const body = views.slice(views.indexOf(`export async function ${name}(`)).split(/\nexport /)[0]!;
+      expect(body, name).toMatch(/lens\(|flagsView\(|vendorVisible\(/); // overview reuses flagsView; attachmentFile reuses vendorVisible
+    }
+    const fundingView = strip(read('src/lib/knotwork/funding/store.ts')).split('export async function fundingView(')[1]!.split(/\nexport /)[0]!;
+    expect(fundingView).toMatch(/const L = lens\(seen\);/);
+    expect(fundingView).toMatch(/L\.ofCategory</);
+    expect(fundingView).toMatch(/L\.expense\(/);
+  });
+  it('lens.ts is the only maker of a masked line, and it is pure', () => {
+    expect(filesWith(/hidden: true/)).toEqual([LENS]);
+    expect([...read(LENS).matchAll(/from '([^']+)'/g)].map((m) => m[1]).every((i) => i!.startsWith('.'))).toBe(true);
+  });
+  it('the change log is masked at write: logChange asks sealedNow before every entry', () => {
+    const log = strip(read('src/lib/knotwork/changelog.ts'));
+    expect(log).toMatch(/\(await sealedNow\(tx, ctx\.orgId, entity, id\)\)\s+\? \{ label: PRIVATE_ENTRY, before: null, after: null, private: true/);
+    expect(filesWith(/\baudit\(ctx, `\$\{PREFIX\}/)).toEqual(['src/lib/knotwork/changelog.ts']);
+    // An entry about a row that is about to be deleted is written first, while its privacy can still be read.
+    for (const [f, del] of [['src/app/o/[org]/wedding/actions.ts', 'tx.task.delete('], ['src/lib/knotwork/vendors/attachments.ts', 'tx.vendorAttachment.delete('], ['src/lib/knotwork/funding/store.ts', 'tx.funderReceipt.delete(']] as const) {
+      const text = strip(read(f));
+      expect(text.indexOf(del), f).toBeGreaterThan(text.lastIndexOf('logChange(', text.indexOf(del)));
+    }
+  });
+  it('what is stored and shared is written for nobody, and the export is built for nobody', () => {
+    expect(strip(read('src/lib/knotwork/schedule/store.ts'))).toMatch(/nobodyLens\(tx, ctx\.orgId\)\)\?\.titles\(/);
+    expect(strip(read('src/lib/knotwork/budget-store.ts'))).toMatch(/const L = await nobodyLens\(tx, ctx\.orgId\);/);
+    expect(strip(read('src/lib/knotwork/vendors/store.ts'))).toMatch(/!L\?\.task\(t\)\.hidden/);
+    const hooks = strip(read('src/app/export-hooks.ts'));
+    for (const [table, fn] of [['Task', 'exportTasks'], ['Expense', 'exportExpenses'], ['BudgetCategory', 'exportCategories'], ['Vendor', 'exportVendors'], ['VendorPayment', 'exportVendorPayments'], ['VendorBrief', 'exportVendorBriefs'], ['VendorAttachment', 'exportVendorAttachments'], ['ScheduleBaseline', 'exportBaselines'], ['BudgetSnapshot', 'exportBudgetSnapshots']]) {
+      expect(hooks, table).toContain(`whole('${table}', ${fn})`);
+    }
+  });
+  it('privacy is two columns on four tables, an offset in days (no stored reveal date), and the database half is in the migration', () => {
+    const schema = read('prisma/schema/knotwork.prisma');
+    const withPrivacy = [...schema.matchAll(/^model (\w+) \{([\s\S]*?)^\}/gm)].filter((m) => /privateToId/.test(m[2]!)).map((m) => m[1]);
+    expect(withPrivacy).toEqual(['Task', 'BudgetCategory', 'Expense', 'Vendor']);
+    for (const m of withPrivacy) expect(schema).toMatch(new RegExp(`model ${m} \\{[\\s\\S]*?revealDays\\s+Int\\?`));
+    const sql = read('prisma/migrations/20261126000000_knotwork_secrecy_funders/migration.sql');
+    for (const c of ['Vendor_designated_shared_check', 'Expense_designated_shared_check', 'Task_reveal_check', 'Vendor_reveal_check', 'Expense_reveal_check', 'BudgetCategory_reveal_check']) expect(sql).toContain(`"${c}"`);
+    for (const t of ['Task_private_owner', 'BudgetCategory_private_owner', 'Expense_private_owner', 'Vendor_private_owner', 'FunderPledge_check', 'FunderReceipt_check', 'FunderAllocation_check']) expect(sql).toContain(`CREATE ${/_check$/.test(t) ? 'CONSTRAINT ' : ''}TRIGGER "${t}"`);
+  });
+  it('a designated proposal reveals what it names first; only the secrecy store writes privacy on an existing row', () => {
+    const actions = strip(read('src/app/o/[org]/wedding/actions.ts'));
+    for (const kind of ['book_vendor', 'sign_contract', 'spend']) {
+      const at = actions.search(new RegExp(`await propose\\(tx, ctx, [^\\n]*?'${kind}'`));
+      expect(at, kind).toBeGreaterThan(0);
+      expect(actions.lastIndexOf('revealForProposal(', at), kind).toBeGreaterThan(actions.lastIndexOf('orgAction(', at));
+    }
+    expect(filesWith(/\bsetExpenseCompartment\(/)).toEqual(['src/lib/knotwork/budget-store.ts', 'src/lib/knotwork/secrecy/store.ts']);
+    expect(filesWith(/\bsetPrivacy\(/)).toEqual(['src/app/o/[org]/wedding/privacy/actions.ts', 'src/lib/knotwork/secrecy/store.ts']);
+    expect(filesWith(/\brevealForProposal\(/)).toEqual(['src/app/o/[org]/wedding/actions.ts', 'src/lib/knotwork/secrecy/store.ts']);
   });
 });

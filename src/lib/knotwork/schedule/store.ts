@@ -6,6 +6,7 @@ import type { Prisma } from '@/generated/prisma/client';
 import { logChange } from '../changelog';
 import { requireWedding, todayOf, weddingDay, type WeddingRow } from '../context';
 import { dbOfDay, showDay, type Day } from '../days';
+import { nobodyLens } from '../secrecy/seal';
 import { flagsForDateMove } from '../vendors/scope';
 import { computeSchedule, previewMove, validatePlan, type Invalid, type MovePreview, type PlanTask, type Schedule } from './engine';
 import { RSVP_TASK_KEY, rsvpBufferDays } from './rsvp';
@@ -14,7 +15,7 @@ import { DEFAULT_TEMPLATE } from './template';
 type Ctx = { orgId: string; userId: string | null };
 
 export const loadTasks = (tx: Tx, ctx: { orgId: string }) =>
-  tx.task.findMany({ where: inOrg(ctx), include: { dependsOn: { select: { dependsOnId: true } }, payment: { select: { id: true, vendorId: true, amountCents: true, paidOn: true } } }, orderBy: [{ createdAt: 'asc' }, { id: 'asc' }] });
+  tx.task.findMany({ where: inOrg(ctx), include: { dependsOn: { select: { dependsOnId: true } }, payment: { select: { id: true, vendorId: true, amountCents: true, paidOn: true } }, vendor: { select: { privateToId: true, revealDays: true } } }, orderBy: [{ createdAt: 'asc' }, { id: 'asc' }] });
 export type TaskRow = Awaited<ReturnType<typeof loadTasks>>[number];
 
 export const toPlan = (rows: readonly TaskRow[]): PlanTask[] =>
@@ -86,8 +87,10 @@ export async function commitMove(tx: Tx, ctx: Ctx, input: { to: Day; fingerprint
   if (preview.fingerprint !== input.fingerprint) throw new Refused('The plan changed since this preview was made. Look at the new preview, then approve again.');
   const before = computeSchedule(plan, from, todayOf(wedding));
   await tx.wedding.update({ where: { orgId: ctx.orgId }, data: { date: dbOfDay(input.to), dateRequestId: input.requestId } });
+  // The baseline is shared and exported: a task that is private right now is stored as "Private task" (ADR-001).
+  const titles = (await nobodyLens(tx, ctx.orgId))?.titles(await loadTasks(tx, ctx));
   const snapshot = {
-    tasks: Object.fromEntries(plan.map((t) => [t.id, { title: t.title, dueFrom: before.tasks![t.id]!.due, dueTo: preview.tasks[t.id]!.due, startByFrom: before.tasks![t.id]!.startBy, startByTo: preview.tasks[t.id]!.startBy, state: preview.tasks[t.id]!.state }])),
+    tasks: Object.fromEntries(plan.map((t) => [t.id, { title: titles?.get(t.id) ?? t.title, dueFrom: before.tasks![t.id]!.due, dueTo: preview.tasks[t.id]!.due, startByFrom: before.tasks![t.id]!.startBy, startByTo: preview.tasks[t.id]!.startBy, state: preview.tasks[t.id]!.state }])),
     late: preview.late,
     impossible: preview.impossible,
     resolved: preview.resolved,

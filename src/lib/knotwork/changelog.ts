@@ -4,12 +4,18 @@
 // transaction as the write, so a change and its log line commit together or not at all.
 //
 // Never put a 64-hex string in `label` or a change: the data export scans for them (INV-34).
+//
+// P1-1 (ADR-001): an entry about an item that is sealed (private to a partner, before its reveal point) is written
+// WITHOUT its label, before, after or extras: "a private item", who, when, and the names of the fields that changed.
+// The log is append-only and exported whole, so a secret's details must never be written into it.
 import { audit, auditEvents } from '@/core/audit';
 import type { Tx } from '@/core/db/rls';
 import type { Prisma } from '@/generated/prisma/client';
 import { diff, type Plain } from './changelog-diff';
+import { PRIVATE_ENTRY } from './secrecy/compartment';
+import { sealedNow } from './secrecy/seal';
 
-export const ENTITIES = ['wedding', 'task', 'baseline', 'category', 'expense', 'snapshot', 'vendor', 'payment', 'flag', 'brief', 'request', 'grant', 'household', 'guest', 'wave', 'guestplan', 'song', 'registry', 'gift', 'thankyou', 'photoevent', 'photo', 'photodevice', 'attachment'] as const;
+export const ENTITIES = ['wedding', 'task', 'baseline', 'category', 'expense', 'snapshot', 'vendor', 'payment', 'flag', 'brief', 'request', 'grant', 'household', 'guest', 'wave', 'guestplan', 'song', 'registry', 'gift', 'thankyou', 'photoevent', 'photo', 'photodevice', 'attachment', 'funder', 'pledge', 'receipt', 'allocation'] as const;
 export type Entity = (typeof ENTITIES)[number];
 export const PREFIX = 'knotwork.';
 
@@ -20,7 +26,10 @@ export const PREFIX = 'knotwork.';
 export async function logChange(tx: Tx, ctx: { orgId: string; userId: string | null }, entity: Entity, verb: string, id: string, label: string, before: Plain | null, after: Plain | null, extra: Plain = {}): Promise<boolean> {
   const d = diff(before, after);
   if (!d && verb === 'updated') return false;
-  await audit(ctx, `${PREFIX}${entity}.${verb}`, { targetType: entity, targetId: id, data: { label, before: d?.before ?? null, after: d?.after ?? null, ...extra } as Prisma.InputJsonObject }, tx);
+  const data = (await sealedNow(tx, ctx.orgId, entity, id))
+    ? { label: PRIVATE_ENTRY, before: null, after: null, private: true, fields: [...new Set([...Object.keys(d?.before ?? {}), ...Object.keys(d?.after ?? {})])].sort() }
+    : { label, before: d?.before ?? null, after: d?.after ?? null, ...extra };
+  await audit(ctx, `${PREFIX}${entity}.${verb}`, { targetType: entity, targetId: id, data: data as Prisma.InputJsonObject }, tx);
   return true;
 }
 

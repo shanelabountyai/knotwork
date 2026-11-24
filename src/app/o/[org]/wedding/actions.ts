@@ -18,6 +18,10 @@ import { assertValidPlan, createWedding as createWeddingRows, loadTasks, lockWed
 import { VENDOR_CATEGORIES } from '@/lib/knotwork/vendors/brief';
 import { parseHHMM } from '@/lib/knotwork/vendors/scope';
 import { acknowledgeFlag as ackFlag, addPayment, generateBrief, updateVendor as updateVendorRow } from '@/lib/knotwork/vendors/store';
+import { parsePrivacy, revealDayOf, sealed, type Compartment, type ItemKind } from '@/lib/knotwork/secrecy/compartment';
+import { lens } from '@/lib/knotwork/secrecy/lens';
+import { canSee, revealForProposal, seen } from '@/lib/knotwork/secrecy/store';
+import { unlinkFunder } from '@/lib/knotwork/funding/store';
 
 // Every Knotwork write (PRD Phase 1). Each is an orgAction, so the template's harness drives it (INV-01..04, INV-22).
 // Order inside every body: capability, then every ref (a row of another org is notFound, like a missing one), then the
@@ -25,6 +29,10 @@ import { acknowledgeFlag as ackFlag, addPayment, generateBrief, updateVendor as 
 //
 // RULE 2: nothing here books a vendor, signs a contract, spends over the threshold, moves the date or changes the
 // approval rules. Those actions PROPOSE; src/lib/knotwork/consent/execute.ts does them when the other partner approves.
+//
+// P1-1 (ADR-001): a task, expense, vendor or category hidden from the person asking is notFound, like a row of another
+// workspace (every *In helper below). A new one may be made private to the partner creating it (`privacy`); proposing
+// a designated action on a private item reveals it first (revealForProposal).
 
 const home = (ctx: OrgCtx, page = '') => `/o/${ctx.slug}/wedding${page}`;
 
@@ -68,20 +76,52 @@ const checkbox = z.union([z.boolean(), z.string().max(8)]).optional().transform(
 /** '' means today. Checked in the body (after the refs), so a foreign id is notFound before a bad date is refused. */
 const dayOrToday = z.union([z.literal(''), z.string().trim().max(10)]).default('');
 const optionalRef = (model: string) => z.union([ref(model), z.literal('')]).optional().transform((v) => v || null);
+/** P1-1: '' shared; 'never'; or whole days after the wedding date (negative: before). Checked in the body, after the refs. */
+const privacyField = z.union([z.number().int(), z.string().max(12)]).optional().transform((v) => v ?? '');
 
 const realDay = (s: string, fallback: string) => {
   if (s === '') return fallback;
   if (!isRealDay(s)) throw new Refused('Pick a real date.');
   return s;
 };
+/** A row the asker may not see (another workspace's, or one private to the other partner) is notFound. */
+async function visible(tx: Tx, ctx: OrgCtx, kind: ItemKind, id: string) {
+  if (!(await canSee(tx, ctx, kind, id))) notFound();
+}
 async function taskIn(tx: Tx, ctx: OrgCtx, id: string) {
-  return (await tx.task.findFirst({ where: { id, ...inOrg(ctx) }, include: { payment: { select: { id: true } } } })) ?? notFound();
+  const t = (await tx.task.findFirst({ where: { id, ...inOrg(ctx) }, include: { payment: { select: { id: true } } } })) ?? notFound();
+  await visible(tx, ctx, 'task', id);
+  return t;
 }
 async function memberIn(tx: Tx, ctx: OrgCtx, userId: string | null) {
   if (userId && !(await tx.membership.findUnique({ where: { orgId_userId: { orgId: ctx.orgId, userId } }, select: { role: true } }))) notFound();
 }
-const vendorIn = async (tx: Tx, ctx: OrgCtx, id: string) => (await tx.vendor.findFirst({ where: { id, ...inOrg(ctx) } })) ?? notFound();
-const categoryIn = async (tx: Tx, ctx: OrgCtx, id: string) => (await tx.budgetCategory.findFirst({ where: { id, ...inOrg(ctx) } })) ?? notFound();
+async function vendorIn(tx: Tx, ctx: OrgCtx, id: string) {
+  const v = (await tx.vendor.findFirst({ where: { id, ...inOrg(ctx) } })) ?? notFound();
+  await visible(tx, ctx, 'vendor', id);
+  return v;
+}
+async function categoryIn(tx: Tx, ctx: OrgCtx, id: string) {
+  const c = (await tx.budgetCategory.findFirst({ where: { id, ...inOrg(ctx) } })) ?? notFound();
+  await visible(tx, ctx, 'category', id);
+  return c;
+}
+
+/**
+ * P1-1: the compartment a new item is created in, from its form's `privacy` field, or null for shared. Only a partner
+ * keeps a secret; the reveal point must still be ahead; a private task is assigned to its owner or to nobody.
+ */
+async function newSecret(tx: Tx, ctx: OrgCtx, raw: string | number, assigneeId: string | null = null): Promise<Compartment | null> {
+  const p = parsePrivacy(raw);
+  if (!p) throw new Refused('Pick when it should be revealed: the wedding day, a number of days before or after, or never.');
+  if (!p.private) return null;
+  if (!isPartner(ctx.role)) throw new Refused('Only the two partners can keep something private.');
+  const s = await seen(tx, ctx);
+  const day = revealDayOf(s.weddingDay, p.revealDays);
+  if (day !== null && s.today >= day) throw new Refused('That reveal point has already passed. Pick a later one, or keep it private until you reveal it.');
+  if (assigneeId && assigneeId !== ctx.userId) throw new Refused('Only a task assigned to you, or to nobody, can be private to you.');
+  return { privateToId: ctx.userId, revealDays: p.revealDays };
+}
 
 // ---------------------------------------------------------------------------------------------------------------------
 // Wedding and schedule (P0-1)
@@ -106,22 +146,28 @@ export const createWedding = orgAction(
 );
 
 const taskFields = { title: text('Title'), leadDays: wholeNumber('Days it takes', 0, 3650), bufferDays: wholeNumber('Days before the wedding', 0, 3650), assigneeId: optionalRef('member'), dependsOn: z.array(ref('task')).max(50).default([]) };
+/** The plan check, with any task hidden from the asker named "Private task" in the refusal. */
+async function assertValidPlanFor(tx: Tx, ctx: OrgCtx, edit: (plan: ReturnType<typeof toPlan>) => ReturnType<typeof toPlan> = (p) => p) {
+  const rows = await loadTasks(tx, ctx);
+  assertValidPlan(lens(await seen(tx, ctx)).plan(edit(toPlan(rows)), rows));
+}
 
 async function setDependencies(tx: Tx, ctx: OrgCtx, taskId: string, dependsOn: string[]) {
   await tx.taskDependency.deleteMany({ where: { taskId, ...inOrg(ctx) } });
   if (dependsOn.length) await tx.taskDependency.createMany({ data: [...new Set(dependsOn)].map((dependsOnId) => ({ orgId: ctx.orgId, taskId, dependsOnId })) });
 }
 
-export const addTask = orgAction(null, z.object(taskFields), async (ctx, i) => {
+export const addTask = orgAction(null, z.object({ ...taskFields, privacy: privacyField }), async (ctx, i) => {
   await withOrg(ctx, async (tx) => {
     need(await loadWho(tx, ctx), 'schedule.edit');
     for (const d of i.dependsOn) await taskIn(tx, ctx, d);
     await memberIn(tx, ctx, i.assigneeId);
     await requireWedding(tx, ctx);
+    const secret = await newSecret(tx, ctx, i.privacy, i.assigneeId);
     await lockWedding(tx, ctx.orgId);
-    const t = await tx.task.create({ data: { orgId: ctx.orgId, title: i.title, kind: 'manual', leadDays: i.leadDays, bufferDays: i.bufferDays, assigneeId: i.assigneeId } });
+    const t = await tx.task.create({ data: { orgId: ctx.orgId, title: i.title, kind: 'manual', leadDays: i.leadDays, bufferDays: i.bufferDays, assigneeId: i.assigneeId, ...secret } });
     await setDependencies(tx, ctx, t.id, i.dependsOn);
-    assertValidPlan(toPlan(await loadTasks(tx, ctx)));
+    await assertValidPlanFor(tx, ctx);
     await logChange(tx, ctx, 'task', 'created', t.id, t.title, null, { title: i.title, leadDays: i.leadDays, bufferDays: i.bufferDays, assigneeId: i.assigneeId, dependsOn: [...i.dependsOn].sort() });
   });
   redirect(home(ctx, '/schedule'));
@@ -135,16 +181,20 @@ export const updateTask = orgAction(null, z.object({ id: ref('task'), ...taskFie
     await memberIn(tx, ctx, i.assigneeId);
     await lockWedding(tx, ctx.orgId);
     const was = (await tx.taskDependency.findMany({ where: { taskId: t.id, ...inOrg(ctx) }, select: { dependsOnId: true } })).map((d) => d.dependsOnId).sort();
+    // A dependency on a task hidden from this editor is not on their form, so it is kept, not dropped (P1-1).
+    const keep: string[] = [];
+    for (const d of was) if (!(await canSee(tx, ctx, 'task', d))) keep.push(d);
+    if (i.assigneeId && i.assigneeId !== t.privateToId && sealed(t, await seen(tx, ctx))) throw new Refused('Only a task assigned to you, or to nobody, can be private to you.');
     // A payment task's timing belongs to its payment, and the RSVP deadline is derived: only the assignee and the dependencies are open.
     if (t.kind === 'payment' || t.kind === 'rsvp') {
       if (i.leadDays !== t.leadDays || i.bufferDays !== t.bufferDays || i.title !== t.title) throw new Refused(t.kind === 'payment' ? 'This task follows its vendor payment. Change the payment instead.' : 'The RSVP deadline is worked out from the vendors\' count deadlines.');
     }
     // The plan as it would be, checked before anything is written: a circle or a self-dependency is refused by name.
-    const deps = [...new Set(i.dependsOn)].sort();
-    assertValidPlan(toPlan(await loadTasks(tx, ctx)).map((p) => (p.id === t.id ? { ...p, title: i.title, leadDays: i.leadDays, bufferDays: i.bufferDays, dependsOn: deps } : p)));
+    const deps = [...new Set([...i.dependsOn, ...keep])].sort();
+    await assertValidPlanFor(tx, ctx, (plan) => plan.map((p) => (p.id === t.id ? { ...p, title: i.title, leadDays: i.leadDays, bufferDays: i.bufferDays, dependsOn: deps } : p)));
     await tx.task.update({ where: { id: t.id }, data: { title: i.title, leadDays: i.leadDays, bufferDays: i.bufferDays, assigneeId: i.assigneeId } });
     await setDependencies(tx, ctx, t.id, deps);
-    await logChange(tx, ctx, 'task', 'updated', t.id, i.title, { title: t.title, leadDays: t.leadDays, bufferDays: t.bufferDays, assigneeId: t.assigneeId, dependsOn: was }, { title: i.title, leadDays: i.leadDays, bufferDays: i.bufferDays, assigneeId: i.assigneeId, dependsOn: [...new Set(i.dependsOn)].sort() });
+    await logChange(tx, ctx, 'task', 'updated', t.id, i.title, { title: t.title, leadDays: t.leadDays, bufferDays: t.bufferDays, assigneeId: t.assigneeId, dependsOn: was }, { title: i.title, leadDays: i.leadDays, bufferDays: i.bufferDays, assigneeId: i.assigneeId, dependsOn: deps });
   });
   redirect(home(ctx, '/schedule'));
 });
@@ -169,8 +219,9 @@ export const removeTask = orgAction(null, z.object({ id: ref('task') }), async (
     const t = await taskIn(tx, ctx, i.id);
     if (t.kind === 'payment' || t.kind === 'rsvp') throw new Refused('That task is kept by the app and cannot be removed here.');
     await lockWedding(tx, ctx.orgId);
-    await tx.task.delete({ where: { id: t.id } }); // its dependency edges go with it
+    // Logged first: whether the entry may carry the title is read from the row (P1-1), which is about to go.
     await logChange(tx, ctx, 'task', 'deleted', t.id, t.title, { title: t.title, leadDays: t.leadDays, bufferDays: t.bufferDays, status: t.status }, null);
+    await tx.task.delete({ where: { id: t.id } }); // its dependency edges go with it
   });
   redirect(home(ctx, '/schedule'));
 });
@@ -192,11 +243,13 @@ export const proposeDateMove = orgAction(null, z.object({ to: z.string().trim().
 // ---------------------------------------------------------------------------------------------------------------------
 // Budget (P0-7)
 
-export const addCategory = orgAction(null, z.object({ name: text('Name', 60), estimate: money('Estimate') }), async (ctx, i) => {
+export const addCategory = orgAction(null, z.object({ name: text('Name', 60), estimate: money('Estimate'), privacy: privacyField }), async (ctx, i) => {
   await withOrg(ctx, async (tx) => {
     need(await loadWho(tx, ctx), 'budget.edit');
-    if (await tx.budgetCategory.findFirst({ where: { ...inOrg(ctx), name: i.name }, select: { id: true } })) throw new Refused(`There is already a category called ${i.name}.`);
-    const c = await tx.budgetCategory.create({ data: { orgId: ctx.orgId, name: i.name, estimateCents: i.estimate } });
+    // The same refusal whether or not the other one is private: the name is taken either way (D-98).
+    if (await tx.budgetCategory.findFirst({ where: { ...inOrg(ctx), name: i.name }, select: { id: true } })) throw new Refused('There is already a category with that name.');
+    const secret = await newSecret(tx, ctx, i.privacy);
+    const c = await tx.budgetCategory.create({ data: { orgId: ctx.orgId, name: i.name, estimateCents: i.estimate, ...secret } });
     await logChange(tx, ctx, 'category', 'created', c.id, c.name, null, { name: c.name, estimateCents: c.estimateCents });
   });
   redirect(home(ctx, '/budget'));
@@ -206,7 +259,7 @@ export const updateCategory = orgAction(null, z.object({ id: ref('budgetCategory
   await withOrg(ctx, async (tx) => {
     need(await loadWho(tx, ctx), 'budget.edit');
     const c = await categoryIn(tx, ctx, i.id);
-    if (await tx.budgetCategory.findFirst({ where: { ...inOrg(ctx), name: i.name, NOT: { id: c.id } }, select: { id: true } })) throw new Refused(`There is already a category called ${i.name}.`);
+    if (await tx.budgetCategory.findFirst({ where: { ...inOrg(ctx), name: i.name, NOT: { id: c.id } }, select: { id: true } })) throw new Refused('There is already a category with that name.');
     await tx.budgetCategory.update({ where: { id: c.id }, data: { name: i.name, estimateCents: i.estimate } });
     await logChange(tx, ctx, 'category', 'updated', c.id, i.name, { name: c.name, estimateCents: c.estimateCents }, { name: i.name, estimateCents: i.estimate });
   });
@@ -222,20 +275,27 @@ async function spendOrPropose(tx: Tx, ctx: OrgCtx, input: ExpenseInput, label: s
     return 'recorded';
   }
   if (!isPartner(ctx.role)) throw new Refused(`That is over ${usd(wedding.spendThresholdCents)}, so one of the partners has to propose it.`);
-  const r = await propose(tx, ctx, wedding, 'spend', input as unknown as Prisma.InputJsonObject, `Spend ${usd(input.amountCents)}: ${label}`);
+  // Designated (rule 2): it needs the other partner's key, so it cannot be private, and proposing it reveals the
+  // category and the vendor it names (ADR-001).
+  if (input.secret) throw new Refused(`A spend over ${usd(wedding.spendThresholdCents)} needs both of you, so it cannot be private.`);
+  await revealForProposal(tx, ctx, [{ kind: 'category', id: input.categoryId }, input.vendorId ? { kind: 'vendor', id: input.vendorId } : null]);
+  const payload: Omit<ExpenseInput, 'secret'> & { secret?: unknown } = { ...input };
+  delete payload.secret;
+  const r = await propose(tx, ctx, wedding, 'spend', payload as unknown as Prisma.InputJsonObject, `Spend ${usd(input.amountCents)}: ${label}`);
   return r.executed ? 'recorded' : 'proposed'; // solo mode (D-33) executes at once
 }
 
 export const addExpense = orgAction(
   null,
-  z.object({ categoryId: ref('budgetCategory'), vendorId: optionalRef('vendor'), description: text('What it was for', 200), amount: money('Amount'), paidOn: dayOrToday }),
+  z.object({ categoryId: ref('budgetCategory'), vendorId: optionalRef('vendor'), description: text('What it was for', 200), amount: money('Amount'), paidOn: dayOrToday, privacy: privacyField }),
   async (ctx, i) => {
     const went = await withOrg(ctx, async (tx) => {
       need(await loadWho(tx, ctx), 'budget.edit');
       const c = await categoryIn(tx, ctx, i.categoryId);
       if (i.vendorId) await vendorIn(tx, ctx, i.vendorId);
       const paidOn = realDay(i.paidOn, todayOf(await requireWedding(tx, ctx)));
-      return spendOrPropose(tx, ctx, { categoryId: c.id, vendorId: i.vendorId, description: i.description, amountCents: i.amount, paidOn, paymentId: null }, `${i.description} (${c.name})`);
+      const secret = await newSecret(tx, ctx, i.privacy);
+      return spendOrPropose(tx, ctx, { categoryId: c.id, vendorId: i.vendorId, description: i.description, amountCents: i.amount, paidOn, paymentId: null, secret }, `${i.description} (${c.name})`);
     });
     redirect(home(ctx, went === 'proposed' ? '/approvals' : '/budget'));
   },
@@ -254,11 +314,12 @@ export const takeBudgetSnapshot = orgAction(null, z.object({ note: note(200) }),
 
 export const addVendor = orgAction(
   null,
-  z.object({ name: text('Name'), category: z.enum(VENDOR_CATEGORIES), contactName: note(120), email: note(200), phone: note(40) }),
-  async (ctx, i) => {
+  z.object({ name: text('Name'), category: z.enum(VENDOR_CATEGORIES), contactName: note(120), email: note(200), phone: note(40), privacy: privacyField }),
+  async (ctx, { privacy, ...i }) => {
     const id = await withOrg(ctx, async (tx) => {
       need(await loadWho(tx, ctx), 'vendors.edit');
-      const v = await tx.vendor.create({ data: { orgId: ctx.orgId, ...i } });
+      const secret = await newSecret(tx, ctx, privacy);
+      const v = await tx.vendor.create({ data: { orgId: ctx.orgId, ...i, ...secret } });
       await logChange(tx, ctx, 'vendor', 'created', v.id, v.name, null, { name: v.name, category: v.category, status: v.status });
       return v.id;
     });
@@ -290,6 +351,7 @@ export const proposeBooking = orgAction(null, z.object({ id: ref('vendor') }), a
     const v = await vendorIn(tx, ctx, i.id);
     if (v.status !== 'considering') throw new Refused(v.status === 'booked' ? 'That vendor is already booked.' : 'That vendor was dropped.');
     if (await hasPending(tx, ctx, 'book_vendor', v.id)) throw new Refused('Booking this vendor is already waiting for your partner.');
+    await revealForProposal(tx, ctx, [{ kind: 'vendor', id: v.id }]); // designated: the approver sees what they approve
     await propose(tx, ctx, await requireWedding(tx, ctx), 'book_vendor', { vendorId: v.id }, `Book ${v.name} (${v.category})`);
   });
   redirect(home(ctx, '/approvals'));
@@ -302,6 +364,7 @@ export const proposeContract = orgAction(null, z.object({ id: ref('vendor'), tot
     const v = await vendorIn(tx, ctx, i.id);
     if (v.contractSignedOn) throw new Refused('That contract is already signed.');
     if (await hasPending(tx, ctx, 'sign_contract', v.id)) throw new Refused('Signing this contract is already waiting for your partner.');
+    await revealForProposal(tx, ctx, [{ kind: 'vendor', id: v.id }]);
     await propose(tx, ctx, await requireWedding(tx, ctx), 'sign_contract', { vendorId: v.id, totalCents: i.total }, `Sign the contract with ${v.name} for ${usd(i.total)}`);
   });
   redirect(home(ctx, '/approvals'));
@@ -330,6 +393,7 @@ export const payVendorPayment = orgAction(null, z.object({ id: ref('vendorPaymen
     need(who, 'vendors.edit');
     need(who, 'budget.edit');
     const p = (await tx.vendorPayment.findFirst({ where: { id: i.id, ...inOrg(ctx) }, include: { vendor: { select: { name: true } } } })) ?? notFound();
+    await visible(tx, ctx, 'vendor', p.vendorId);
     const c = await categoryIn(tx, ctx, i.categoryId);
     if (p.paidOn) throw new Refused('That payment has already been paid.');
     const paidOn = realDay(i.paidOn, todayOf(await requireWedding(tx, ctx)));
@@ -342,7 +406,8 @@ export const payVendorPayment = orgAction(null, z.object({ id: ref('vendorPaymen
 export const acknowledgeFlag = orgAction(null, z.object({ id: ref('vendorFlag'), note: note(500) }), async (ctx, i) => {
   await withOrg(ctx, async (tx) => {
     need(await loadWho(tx, ctx), 'vendors.edit');
-    if (!(await tx.vendorFlag.findFirst({ where: { id: i.id, ...inOrg(ctx) }, select: { id: true } }))) notFound();
+    const f = (await tx.vendorFlag.findFirst({ where: { id: i.id, ...inOrg(ctx) }, select: { vendorId: true } })) ?? notFound();
+    await visible(tx, ctx, 'vendor', f.vendorId);
     if (!(await ackFlag(tx, ctx, i.id, i.note))) throw new Refused('That flag was already acknowledged.');
   });
   redirect(home(ctx, '/flags'));
@@ -416,6 +481,7 @@ export const grantHelper = orgAction(null, z.object({ userId: ref('member'), sco
     need(await loadWho(tx, ctx), 'helpers.manage');
     const m = (await tx.membership.findUnique({ where: { orgId_userId: { orgId: ctx.orgId, userId: i.userId } }, select: { role: true, user: { select: { email: true } } } })) ?? notFound();
     if (isPartner(m.role)) throw new Refused('A partner already has full access.');
+    if (i.scope === 'funder') throw new Refused('Link them to a funder on the Funding page instead.');
     if (await tx.helperGrant.findFirst({ where: { ...inOrg(ctx), userId: i.userId, scope: i.scope }, select: { id: true } })) throw new Refused('They already have that.');
     const g = await tx.helperGrant.create({ data: { orgId: ctx.orgId, userId: i.userId, scope: i.scope, grantedById: ctx.userId } });
     await logChange(tx, ctx, 'grant', 'granted', g.id, `${m.user.email}: ${SCOPE_LABEL[i.scope]}`, null, { userId: i.userId, scope: i.scope });
@@ -427,6 +493,9 @@ export const revokeHelper = orgAction(null, z.object({ id: ref('helperGrant') })
   await withOrg(ctx, async (tx) => {
     need(await loadWho(tx, ctx), 'helpers.manage');
     const g = (await tx.helperGrant.findFirst({ where: { id: i.id, ...inOrg(ctx) } })) ?? notFound();
+    // A funder grant goes with its link (P1-2): unlinking removes the grant and logs both.
+    const linked = g.scope === 'funder' ? await tx.funder.findFirst({ where: { ...inOrg(ctx), userId: g.userId }, select: { id: true } }) : null;
+    if (linked) return unlinkFunder(tx, ctx, linked.id);
     await tx.helperGrant.delete({ where: { id: g.id } });
     await logChange(tx, ctx, 'grant', 'revoked', g.id, SCOPE_LABEL[g.scope], { userId: g.userId, scope: g.scope }, null);
   });

@@ -35,9 +35,10 @@ export const weddingDay = (w: { date: Date }): Day => dayOfDb(w.date);
 export const partnersOf = (tx: Tx, ctx: { orgId: string }) =>
   tx.membership.findMany({ where: { orgId: ctx.orgId, role: 'owner' }, select: { userId: true, user: { select: { email: true, name: true } } }, orderBy: { createdAt: 'asc' } });
 
-/** What ends with a membership (src/app/org-hooks.ts): the person's helper grants, and their task assignments. */
+/** What ends with a membership (src/app/org-hooks.ts): the person's helper grants, a funder link, and their task assignments. */
 export async function endHelper(tx: Tx, orgId: string, userId: string) {
   await tx.helperGrant.deleteMany({ where: { orgId, userId } });
+  await tx.funder.updateMany({ where: { orgId, userId }, data: { userId: null } });
   await tx.task.updateMany({ where: { orgId, assigneeId: userId }, data: { assigneeId: null } });
 }
 
