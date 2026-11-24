@@ -1,0 +1,72 @@
+{
+  "name": "02-dress-chain",
+  "note": "The PRD's example: alterations need 3 months, so the dress order lands months earlier. Worked by hand in the test file.",
+  "weddingDate": "2027-10-09",
+  "today": "2026-11-23",
+  "tasks": [
+    {
+      "id": "choose-dress",
+      "title": "Choose dress",
+      "leadDays": 30,
+      "bufferDays": 0,
+      "dependsOn": [],
+      "done": false
+    },
+    {
+      "id": "order-dress",
+      "title": "Order dress",
+      "leadDays": 150,
+      "bufferDays": 0,
+      "dependsOn": [
+        "choose-dress"
+      ],
+      "done": false
+    },
+    {
+      "id": "alterations",
+      "title": "Alterations",
+      "leadDays": 90,
+      "bufferDays": 14,
+      "dependsOn": [
+        "order-dress"
+      ],
+      "done": false
+    }
+  ],
+  "expect": {
+    "invalid": null,
+    "tasks": {
+      "choose-dress": {
+        "due": "2027-01-28",
+        "startBy": "2026-12-29",
+        "earliestStart": "2026-11-23",
+        "slackDays": 36,
+        "needDays": 284,
+        "state": "ok"
+      },
+      "order-dress": {
+        "due": "2027-06-27",
+        "startBy": "2027-01-28",
+        "earliestStart": "2026-12-23",
+        "slackDays": 36,
+        "needDays": 254,
+        "state": "ok"
+      },
+      "alterations": {
+        "due": "2027-09-25",
+        "startBy": "2027-06-27",
+        "earliestStart": "2027-05-22",
+        "slackDays": 36,
+        "needDays": 104,
+        "state": "ok"
+      }
+    },
+    "criticalPath": [
+      "choose-dress",
+      "order-dress",
+      "alterations"
+    ],
+    "runwayDays": 284,
+    "marginDays": 36
+  }
+}

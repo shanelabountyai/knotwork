@@ -1,0 +1,88 @@
+{
+  "name": "05-done-ignored",
+  "note": "Finished tasks constrain nothing and never show as late or impossible.",
+  "weddingDate": "2027-01-22",
+  "today": "2026-11-23",
+  "tasks": [
+    {
+      "id": "book-venue",
+      "title": "Book venue",
+      "leadDays": 30,
+      "bufferDays": 300,
+      "dependsOn": [],
+      "done": true
+    },
+    {
+      "id": "tasting",
+      "title": "Tasting",
+      "leadDays": 14,
+      "bufferDays": 20,
+      "dependsOn": [
+        "book-venue"
+      ],
+      "done": false
+    },
+    {
+      "id": "print-menus",
+      "title": "Print menus",
+      "leadDays": 10,
+      "bufferDays": 100,
+      "dependsOn": [
+        "tasting"
+      ],
+      "done": true
+    },
+    {
+      "id": "seat-cards",
+      "title": "Seat cards",
+      "leadDays": 5,
+      "bufferDays": 3,
+      "dependsOn": [
+        "print-menus"
+      ],
+      "done": false
+    }
+  ],
+  "expect": {
+    "invalid": null,
+    "tasks": {
+      "book-venue": {
+        "due": "2026-03-28",
+        "startBy": "2026-02-26",
+        "earliestStart": null,
+        "slackDays": null,
+        "needDays": null,
+        "state": "done"
+      },
+      "tasting": {
+        "due": "2027-01-02",
+        "startBy": "2026-12-19",
+        "earliestStart": "2026-11-23",
+        "slackDays": 26,
+        "needDays": 34,
+        "state": "ok"
+      },
+      "print-menus": {
+        "due": "2026-10-14",
+        "startBy": "2026-10-04",
+        "earliestStart": null,
+        "slackDays": null,
+        "needDays": null,
+        "state": "done"
+      },
+      "seat-cards": {
+        "due": "2027-01-19",
+        "startBy": "2027-01-14",
+        "earliestStart": "2026-11-23",
+        "slackDays": 52,
+        "needDays": 8,
+        "state": "ok"
+      }
+    },
+    "criticalPath": [
+      "tasting"
+    ],
+    "runwayDays": 34,
+    "marginDays": 26
+  }
+}

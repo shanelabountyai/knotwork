@@ -1,0 +1,76 @@
+{
+  "name": "17-move-resolves",
+  "note": "Moving the wedding later resolves a task that was impossible.",
+  "weddingDate": "2027-01-22",
+  "today": "2026-11-23",
+  "tasks": [
+    {
+      "id": "custom-suit",
+      "title": "Custom suit",
+      "leadDays": 45,
+      "bufferDays": 30,
+      "dependsOn": [],
+      "done": false
+    },
+    {
+      "id": "order-rings",
+      "title": "Order rings",
+      "leadDays": 21,
+      "bufferDays": 70,
+      "dependsOn": [],
+      "done": false
+    }
+  ],
+  "expect": {
+    "invalid": null,
+    "tasks": {
+      "custom-suit": {
+        "due": "2026-12-23",
+        "startBy": "2026-11-08",
+        "earliestStart": "2026-11-23",
+        "slackDays": -15,
+        "needDays": 75,
+        "state": "impossible"
+      },
+      "order-rings": {
+        "due": "2026-11-13",
+        "startBy": "2026-10-23",
+        "earliestStart": "2026-11-23",
+        "slackDays": -31,
+        "needDays": 91,
+        "state": "late"
+      }
+    },
+    "criticalPath": [
+      "order-rings"
+    ],
+    "runwayDays": 91,
+    "marginDays": -31
+  },
+  "move": {
+    "to": "2027-03-01",
+    "expect": {
+      "deltaDays": 38,
+      "tasks": {
+        "custom-suit": {
+          "due": "2027-01-30",
+          "startBy": "2026-12-16",
+          "state": "ok"
+        },
+        "order-rings": {
+          "due": "2026-12-21",
+          "startBy": "2026-11-30",
+          "state": "ok"
+        }
+      },
+      "late": [],
+      "impossible": [],
+      "resolved": [
+        "custom-suit",
+        "order-rings"
+      ],
+      "marginDays": 7,
+      "fingerprint": "b1a3ca22fefe95ad"
+    }
+  }
+}

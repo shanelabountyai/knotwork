@@ -1,0 +1,9 @@
+-- Knotwork D-03: the billing module was removed in Phase 0; its tables go too, so the migration history matches the
+-- schema (CI's `prisma migrate diff --exit-code`, D-04). Dated after the template's newest migration: the RLS policy
+-- migrations up to 20261108000002 ALTER "BillingAccount" unguarded (template README, "Removing a module").
+
+-- DropTable
+DROP TABLE "BillingAccount";
+
+-- DropTable
+DROP TABLE "StripeEvent";

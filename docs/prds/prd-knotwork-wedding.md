@@ -1,5 +1,97 @@
 # PRD: Knotwork — Wedding Planning, Engagement Through Name Change
 
+> **v1.1 (2026-11-23).** v1.0 (2026-09-25) is kept below, unchanged. v1.1 adds only the section that follows: where each
+> "house pattern" and "reuse" line lands in real code, the stack, the port and the status. Product scope, P0/P1
+> membership and the four phase gates are as v1.0 wrote them.
+
+## v1.1 changes (2026-11-23)
+
+Written by Claude in an unattended run that Shane asked for on 2026-11-23. Judgment calls are rows in
+`docs/knotwork/decisions.md`; open product questions are under "Questions for Shane" at the end of this section and are
+not decided here.
+
+### Status, stack, port
+
+- **Not deployed. Synthetic data only; no real people.** No hosting, database or account was created or changed. Email
+  and SMS stay stubbed (captured in the database), money is mock and ledgered, and no model is called.
+- **Stack:** saas-foundation **v1.7.0** (`FOUNDATION_VERSION`), merged with shared history so later `git merge vX.Y.Z`
+  stays clean. Next.js 16, React 19, Prisma 7, Postgres 17, zod 4, vitest 5, Playwright (versions in `package.json`).
+  The `billing` module is removed (decisions D-03); `notifications`, `sso` and `apikeys` are still installed.
+- **Port 8400** (`package.json`, `playwright.config.ts`, `.github/workflows/ci.yml`). It was free in the template's
+  `CLONES.md` on 2026-11-23.
+- **Build status:** Phase 1 is built on branch `kickoff` (see `NEXT.md` for the gate results). Phases 2 to 4 are not started.
+
+### House patterns → saas-foundation v1.7.0
+
+Paths are in this repo after the merge. "Template-owned" means `npm run foundation:drift` fails if the file is edited.
+
+| PRD says | Used by | Real module or seam (v1.7.0) | Notes |
+|---|---|---|---|
+| RBAC house module; scoped helper grants | P0-2 | `src/core/authz/permissions.ts` (`Role`, `can`, `mayAssign`), `src/core/authz/guards.ts` (`requireOrg`, `inOrg`), `src/core/authz/action.ts` (`orgAction`, `ref`) | Roles are a fixed enum (`owner`, `admin`, `member`, `scorekeeper` in `prisma/schema/core.prisma`), template-owned. The two partners are the workspace's two `owner` memberships. The template has **no scoped grants**, so helper scopes are a clone table (`HelperGrant`) checked in `src/lib/knotwork/access.ts`: pattern rebuilt here (D-08). |
+| Audit-log house pattern → activity feed | P0-2 | `src/core/audit.ts` (`audit`, `auditEvents`), model `AuditEvent` in `prisma/schema/core.prisma`, append-only by database trigger (`tests/invariants/inv-19-audit-append-only.test.ts`), raw viewer at `src/app/o/[org]/settings/audit/` | The change log writes through `audit()` with `{ before, after }` in `data` (`src/lib/knotwork/changelog.ts`); the feed is a consumer rendering of the same rows (D-15). |
+| Outbox stubs (no real SMS/email) | Non-goals, P0-3 chasing | `src/modules/notifications/outbox.ts` (`enqueue`, `drainOutbox`), `src/modules/notifications/templates.ts`, `src/modules/notifications/sms.ts`, `src/core/email/transport.ts` (captures to `CapturedMessage` when no provider key is set) | Phase 1 sends nothing. Phase 2 chasing enqueues here. |
+| Tokenized links (RSVP, photo upload) | P0-3, P0-6 | `src/core/tokens.ts` (`newToken`, `hashToken`; only the sha256 is stored, INV-07), `src/core/share/links.ts` (`ShareLink`, expiry required, INV-08), public page `src/app/s/[token]/` | The `shareable` registry lives in template-owned `src/core/share/links.ts`, so guest links will be a clone table built on `tokens.ts` with the same rules (hash only, expiry, revoke). Phase 2 and 3; not built. |
+| Import house pattern (guest CSV) | P0-3 | none in v1.7.0 (the template has CSV export only: `toCsv` in `src/core/audit.ts`) | **Pattern only, rebuilt here** in Phase 2: validate, preview, then write. The library's import pipeline lives in another clone that this run did not read. |
+| Demo gate | status | `src/core/demo-gate.ts` (`gate`, `gateResponse`), `src/core/auth/demo.ts`, `src/app/(public)/demo/`, `scripts/seed-demo.ts` | Not deployed, so no `src/proxy.ts` gate is wired. `/demo` works locally with `DEMO_MODE=1`. |
+| Export hooks | every org table | `src/app/export-hooks.ts` (`exportTables`, `exportSkipped`), `src/core/tenancy/export.ts`, `tests/invariants/inv-34-export.test.ts` | Every Phase 1 table is listed in `exportTables`. |
+| RLS | every org table | `src/core/db/rls.ts` (`withOrg`, `asSystem`), `scripts/rls-policies.ts` (`npm run rls:policies`), `tests/invariants/inv-29-33-rls.test.ts`, `tests/invariants/inv-42-org-scope.test.ts`, harness rows in `tests/fixtures/app.ts` | Every Phase 1 table has `orgId`, a generated policy and a harness row. RLS stays off at runtime unless `RLS_MODE=enforce` (the template's default). |
+| Data-minimization house pattern (counts, never names) | P0-3 | no module; the nearest seam is the allowlisted projection in `src/core/share/project.ts` | **Pattern only, rebuilt here** in Phase 2, with a sweep test. |
+| House entitlement/ledger pattern | P0-5 | none in this clone (the template's only money code was `billing`, removed) | **Pattern only, rebuilt here** in Phase 3 as an append-only ledger in integer cents. |
+| Polling (house rule) | P0-6 wall | no module | **Pattern only** (plain interval fetch), Phase 3. |
+| "Mock/house convention" for payments | Non-goals | no module | Phase 1 records payments as rows the couple marks paid; nothing is charged. |
+| Server "now" | scheduler | `src/core/clock.ts` (`now`, `advanceClock`) | The only clock the scheduler and consent expiry read. |
+| Cron | consent expiry | `src/core/cron.ts`, `src/app/api/cron/route.ts`, clone-owned `src/app/cron-jobs.ts` | Expiry is also checked on every read and transition, so cron is a sweep, not the gate. |
+
+### Reuse lines → real code
+
+Read on 2026-11-23 from public clones, read-only. Showcall is not a saas-foundation clone (its own `src/db.ts`, no orgs,
+no RLS), so nothing from it can be imported as is.
+
+| PRD line | Source read | Verdict |
+|---|---|---|
+| P0-1 "previewed cascade (Groundwork's preview pattern)" | Groundwork was not read in this run. The same pattern is in showcall `src/runsheet/cascade.ts` (`previewCascade`, `commitCascade`: a preview is the commit rolled back; the commit refuses unless it moves exactly what the preview showed) and `src/runsheet/cues.ts` (`resolveCues`, `diffTimings`) at d484826 | **Pattern only, rebuilt here** in `src/lib/knotwork/schedule/`. Showcall resolves minute-of-day cues against agenda sessions; Knotwork resolves whole days backward from one date, and needs `withOrg`. The commit-must-match-preview rule is kept. |
+| P0-1 anchor/cascade scheduling | showcall `src/runsheet/cues.ts` | Pattern only, as above. |
+| P0-7 "integer cents" | showcall `src/money.ts` (`usd`, `parseCents`, 8 lines) | **Reused**: copied into `src/lib/knotwork/money.ts` with the source noted. |
+| P0-7 "vendor briefs (call-sheet-style, role-filtered)" | showcall `src/callsheet/callsheet.ts` (`projectCallSheet`, `diffCallSheets`) | **Pattern only, rebuilt here**: a brief is an explicit per-category projection, regenerated when its inputs change. No PDF in Phase 1. |
+| P0-3 "RSVP chasing: reminder cadence" | showcall `src/chase/chase.ts` (`CADENCE`, `cadenceStep`) | Candidate for Phase 2; not built. |
+| P0-6 "per-device rate limits (Commons' pattern)" | commons branch `foundation/v1.7.0` at 36fe554: `rules/limits.json`, `src/limits/index.ts`, `src/forum/limits-store.ts`, `tools/limitslib.py`, `fixtures/expected_limits.csv`; primitive `src/core/rate-limit.ts` (`hit`, `LIMITS`) is in the template | Candidate for Phase 3 (limits as data plus a Python oracle); not built. Commons' default branch holds only its kickoff kit. |
+| P1-5 "Bracketry's generate-score-repair" | bracketry `src/lib/league/schedule.ts` (`greedyDraft`, `scoreSchedule`, `repair`, `generateSchedule`), `src/lib/league/quality.ts`, `src/lib/league/prng.ts` at 1c6d632 | P1 only; not built. |
+| P1-6 "Showcall's engine reused consumer-side" | showcall `src/contingency/contingency.ts` (`createPlan`, `previewBranch`, `executeBranch`) | P1 only; not built. |
+| P0-3 "Adjuster's pattern", P0-5 "Quorum's separation discipline", P1-4 "Coursework's gating", Non-goals "Tradepost's lesson" | not read in this run (not on the list of repos to read) | **Pattern only**; to be mapped when their phase starts. |
+
+### What Phase 1 delivers against v1.0
+
+Phase 1 is P0-1, P0-7 and P0-2 as written. Two parts of P0-7 are cut down in this build and listed as "not done" in
+`NEXT.md`: contract **attachments** (needs a storage decision, see Questions) and brief content that depends on the
+guest engine (counts, do-not-play list), which is Phase 2 data.
+
+### Questions for Shane
+
+Each has a default in force so the build could proceed; the default is a row in `docs/knotwork/decisions.md`.
+
+1. **Solo partner.** Until the second partner joins, nothing designated can execute (D-13). Should a solo owner be
+   able to book and spend alone until then, with those actions marked "solo" in the feed?
+2. **Second factor.** The template requires TOTP for every `owner`, so both partners must enrol an authenticator app
+   before they can use the workspace. Is that acceptable for a consumer product, or should Knotwork ask the template
+   for a role that owns without MFA?
+3. **Impossible tasks on a date move.** The preview names them and the commit goes ahead (D-10). Should a move that
+   makes anything impossible be refused instead, the way Showcall refuses a run sheet with problems?
+4. **Spend threshold and expiry defaults.** $500.00 and 7 days (D-14). What should they be?
+5. **Changing the rules takes two keys.** The spend threshold and expiry can only change through a consent request
+   (D-12). Should single classes (for example "book vendor") be switchable off, and by whom?
+6. **Contract attachments.** Where do files live: a database column with a size cap, or a blob store? Nothing is built
+   until this is decided (D-17).
+7. **Who is a helper.** Every non-owner role is a helper with scoped grants; the template's `admin` role still reaches
+   the template's own settings pages (D-08). Should Knotwork hide `admin` at invite time?
+8. **Which vendors get flags.** Only booked vendors are flagged for re-confirmation (D-16). Should vendors still being
+   considered be flagged too?
+9. **Vendor access.** Briefs are read and printed by the couple in Phase 1. Should vendors get a tokenized read-only
+   link (a clone table on `src/core/tokens.ts`), and in which phase?
+10. **Default task template.** The lead times in `src/lib/knotwork/schedule/template.ts` are illustrative defaults,
+    not sourced figures (D-20). Do you want them reviewed by the wedding-planner persona before anyone sees them?
+
+---
+
 **Sample business:** "Knotwork," a consumer wedding-planning app for one couple + their circle
 **Status:** Draft v1.0 — written with PM + wedding-planner review AND a bride-persona deep review baked in (tags: *planner review*, *bride review*)
 **Scope stance:** deliberately the largest consumer project in the library (six net-new artifacts). Built in shippable phases — every phase gate is a working product.

@@ -1,0 +1,34 @@
+{
+  "name": "07-impossible-runway",
+  "note": "Lead time exceeds runway: due is still ahead, but the work no longer fits. Worked by hand in the test file.",
+  "weddingDate": "2027-01-22",
+  "today": "2026-11-23",
+  "tasks": [
+    {
+      "id": "custom-suit",
+      "title": "Custom suit",
+      "leadDays": 45,
+      "bufferDays": 30,
+      "dependsOn": [],
+      "done": false
+    }
+  ],
+  "expect": {
+    "invalid": null,
+    "tasks": {
+      "custom-suit": {
+        "due": "2026-12-23",
+        "startBy": "2026-11-08",
+        "earliestStart": "2026-11-23",
+        "slackDays": -15,
+        "needDays": 75,
+        "state": "impossible"
+      }
+    },
+    "criticalPath": [
+      "custom-suit"
+    ],
+    "runwayDays": 75,
+    "marginDays": -15
+  }
+}

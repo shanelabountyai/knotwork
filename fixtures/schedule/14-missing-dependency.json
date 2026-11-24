@@ -1,0 +1,26 @@
+{
+  "name": "14-missing-dependency",
+  "note": "A dependency on a task that does not exist is refused.",
+  "weddingDate": "2027-10-09",
+  "today": "2026-11-23",
+  "tasks": [
+    {
+      "id": "a",
+      "title": "A",
+      "leadDays": 1,
+      "bufferDays": 0,
+      "dependsOn": [
+        "ghost"
+      ],
+      "done": false
+    }
+  ],
+  "expect": {
+    "invalid": {
+      "kind": "missing-dependency",
+      "ids": [
+        "a"
+      ]
+    }
+  }
+}

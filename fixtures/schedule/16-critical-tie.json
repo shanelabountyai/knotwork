@@ -1,0 +1,87 @@
+{
+  "name": "16-critical-tie",
+  "note": "Two chains of equal length: the critical path picks the smaller id, every time.",
+  "weddingDate": "2027-10-09",
+  "today": "2026-11-23",
+  "tasks": [
+    {
+      "id": "m-start",
+      "title": "M start",
+      "leadDays": 10,
+      "bufferDays": 0,
+      "dependsOn": [],
+      "done": false
+    },
+    {
+      "id": "b-branch",
+      "title": "B branch",
+      "leadDays": 20,
+      "bufferDays": 5,
+      "dependsOn": [
+        "m-start"
+      ],
+      "done": false
+    },
+    {
+      "id": "a-branch",
+      "title": "A branch",
+      "leadDays": 20,
+      "bufferDays": 5,
+      "dependsOn": [
+        "m-start"
+      ],
+      "done": false
+    },
+    {
+      "id": "z-other",
+      "title": "Z other",
+      "leadDays": 35,
+      "bufferDays": 0,
+      "dependsOn": [],
+      "done": false
+    }
+  ],
+  "expect": {
+    "invalid": null,
+    "tasks": {
+      "m-start": {
+        "due": "2027-09-14",
+        "startBy": "2027-09-04",
+        "earliestStart": "2026-11-23",
+        "slackDays": 285,
+        "needDays": 35,
+        "state": "ok"
+      },
+      "b-branch": {
+        "due": "2027-10-04",
+        "startBy": "2027-09-14",
+        "earliestStart": "2026-12-03",
+        "slackDays": 285,
+        "needDays": 25,
+        "state": "ok"
+      },
+      "a-branch": {
+        "due": "2027-10-04",
+        "startBy": "2027-09-14",
+        "earliestStart": "2026-12-03",
+        "slackDays": 285,
+        "needDays": 25,
+        "state": "ok"
+      },
+      "z-other": {
+        "due": "2027-10-09",
+        "startBy": "2027-09-04",
+        "earliestStart": "2026-11-23",
+        "slackDays": 285,
+        "needDays": 35,
+        "state": "ok"
+      }
+    },
+    "criticalPath": [
+      "m-start",
+      "a-branch"
+    ],
+    "runwayDays": 35,
+    "marginDays": 285
+  }
+}

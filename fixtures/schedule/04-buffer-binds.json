@@ -1,0 +1,52 @@
+{
+  "name": "04-buffer-binds",
+  "note": "A task's own buffer is tighter than the task that depends on it.",
+  "weddingDate": "2027-10-09",
+  "today": "2026-11-23",
+  "tasks": [
+    {
+      "id": "send-save-the-dates",
+      "title": "Send save the dates",
+      "leadDays": 10,
+      "bufferDays": 120,
+      "dependsOn": [],
+      "done": false
+    },
+    {
+      "id": "send-invitations",
+      "title": "Send invitations",
+      "leadDays": 5,
+      "bufferDays": 60,
+      "dependsOn": [
+        "send-save-the-dates"
+      ],
+      "done": false
+    }
+  ],
+  "expect": {
+    "invalid": null,
+    "tasks": {
+      "send-save-the-dates": {
+        "due": "2027-06-11",
+        "startBy": "2027-06-01",
+        "earliestStart": "2026-11-23",
+        "slackDays": 190,
+        "needDays": 130,
+        "state": "ok"
+      },
+      "send-invitations": {
+        "due": "2027-08-10",
+        "startBy": "2027-08-05",
+        "earliestStart": "2026-12-03",
+        "slackDays": 245,
+        "needDays": 65,
+        "state": "ok"
+      }
+    },
+    "criticalPath": [
+      "send-save-the-dates"
+    ],
+    "runwayDays": 130,
+    "marginDays": 190
+  }
+}

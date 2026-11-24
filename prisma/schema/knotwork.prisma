@@ -1,0 +1,348 @@
+// Knotwork (clone-owned, PRD v1.1 Phase 1): the wedding, its backward-scheduled tasks, the budget and vendor book, and
+// the two-key consent requests. Every table is org-owned: RLS policies in 20261123000002_rls_policies_knotwork (INV-30),
+// all thirteen in the data export (src/app/export-hooks.ts, INV-34), harness rows in tests/fixtures/app.ts.
+//
+// RULE 1 (CLAUDE.md): the only stored deadline is Wedding.date. A task stores leadDays, bufferDays and dependencies;
+// its dates are derived on read (src/lib/knotwork/schedule/engine.ts). tests/knotwork/structure.test.ts scans this
+// file: a new date column fails until it is named there as a date of fact.
+// RULE 2: the fields marked "designated" are written only by src/lib/knotwork/consent/execute.ts, and the database
+// refuses them without an approved request (triggers in 20261123000001_knotwork_phase1).
+
+enum TaskKind {
+  template
+  manual
+  payment
+  rsvp
+}
+
+enum TaskStatus {
+  todo
+  in_progress
+  done
+}
+
+enum VendorStatus {
+  considering
+  booked
+  dropped
+}
+
+enum VendorCategory {
+  venue
+  caterer
+  photographer
+  dj
+  florist
+  officiant
+  baker
+  attire
+  transport
+  planner
+  other
+}
+
+enum FlagReason {
+  date_moved
+  scope_changed
+}
+
+enum ConsentKind {
+  book_vendor
+  sign_contract
+  spend
+  change_date
+  change_settings
+  remove_guest
+}
+
+enum ConsentStatus {
+  pending
+  approved
+  declined
+  withdrawn
+  expired
+}
+
+enum GrantScope {
+  schedule_edit
+  budget_view
+  budget_edit
+  vendors_view
+  vendors_edit
+  guests_edit
+}
+
+enum BaselineKind {
+  initial
+  move
+}
+
+/// One per org (D-07). `date` is the anchor every deadline derives from.
+model Wedding {
+  id                  String          @id @default(uuid()) @db.Uuid
+  orgId               String          @unique @db.Uuid
+  org                 Org             @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  title               String
+  /// Designated after creation: changes only with an approved change_date request (dateRequestId).
+  date                DateTime        @db.Date
+  dateRequestId       String?         @db.Uuid
+  dateRequest         ConsentRequest? @relation("weddingDate", fields: [dateRequestId], references: [id], onDelete: NoAction)
+  timeZone            String          @default("America/Chicago")
+  /// Designated: these three change only with an approved change_settings request (settingsRequestId).
+  spendThresholdCents Int             @default(50000)
+  consentExpiryDays   Int             @default(7)
+  chaseBufferDays     Int             @default(14)
+  settingsRequestId   String?         @db.Uuid
+  settingsRequest     ConsentRequest? @relation("weddingSettings", fields: [settingsRequestId], references: [id], onDelete: NoAction)
+  createdById         String?         @db.Uuid
+  createdAt           DateTime        @default(now()) @db.Timestamptz(6)
+  updatedAt           DateTime        @updatedAt @db.Timestamptz(6)
+}
+
+/// No date of its own: due = wedding - bufferDays (or earlier, if something depends on it); startBy = due - leadDays.
+model Task {
+  id          String           @id @default(uuid()) @db.Uuid
+  orgId       String           @db.Uuid
+  org         Org              @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  /// The template key, or 'rsvp-deadline' for the derived RSVP task. Null for manual and payment tasks.
+  key         String?
+  title       String
+  kind        TaskKind         @default(manual)
+  leadDays    Int
+  bufferDays  Int
+  status      TaskStatus       @default(todo)
+  assigneeId  String?          @db.Uuid
+  assignee    User?            @relation(fields: [assigneeId], references: [id], onDelete: SetNull)
+  /// A date of fact: the day it was marked done.
+  completedOn DateTime?        @db.Date
+  vendorId    String?          @db.Uuid
+  vendor      Vendor?          @relation(fields: [vendorId], references: [id], onDelete: SetNull)
+  notes       String           @default("")
+  createdAt   DateTime         @default(now()) @db.Timestamptz(6)
+  dependsOn   TaskDependency[] @relation("dependencyTask")
+  dependents  TaskDependency[] @relation("dependencyOn")
+  payment     VendorPayment?
+
+  @@unique([orgId, key])
+  @@index([orgId])
+}
+
+model TaskDependency {
+  id          String @id @default(uuid()) @db.Uuid
+  orgId       String @db.Uuid
+  org         Org    @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  taskId      String @db.Uuid
+  task        Task   @relation("dependencyTask", fields: [taskId], references: [id], onDelete: Cascade)
+  dependsOnId String @db.Uuid
+  dependsOn   Task   @relation("dependencyOn", fields: [dependsOnId], references: [id], onDelete: Cascade)
+
+  @@unique([taskId, dependsOnId])
+  @@index([orgId])
+  @@index([dependsOnId])
+}
+
+/// One row per committed wedding date: the first one, and every approved move. History, not a deadline.
+model ScheduleBaseline {
+  id          String          @id @default(uuid()) @db.Uuid
+  orgId       String          @db.Uuid
+  org         Org             @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  kind        BaselineKind
+  fromDate    DateTime?       @db.Date
+  toDate      DateTime        @db.Date
+  requestId   String?         @db.Uuid
+  request     ConsentRequest? @relation(fields: [requestId], references: [id], onDelete: NoAction)
+  /// { tasks: { id: { title, dueFrom, dueTo, startByFrom, startByTo, state } }, late, impossible }
+  snapshot    Json
+  /// 16 hex characters of the preview that was committed.
+  fingerprint String
+  createdById String?         @db.Uuid
+  createdAt   DateTime        @default(now()) @db.Timestamptz(6)
+
+  @@index([orgId, createdAt])
+}
+
+model BudgetCategory {
+  id            String    @id @default(uuid()) @db.Uuid
+  orgId         String    @db.Uuid
+  org           Org       @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  name          String
+  estimateCents Int
+  createdAt     DateTime  @default(now()) @db.Timestamptz(6)
+  expenses      Expense[]
+
+  @@unique([orgId, name])
+}
+
+/// An actual. Strictly over the spend threshold it is designated: it needs an approved spend request (requestId).
+model Expense {
+  id          String          @id @default(uuid()) @db.Uuid
+  orgId       String          @db.Uuid
+  org         Org             @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  categoryId  String          @db.Uuid
+  category    BudgetCategory  @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  vendorId    String?         @db.Uuid
+  vendor      Vendor?         @relation(fields: [vendorId], references: [id], onDelete: SetNull)
+  description String
+  amountCents Int
+  /// A date of fact: the day the money went out.
+  paidOn      DateTime        @db.Date
+  requestId   String?         @db.Uuid
+  request     ConsentRequest? @relation(fields: [requestId], references: [id], onDelete: NoAction)
+  createdById String?         @db.Uuid
+  createdAt   DateTime        @default(now()) @db.Timestamptz(6)
+  payment     VendorPayment?
+
+  @@index([orgId])
+  @@index([categoryId])
+}
+
+/// PRD P0-7 "snapshots": the rollup frozen at a moment.
+model BudgetSnapshot {
+  id        String   @id @default(uuid()) @db.Uuid
+  orgId     String   @db.Uuid
+  org       Org      @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  note      String   @default("")
+  totals    Json
+  takenById String?  @db.Uuid
+  takenAt   DateTime @default(now()) @db.Timestamptz(6)
+
+  @@index([orgId, takenAt])
+}
+
+model Vendor {
+  id                 String          @id @default(uuid()) @db.Uuid
+  orgId              String          @db.Uuid
+  org                Org             @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  name               String
+  category           VendorCategory
+  contactName        String          @default("")
+  email              String          @default("")
+  phone              String          @default("")
+  notes              String          @default("")
+  /// Designated: `booked` only with an approved book_vendor request (bookedRequestId).
+  status             VendorStatus    @default(considering)
+  bookedRequestId    String?         @db.Uuid
+  bookedRequest      ConsentRequest? @relation("vendorBooked", fields: [bookedRequestId], references: [id], onDelete: NoAction)
+  contractTotalCents Int?
+  /// Designated: set only with an approved sign_contract request (contractRequestId). A date of fact.
+  contractSignedOn   DateTime?       @db.Date
+  contractRequestId  String?         @db.Uuid
+  contractRequest    ConsentRequest? @relation("vendorContract", fields: [contractRequestId], references: [id], onDelete: NoAction)
+  /// Scope (D-16): a change to any of these four on a booked vendor raises a re-confirmation flag.
+  deliverables       String          @default("")
+  /// Minutes after midnight on the wedding day.
+  arriveMin          Int?
+  departMin          Int?
+  countEstimate      Int?
+  /// The vendor needs the final count this many days before the wedding; drives the RSVP deadline.
+  countDueDaysBefore Int?
+  /// Eats on site (a vendor meal in Phase 2's counts).
+  onSite             Boolean         @default(false)
+  createdAt          DateTime        @default(now()) @db.Timestamptz(6)
+  tasks              Task[]
+  payments           VendorPayment[]
+  flags              VendorFlag[]
+  briefs             VendorBrief[]
+  expenses           Expense[]
+
+  @@index([orgId])
+}
+
+/// A scheduled payment: "N days before the wedding". Its task carries it on the schedule (P0-1).
+model VendorPayment {
+  id            String    @id @default(uuid()) @db.Uuid
+  orgId         String    @db.Uuid
+  org           Org       @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  vendorId      String    @db.Uuid
+  vendor        Vendor    @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  label         String
+  amountCents   Int
+  dueDaysBefore Int
+  taskId        String    @unique @db.Uuid
+  task          Task      @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  /// A date of fact.
+  paidOn        DateTime? @db.Date
+  expenseId     String?   @unique @db.Uuid
+  expense       Expense?  @relation(fields: [expenseId], references: [id], onDelete: SetNull)
+  createdAt     DateTime  @default(now()) @db.Timestamptz(6)
+
+  @@index([orgId])
+  @@index([vendorId])
+}
+
+/// "Needs re-confirmation" while ackAt is null.
+model VendorFlag {
+  id         String     @id @default(uuid()) @db.Uuid
+  orgId      String     @db.Uuid
+  org        Org        @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  vendorId   String     @db.Uuid
+  vendor     Vendor     @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  reason     FlagReason
+  detail     Json
+  raisedById String?    @db.Uuid
+  raisedAt   DateTime   @default(now()) @db.Timestamptz(6)
+  ackById    String?    @db.Uuid
+  ackAt      DateTime?  @db.Timestamptz(6)
+  ackNote    String     @default("")
+
+  @@index([orgId, ackAt])
+  @@index([vendorId])
+}
+
+/// A regenerable artifact: a new version only when the inputs changed.
+model VendorBrief {
+  id            String   @id @default(uuid()) @db.Uuid
+  orgId         String   @db.Uuid
+  org           Org      @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  vendorId      String   @db.Uuid
+  vendor        Vendor   @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  version       Int
+  body          String
+  inputsHash    String
+  generatedById String?  @db.Uuid
+  generatedAt   DateTime @default(now()) @db.Timestamptz(6)
+
+  @@unique([vendorId, version])
+  @@index([orgId])
+}
+
+/// The two-key request (src/lib/knotwork/consent/machine.ts). `approved` is written together with the action it allows.
+model ConsentRequest {
+  id              String             @id @default(uuid()) @db.Uuid
+  orgId           String             @db.Uuid
+  org             Org                @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  kind            ConsentKind
+  status          ConsentStatus      @default(pending)
+  payload         Json
+  summary         String
+  proposerId      String             @db.Uuid
+  proposedAt      DateTime           @default(now()) @db.Timestamptz(6)
+  /// When the request lapses: proposedAt plus the wedding's consentExpiryDays. Not a plan deadline.
+  expiresAt       DateTime           @db.Timestamptz(6)
+  deciderId       String?            @db.Uuid
+  decidedAt       DateTime?          @db.Timestamptz(6)
+  declineReason   String             @default("")
+  executedAt      DateTime?          @db.Timestamptz(6)
+  weddingDates    Wedding[]          @relation("weddingDate")
+  weddingSettings Wedding[]          @relation("weddingSettings")
+  bookedVendors   Vendor[]           @relation("vendorBooked")
+  signedVendors   Vendor[]           @relation("vendorContract")
+  expenses        Expense[]
+  baselines       ScheduleBaseline[]
+
+  @@index([orgId, status])
+}
+
+/// A scoped grant for a helper (D-08). Partners need none.
+model HelperGrant {
+  id          String     @id @default(uuid()) @db.Uuid
+  orgId       String     @db.Uuid
+  org         Org        @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  userId      String     @db.Uuid
+  user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  scope       GrantScope
+  grantedById String?    @db.Uuid
+  createdAt   DateTime   @default(now()) @db.Timestamptz(6)
+
+  @@unique([orgId, userId, scope])
+}

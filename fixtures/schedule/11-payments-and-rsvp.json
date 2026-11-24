@@ -1,0 +1,104 @@
+{
+  "name": "11-payments-and-rsvp",
+  "note": "Vendor payments are zero-lead tasks; the RSVP deadline is a task too.",
+  "weddingDate": "2027-10-09",
+  "today": "2026-11-23",
+  "tasks": [
+    {
+      "id": "pay-venue-deposit",
+      "title": "Pay venue deposit",
+      "leadDays": 0,
+      "bufferDays": 300,
+      "dependsOn": [],
+      "done": false
+    },
+    {
+      "id": "pay-venue-balance",
+      "title": "Pay venue balance",
+      "leadDays": 0,
+      "bufferDays": 30,
+      "dependsOn": [
+        "pay-venue-deposit"
+      ],
+      "done": false
+    },
+    {
+      "id": "rsvp-deadline",
+      "title": "Rsvp deadline",
+      "leadDays": 0,
+      "bufferDays": 28,
+      "dependsOn": [],
+      "done": false
+    },
+    {
+      "id": "final-count-to-caterer",
+      "title": "Final count to caterer",
+      "leadDays": 0,
+      "bufferDays": 14,
+      "dependsOn": [
+        "rsvp-deadline"
+      ],
+      "done": false
+    },
+    {
+      "id": "seating-chart",
+      "title": "Seating chart",
+      "leadDays": 7,
+      "bufferDays": 7,
+      "dependsOn": [
+        "rsvp-deadline"
+      ],
+      "done": false
+    }
+  ],
+  "expect": {
+    "invalid": null,
+    "tasks": {
+      "pay-venue-deposit": {
+        "due": "2026-12-13",
+        "startBy": "2026-12-13",
+        "earliestStart": "2026-11-23",
+        "slackDays": 20,
+        "needDays": 300,
+        "state": "ok"
+      },
+      "pay-venue-balance": {
+        "due": "2027-09-09",
+        "startBy": "2027-09-09",
+        "earliestStart": "2026-11-23",
+        "slackDays": 290,
+        "needDays": 30,
+        "state": "ok"
+      },
+      "rsvp-deadline": {
+        "due": "2027-09-11",
+        "startBy": "2027-09-11",
+        "earliestStart": "2026-11-23",
+        "slackDays": 292,
+        "needDays": 28,
+        "state": "ok"
+      },
+      "final-count-to-caterer": {
+        "due": "2027-09-25",
+        "startBy": "2027-09-25",
+        "earliestStart": "2026-11-23",
+        "slackDays": 306,
+        "needDays": 14,
+        "state": "ok"
+      },
+      "seating-chart": {
+        "due": "2027-10-02",
+        "startBy": "2027-09-25",
+        "earliestStart": "2026-11-23",
+        "slackDays": 306,
+        "needDays": 14,
+        "state": "ok"
+      }
+    },
+    "criticalPath": [
+      "pay-venue-deposit"
+    ],
+    "runwayDays": 300,
+    "marginDays": 20
+  }
+}

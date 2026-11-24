@@ -1,0 +1,87 @@
+{
+ "note": "Hand-added: venue 600000+250000=850000 of 900000; catering 1250050 of 1200000 (over by 50050); flowers nothing spent of 300000; music 80000+1=80001 of 150000. Totals: estimate 2550000, actual 2180051, remaining 369949.",
+ "categories": [
+  {
+   "id": "c-venue",
+   "name": "Venue",
+   "estimateCents": 900000
+  },
+  {
+   "id": "c-cater",
+   "name": "Catering",
+   "estimateCents": 1200000
+  },
+  {
+   "id": "c-flowers",
+   "name": "Flowers",
+   "estimateCents": 300000
+  },
+  {
+   "id": "c-music",
+   "name": "Music",
+   "estimateCents": 150000
+  }
+ ],
+ "expenses": [
+  {
+   "categoryId": "c-venue",
+   "amountCents": 600000
+  },
+  {
+   "categoryId": "c-venue",
+   "amountCents": 250000
+  },
+  {
+   "categoryId": "c-cater",
+   "amountCents": 1250050
+  },
+  {
+   "categoryId": "c-music",
+   "amountCents": 80000
+  },
+  {
+   "categoryId": "c-music",
+   "amountCents": 1
+  }
+ ],
+ "expect": {
+  "lines": [
+   {
+    "id": "c-cater",
+    "name": "Catering",
+    "estimateCents": 1200000,
+    "actualCents": 1250050,
+    "remainingCents": -50050,
+    "over": true
+   },
+   {
+    "id": "c-flowers",
+    "name": "Flowers",
+    "estimateCents": 300000,
+    "actualCents": 0,
+    "remainingCents": 300000,
+    "over": false
+   },
+   {
+    "id": "c-music",
+    "name": "Music",
+    "estimateCents": 150000,
+    "actualCents": 80001,
+    "remainingCents": 69999,
+    "over": false
+   },
+   {
+    "id": "c-venue",
+    "name": "Venue",
+    "estimateCents": 900000,
+    "actualCents": 850000,
+    "remainingCents": 50000,
+    "over": false
+   }
+  ],
+  "estimateCents": 2550000,
+  "actualCents": 2180051,
+  "remainingCents": 369949,
+  "over": false
+ }
+}

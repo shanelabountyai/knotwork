@@ -1,0 +1,218 @@
+{
+ "note": "Each case: a vendor's scope before, the fields an edit submits, and the scope fields that must raise a re-confirmation flag (in SCOPE_FIELDS order). 'changed' is given when fields changed but no flag is due (D-16: only booked vendors are flagged).",
+ "cases": [
+  {
+   "name": "count estimate changed",
+   "status": "booked",
+   "before": {
+    "deliverables": "Plated dinner for the estimate, two servers",
+    "arriveMin": 900,
+    "departMin": 1320,
+    "countEstimate": 120
+   },
+   "after": {
+    "countEstimate": 132
+   },
+   "flag": [
+    "countEstimate"
+   ]
+  },
+  {
+   "name": "count estimate cleared",
+   "status": "booked",
+   "before": {
+    "deliverables": "Plated dinner for the estimate, two servers",
+    "arriveMin": 900,
+    "departMin": 1320,
+    "countEstimate": 120
+   },
+   "after": {
+    "countEstimate": null
+   },
+   "flag": [
+    "countEstimate"
+   ]
+  },
+  {
+   "name": "arrival time changed",
+   "status": "booked",
+   "before": {
+    "deliverables": "Plated dinner for the estimate, two servers",
+    "arriveMin": 900,
+    "departMin": 1320,
+    "countEstimate": 120
+   },
+   "after": {
+    "arriveMin": 870
+   },
+   "flag": [
+    "arriveMin"
+   ]
+  },
+  {
+   "name": "departure time changed",
+   "status": "booked",
+   "before": {
+    "deliverables": "Plated dinner for the estimate, two servers",
+    "arriveMin": 900,
+    "departMin": 1320,
+    "countEstimate": 120
+   },
+   "after": {
+    "departMin": 1380
+   },
+   "flag": [
+    "departMin"
+   ]
+  },
+  {
+   "name": "deliverables rewritten",
+   "status": "booked",
+   "before": {
+    "deliverables": "Plated dinner for the estimate, two servers",
+    "arriveMin": 900,
+    "departMin": 1320,
+    "countEstimate": 120
+   },
+   "after": {
+    "deliverables": "Buffet for the estimate, three servers"
+   },
+   "flag": [
+    "deliverables"
+   ]
+  },
+  {
+   "name": "two scope fields at once",
+   "status": "booked",
+   "before": {
+    "deliverables": "Plated dinner for the estimate, two servers",
+    "arriveMin": 900,
+    "departMin": 1320,
+    "countEstimate": 120
+   },
+   "after": {
+    "arriveMin": 840,
+    "countEstimate": 100
+   },
+   "flag": [
+    "arriveMin",
+    "countEstimate"
+   ]
+  },
+  {
+   "name": "all four scope fields",
+   "status": "booked",
+   "before": {
+    "deliverables": "Plated dinner for the estimate, two servers",
+    "arriveMin": 900,
+    "departMin": 1320,
+    "countEstimate": 120
+   },
+   "after": {
+    "deliverables": "Dessert only",
+    "arriveMin": 1000,
+    "departMin": 1200,
+    "countEstimate": 80
+   },
+   "flag": [
+    "deliverables",
+    "arriveMin",
+    "departMin",
+    "countEstimate"
+   ]
+  },
+  {
+   "name": "time set for the first time",
+   "status": "booked",
+   "before": {
+    "deliverables": "Plated dinner for the estimate, two servers",
+    "arriveMin": null,
+    "departMin": 1320,
+    "countEstimate": 120
+   },
+   "after": {
+    "arriveMin": 900
+   },
+   "flag": [
+    "arriveMin"
+   ]
+  },
+  {
+   "name": "same values resubmitted",
+   "status": "booked",
+   "before": {
+    "deliverables": "Plated dinner for the estimate, two servers",
+    "arriveMin": 900,
+    "departMin": 1320,
+    "countEstimate": 120
+   },
+   "after": {
+    "deliverables": "Plated dinner for the estimate, two servers",
+    "arriveMin": 900,
+    "departMin": 1320,
+    "countEstimate": 120
+   },
+   "flag": []
+  },
+  {
+   "name": "deliverables whitespace only",
+   "status": "booked",
+   "before": {
+    "deliverables": "Plated dinner for the estimate, two servers",
+    "arriveMin": 900,
+    "departMin": 1320,
+    "countEstimate": 120
+   },
+   "after": {
+    "deliverables": "  Plated dinner for the estimate,  two servers \n"
+   },
+   "flag": []
+  },
+  {
+   "name": "nothing in scope submitted (contact edit)",
+   "status": "booked",
+   "before": {
+    "deliverables": "Plated dinner for the estimate, two servers",
+    "arriveMin": 900,
+    "departMin": 1320,
+    "countEstimate": 120
+   },
+   "after": {},
+   "flag": []
+  },
+  {
+   "name": "scope changed on a vendor still being considered",
+   "status": "considering",
+   "before": {
+    "deliverables": "Plated dinner for the estimate, two servers",
+    "arriveMin": 900,
+    "departMin": 1320,
+    "countEstimate": 120
+   },
+   "after": {
+    "countEstimate": 140
+   },
+   "flag": [],
+   "changed": [
+    "countEstimate"
+   ]
+  },
+  {
+   "name": "scope changed on a dropped vendor",
+   "status": "dropped",
+   "before": {
+    "deliverables": "Plated dinner for the estimate, two servers",
+    "arriveMin": 900,
+    "departMin": 1320,
+    "countEstimate": 120
+   },
+   "after": {
+    "deliverables": "Nothing"
+   },
+   "flag": [],
+   "changed": [
+    "deliverables"
+   ]
+  }
+ ]
+}

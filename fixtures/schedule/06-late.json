@@ -1,0 +1,50 @@
+{
+  "name": "06-late",
+  "note": "Due dates already in the past.",
+  "weddingDate": "2026-12-20",
+  "today": "2026-11-23",
+  "tasks": [
+    {
+      "id": "order-rings",
+      "title": "Order rings",
+      "leadDays": 21,
+      "bufferDays": 60,
+      "dependsOn": [],
+      "done": false
+    },
+    {
+      "id": "write-vows",
+      "title": "Write vows",
+      "leadDays": 3,
+      "bufferDays": 1,
+      "dependsOn": [],
+      "done": false
+    }
+  ],
+  "expect": {
+    "invalid": null,
+    "tasks": {
+      "order-rings": {
+        "due": "2026-10-21",
+        "startBy": "2026-09-30",
+        "earliestStart": "2026-11-23",
+        "slackDays": -54,
+        "needDays": 81,
+        "state": "late"
+      },
+      "write-vows": {
+        "due": "2026-12-19",
+        "startBy": "2026-12-16",
+        "earliestStart": "2026-11-23",
+        "slackDays": 23,
+        "needDays": 4,
+        "state": "ok"
+      }
+    },
+    "criticalPath": [
+      "order-rings"
+    ],
+    "runwayDays": 81,
+    "marginDays": -54
+  }
+}

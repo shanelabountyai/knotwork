@@ -1,0 +1,163 @@
+{
+  "name": "09-move-later-6-weeks",
+  "note": "The demo move: six weeks later, every open task shifts 42 days, nothing breaks.",
+  "weddingDate": "2027-10-09",
+  "today": "2026-11-23",
+  "tasks": [
+    {
+      "id": "book-venue",
+      "title": "Book venue",
+      "leadDays": 14,
+      "bufferDays": 300,
+      "dependsOn": [],
+      "done": true
+    },
+    {
+      "id": "book-caterer",
+      "title": "Book caterer",
+      "leadDays": 21,
+      "bufferDays": 240,
+      "dependsOn": [],
+      "done": false
+    },
+    {
+      "id": "tasting",
+      "title": "Tasting",
+      "leadDays": 7,
+      "bufferDays": 120,
+      "dependsOn": [
+        "book-caterer"
+      ],
+      "done": false
+    },
+    {
+      "id": "order-cake",
+      "title": "Order cake",
+      "leadDays": 30,
+      "bufferDays": 45,
+      "dependsOn": [],
+      "done": false
+    },
+    {
+      "id": "final-count-to-caterer",
+      "title": "Final count to caterer",
+      "leadDays": 0,
+      "bufferDays": 14,
+      "dependsOn": [
+        "tasting"
+      ],
+      "done": false
+    },
+    {
+      "id": "pay-caterer-balance",
+      "title": "Pay caterer balance",
+      "leadDays": 0,
+      "bufferDays": 7,
+      "dependsOn": [
+        "final-count-to-caterer"
+      ],
+      "done": false
+    }
+  ],
+  "expect": {
+    "invalid": null,
+    "tasks": {
+      "book-venue": {
+        "due": "2026-12-13",
+        "startBy": "2026-11-29",
+        "earliestStart": null,
+        "slackDays": null,
+        "needDays": null,
+        "state": "done"
+      },
+      "book-caterer": {
+        "due": "2027-02-11",
+        "startBy": "2027-01-21",
+        "earliestStart": "2026-11-23",
+        "slackDays": 59,
+        "needDays": 261,
+        "state": "ok"
+      },
+      "tasting": {
+        "due": "2027-06-11",
+        "startBy": "2027-06-04",
+        "earliestStart": "2026-12-14",
+        "slackDays": 172,
+        "needDays": 127,
+        "state": "ok"
+      },
+      "order-cake": {
+        "due": "2027-08-25",
+        "startBy": "2027-07-26",
+        "earliestStart": "2026-11-23",
+        "slackDays": 245,
+        "needDays": 75,
+        "state": "ok"
+      },
+      "final-count-to-caterer": {
+        "due": "2027-09-25",
+        "startBy": "2027-09-25",
+        "earliestStart": "2026-12-21",
+        "slackDays": 278,
+        "needDays": 14,
+        "state": "ok"
+      },
+      "pay-caterer-balance": {
+        "due": "2027-10-02",
+        "startBy": "2027-10-02",
+        "earliestStart": "2026-12-21",
+        "slackDays": 285,
+        "needDays": 7,
+        "state": "ok"
+      }
+    },
+    "criticalPath": [
+      "book-caterer"
+    ],
+    "runwayDays": 261,
+    "marginDays": 59
+  },
+  "move": {
+    "to": "2027-11-20",
+    "expect": {
+      "deltaDays": 42,
+      "tasks": {
+        "book-caterer": {
+          "due": "2027-03-25",
+          "startBy": "2027-03-04",
+          "state": "ok"
+        },
+        "book-venue": {
+          "due": "2027-01-24",
+          "startBy": "2027-01-10",
+          "state": "done"
+        },
+        "final-count-to-caterer": {
+          "due": "2027-11-06",
+          "startBy": "2027-11-06",
+          "state": "ok"
+        },
+        "order-cake": {
+          "due": "2027-10-06",
+          "startBy": "2027-09-06",
+          "state": "ok"
+        },
+        "pay-caterer-balance": {
+          "due": "2027-11-13",
+          "startBy": "2027-11-13",
+          "state": "ok"
+        },
+        "tasting": {
+          "due": "2027-07-23",
+          "startBy": "2027-07-16",
+          "state": "ok"
+        }
+      },
+      "late": [],
+      "impossible": [],
+      "resolved": [],
+      "marginDays": 101,
+      "fingerprint": "b186d605f4a7a382"
+    }
+  }
+}

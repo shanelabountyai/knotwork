@@ -1,0 +1,478 @@
+{
+  "name": "12-default-template",
+  "note": "The shipped default template, about a year out: it resolves with nothing late and nothing impossible. Tasks are written from src/lib/knotwork/schedule/template.ts.",
+  "weddingDate": "2027-11-20",
+  "today": "2026-11-23",
+  "tasks": [
+    {
+      "id": "set-budget",
+      "title": "Agree the budget",
+      "leadDays": 7,
+      "bufferDays": 270,
+      "dependsOn": [],
+      "done": false
+    },
+    {
+      "id": "book-venue",
+      "title": "Book the venue",
+      "leadDays": 30,
+      "bufferDays": 240,
+      "dependsOn": [],
+      "done": false
+    },
+    {
+      "id": "draft-guest-list",
+      "title": "Draft the guest list",
+      "leadDays": 14,
+      "bufferDays": 240,
+      "dependsOn": [
+        "set-budget"
+      ],
+      "done": false
+    },
+    {
+      "id": "book-caterer",
+      "title": "Book the caterer",
+      "leadDays": 21,
+      "bufferDays": 210,
+      "dependsOn": [
+        "book-venue"
+      ],
+      "done": false
+    },
+    {
+      "id": "book-photographer",
+      "title": "Book the photographer",
+      "leadDays": 14,
+      "bufferDays": 210,
+      "dependsOn": [
+        "book-venue"
+      ],
+      "done": false
+    },
+    {
+      "id": "book-officiant",
+      "title": "Book the officiant",
+      "leadDays": 14,
+      "bufferDays": 180,
+      "dependsOn": [
+        "book-venue"
+      ],
+      "done": false
+    },
+    {
+      "id": "book-music",
+      "title": "Book the music",
+      "leadDays": 14,
+      "bufferDays": 180,
+      "dependsOn": [
+        "book-venue"
+      ],
+      "done": false
+    },
+    {
+      "id": "send-save-the-dates",
+      "title": "Send save-the-dates",
+      "leadDays": 10,
+      "bufferDays": 180,
+      "dependsOn": [
+        "draft-guest-list",
+        "book-venue"
+      ],
+      "done": false
+    },
+    {
+      "id": "book-florist",
+      "title": "Book the florist",
+      "leadDays": 14,
+      "bufferDays": 150,
+      "dependsOn": [],
+      "done": false
+    },
+    {
+      "id": "choose-attire",
+      "title": "Choose the attire",
+      "leadDays": 30,
+      "bufferDays": 0,
+      "dependsOn": [],
+      "done": false
+    },
+    {
+      "id": "order-attire",
+      "title": "Order the attire",
+      "leadDays": 150,
+      "bufferDays": 0,
+      "dependsOn": [
+        "choose-attire"
+      ],
+      "done": false
+    },
+    {
+      "id": "alterations",
+      "title": "Alterations",
+      "leadDays": 90,
+      "bufferDays": 14,
+      "dependsOn": [
+        "order-attire"
+      ],
+      "done": false
+    },
+    {
+      "id": "menu-tasting",
+      "title": "Menu tasting",
+      "leadDays": 7,
+      "bufferDays": 90,
+      "dependsOn": [
+        "book-caterer"
+      ],
+      "done": false
+    },
+    {
+      "id": "order-invitations",
+      "title": "Order invitations",
+      "leadDays": 30,
+      "bufferDays": 75,
+      "dependsOn": [
+        "draft-guest-list"
+      ],
+      "done": false
+    },
+    {
+      "id": "send-invitations",
+      "title": "Send invitations",
+      "leadDays": 5,
+      "bufferDays": 60,
+      "dependsOn": [
+        "order-invitations"
+      ],
+      "done": false
+    },
+    {
+      "id": "order-cake",
+      "title": "Order the cake",
+      "leadDays": 14,
+      "bufferDays": 60,
+      "dependsOn": [],
+      "done": false
+    },
+    {
+      "id": "marriage-licence",
+      "title": "Get the marriage licence",
+      "leadDays": 3,
+      "bufferDays": 14,
+      "dependsOn": [],
+      "done": false
+    },
+    {
+      "id": "seating-chart",
+      "title": "Make the seating chart",
+      "leadDays": 7,
+      "bufferDays": 7,
+      "dependsOn": [],
+      "done": false
+    },
+    {
+      "id": "final-walkthrough",
+      "title": "Final venue walkthrough",
+      "leadDays": 1,
+      "bufferDays": 7,
+      "dependsOn": [
+        "book-venue"
+      ],
+      "done": false
+    },
+    {
+      "id": "write-vows",
+      "title": "Write vows",
+      "leadDays": 7,
+      "bufferDays": 3,
+      "dependsOn": [],
+      "done": false
+    }
+  ],
+  "expect": {
+    "invalid": null,
+    "tasks": {
+      "set-budget": {
+        "due": "2027-02-23",
+        "startBy": "2027-02-16",
+        "earliestStart": "2026-11-23",
+        "slackDays": 85,
+        "needDays": 277,
+        "state": "ok"
+      },
+      "book-venue": {
+        "due": "2027-03-25",
+        "startBy": "2027-02-23",
+        "earliestStart": "2026-11-23",
+        "slackDays": 92,
+        "needDays": 270,
+        "state": "ok"
+      },
+      "draft-guest-list": {
+        "due": "2027-03-25",
+        "startBy": "2027-03-11",
+        "earliestStart": "2026-11-30",
+        "slackDays": 101,
+        "needDays": 254,
+        "state": "ok"
+      },
+      "book-caterer": {
+        "due": "2027-04-24",
+        "startBy": "2027-04-03",
+        "earliestStart": "2026-12-23",
+        "slackDays": 101,
+        "needDays": 231,
+        "state": "ok"
+      },
+      "book-photographer": {
+        "due": "2027-04-24",
+        "startBy": "2027-04-10",
+        "earliestStart": "2026-12-23",
+        "slackDays": 108,
+        "needDays": 224,
+        "state": "ok"
+      },
+      "book-officiant": {
+        "due": "2027-05-24",
+        "startBy": "2027-05-10",
+        "earliestStart": "2026-12-23",
+        "slackDays": 138,
+        "needDays": 194,
+        "state": "ok"
+      },
+      "book-music": {
+        "due": "2027-05-24",
+        "startBy": "2027-05-10",
+        "earliestStart": "2026-12-23",
+        "slackDays": 138,
+        "needDays": 194,
+        "state": "ok"
+      },
+      "send-save-the-dates": {
+        "due": "2027-05-24",
+        "startBy": "2027-05-14",
+        "earliestStart": "2026-12-23",
+        "slackDays": 142,
+        "needDays": 190,
+        "state": "ok"
+      },
+      "book-florist": {
+        "due": "2027-06-23",
+        "startBy": "2027-06-09",
+        "earliestStart": "2026-11-23",
+        "slackDays": 198,
+        "needDays": 164,
+        "state": "ok"
+      },
+      "choose-attire": {
+        "due": "2027-03-11",
+        "startBy": "2027-02-09",
+        "earliestStart": "2026-11-23",
+        "slackDays": 78,
+        "needDays": 284,
+        "state": "ok"
+      },
+      "order-attire": {
+        "due": "2027-08-08",
+        "startBy": "2027-03-11",
+        "earliestStart": "2026-12-23",
+        "slackDays": 78,
+        "needDays": 254,
+        "state": "ok"
+      },
+      "alterations": {
+        "due": "2027-11-06",
+        "startBy": "2027-08-08",
+        "earliestStart": "2027-05-22",
+        "slackDays": 78,
+        "needDays": 104,
+        "state": "ok"
+      },
+      "menu-tasting": {
+        "due": "2027-08-22",
+        "startBy": "2027-08-15",
+        "earliestStart": "2027-01-13",
+        "slackDays": 214,
+        "needDays": 97,
+        "state": "ok"
+      },
+      "order-invitations": {
+        "due": "2027-09-06",
+        "startBy": "2027-08-07",
+        "earliestStart": "2026-12-14",
+        "slackDays": 236,
+        "needDays": 105,
+        "state": "ok"
+      },
+      "send-invitations": {
+        "due": "2027-09-21",
+        "startBy": "2027-09-16",
+        "earliestStart": "2027-01-13",
+        "slackDays": 246,
+        "needDays": 65,
+        "state": "ok"
+      },
+      "order-cake": {
+        "due": "2027-09-21",
+        "startBy": "2027-09-07",
+        "earliestStart": "2026-11-23",
+        "slackDays": 288,
+        "needDays": 74,
+        "state": "ok"
+      },
+      "marriage-licence": {
+        "due": "2027-11-06",
+        "startBy": "2027-11-03",
+        "earliestStart": "2026-11-23",
+        "slackDays": 345,
+        "needDays": 17,
+        "state": "ok"
+      },
+      "seating-chart": {
+        "due": "2027-11-13",
+        "startBy": "2027-11-06",
+        "earliestStart": "2026-11-23",
+        "slackDays": 348,
+        "needDays": 14,
+        "state": "ok"
+      },
+      "final-walkthrough": {
+        "due": "2027-11-13",
+        "startBy": "2027-11-12",
+        "earliestStart": "2026-12-23",
+        "slackDays": 324,
+        "needDays": 8,
+        "state": "ok"
+      },
+      "write-vows": {
+        "due": "2027-11-17",
+        "startBy": "2027-11-10",
+        "earliestStart": "2026-11-23",
+        "slackDays": 352,
+        "needDays": 10,
+        "state": "ok"
+      }
+    },
+    "criticalPath": [
+      "choose-attire",
+      "order-attire",
+      "alterations"
+    ],
+    "runwayDays": 284,
+    "marginDays": 78
+  },
+  "move": {
+    "to": "2028-01-01",
+    "expect": {
+      "deltaDays": 42,
+      "tasks": {
+        "alterations": {
+          "due": "2027-12-18",
+          "startBy": "2027-09-19",
+          "state": "ok"
+        },
+        "book-caterer": {
+          "due": "2027-06-05",
+          "startBy": "2027-05-15",
+          "state": "ok"
+        },
+        "book-florist": {
+          "due": "2027-08-04",
+          "startBy": "2027-07-21",
+          "state": "ok"
+        },
+        "book-music": {
+          "due": "2027-07-05",
+          "startBy": "2027-06-21",
+          "state": "ok"
+        },
+        "book-officiant": {
+          "due": "2027-07-05",
+          "startBy": "2027-06-21",
+          "state": "ok"
+        },
+        "book-photographer": {
+          "due": "2027-06-05",
+          "startBy": "2027-05-22",
+          "state": "ok"
+        },
+        "book-venue": {
+          "due": "2027-05-06",
+          "startBy": "2027-04-06",
+          "state": "ok"
+        },
+        "choose-attire": {
+          "due": "2027-04-22",
+          "startBy": "2027-03-23",
+          "state": "ok"
+        },
+        "draft-guest-list": {
+          "due": "2027-05-06",
+          "startBy": "2027-04-22",
+          "state": "ok"
+        },
+        "final-walkthrough": {
+          "due": "2027-12-25",
+          "startBy": "2027-12-24",
+          "state": "ok"
+        },
+        "marriage-licence": {
+          "due": "2027-12-18",
+          "startBy": "2027-12-15",
+          "state": "ok"
+        },
+        "menu-tasting": {
+          "due": "2027-10-03",
+          "startBy": "2027-09-26",
+          "state": "ok"
+        },
+        "order-attire": {
+          "due": "2027-09-19",
+          "startBy": "2027-04-22",
+          "state": "ok"
+        },
+        "order-cake": {
+          "due": "2027-11-02",
+          "startBy": "2027-10-19",
+          "state": "ok"
+        },
+        "order-invitations": {
+          "due": "2027-10-18",
+          "startBy": "2027-09-18",
+          "state": "ok"
+        },
+        "seating-chart": {
+          "due": "2027-12-25",
+          "startBy": "2027-12-18",
+          "state": "ok"
+        },
+        "send-invitations": {
+          "due": "2027-11-02",
+          "startBy": "2027-10-28",
+          "state": "ok"
+        },
+        "send-save-the-dates": {
+          "due": "2027-07-05",
+          "startBy": "2027-06-25",
+          "state": "ok"
+        },
+        "set-budget": {
+          "due": "2027-04-06",
+          "startBy": "2027-03-30",
+          "state": "ok"
+        },
+        "write-vows": {
+          "due": "2027-12-29",
+          "startBy": "2027-12-22",
+          "state": "ok"
+        }
+      },
+      "late": [],
+      "impossible": [],
+      "resolved": [],
+      "marginDays": 120,
+      "fingerprint": "946ab78a90de6625"
+    }
+  }
+}
