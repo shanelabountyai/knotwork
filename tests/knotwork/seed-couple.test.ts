@@ -10,6 +10,9 @@ import { wallFeed } from '@/lib/knotwork/photos/store';
 import { inspect } from '@/lib/knotwork/uploads/inspect';
 import { addDays, dayOfDb, todayIn } from '@/lib/knotwork/days';
 import { loadSchedule } from '@/lib/knotwork/schedule/store';
+import { loadLinks } from '@/lib/knotwork/registry/store';
+import { ledger } from '@/lib/knotwork/thanks/aging';
+import { loadObligations } from '@/lib/knotwork/thanks/store';
 import { COUPLE, seedCouple } from '../../scripts/knotwork/seed-couple';
 import { resetAuthTables } from '../helpers/auth';
 
@@ -94,6 +97,17 @@ describe('seed:couple', () => {
     // The last offer was 100.00 against 80.00 remaining: entered whole, 20.00 back. Mock money: a ledger, never a charge.
     expect((await db.giftEntry.findMany({ where: { orgId, kind: 'excess_return' } })).map((e) => e.amountCents)).toEqual([-2_000]);
     expect(await db.giftEntry.count({ where: { orgId } })).toBe(5);
+  });
+
+  it('P1-8 and P1-3: two store items, one skillet bought by the Ashbys, and a thank-you ledger reading "2 unthanked > 3 weeks"', async () => {
+    const links = await withOrg({ orgId }, (tx) => loadLinks(tx, { orgId }));
+    expect(links.map((l) => [l.title, l.link?.host, l.claimed, l.quantityWanted, l.claimants])).toEqual([['Cast-iron skillet', 'www.example.com', 1, 2, ['The Ashbys']], ['Linen napkins', 'shop.example.net', 0, 1, []]]);
+    const book = ledger(await withOrg({ orgId }, (tx) => loadObligations(tx, { orgId })), today());
+    expect(book.headline).toBe('2 unthanked > 3 weeks');
+    expect(book.owed.map((o) => [o.source, o.giver, o.ageDays])).toEqual([
+      ['logged', 'Great-aunt Odile', 35], ['logged', 'The Lindqvists', 24], ['pooled', 'Priya Rao', 0], ['claimed', 'The Ashbys', 0], ['pooled', 'The Vales', 0],
+    ]);
+    expect(book.thanked.map((o) => [o.giver, o.what])).toEqual([['Uncle Bram', 'a framed print of the river']]);
   });
 
   it('the photo wall has one pre-moderated event with three approved photos and one waiting, every stored byte clean', async () => {

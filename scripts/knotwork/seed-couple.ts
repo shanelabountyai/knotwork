@@ -13,6 +13,8 @@ import { addFunder, addPledge, allocate, linkFunder, receive } from '@/lib/knotw
 import { addItem, contribute } from '@/lib/knotwork/gifts/store';
 import { applyRsvp, importHouseholds, releaseWave, savePlan } from '@/lib/knotwork/guests/store';
 import { addPhoto, createEvent, moderatePhoto } from '@/lib/knotwork/photos/store';
+import { addLink, claim } from '@/lib/knotwork/registry/store';
+import { acknowledgeGift, logGift } from '@/lib/knotwork/thanks/store';
 import { processUpload, type Processed } from '@/lib/knotwork/uploads/process';
 import { hashToken } from '@/core/tokens';
 import { createWedding } from '@/lib/knotwork/schedule/store';
@@ -198,6 +200,22 @@ export async function seedCouple(opts: { today?: Day } = {}): Promise<string[]> 
     await gives('The Ashbys', canoe.id, 10_000);
     await gives('The Vales', player.id, 12_000);
     await gives('Priya Rao', player.id, 10_000);
+  });
+
+  // Phase 4, P1-8: two things to buy from a store (invented store names on example domains; nothing is fetched). The
+  // Ashbys marked one of the two skillets as bought. P1-3: three gifts logged by hand: a quilt from Great-aunt Odile
+  // five weeks ago and copper mugs from the Lindqvists three and a half weeks ago, neither thanked yet (so the ledger
+  // reads "2 unthanked > 3 weeks"), and a framed print from Uncle Bram, thanked.
+  await withOrg({ orgId }, async (tx) => {
+    const skillet = await addLink(tx, a, { title: 'Cast-iron skillet', store: 'Example Kitchen Co.', url: 'https://www.example.com/skillet', priceCents: 4_500, quantityWanted: 2 });
+    await addLink(tx, b, { title: 'Linen napkins', store: 'Example Linens', url: 'https://shop.example.net/napkins', priceCents: null, quantityWanted: 1 });
+    const household = async (name: string) => (await tx.household.findFirstOrThrow({ where: { orgId, name }, select: { id: true } })).id;
+    const bought = await claim(tx, orgId, await household('The Ashbys'), skillet.id, 1);
+    if (!bought?.ok) throw new Error('seed: the Ashbys could not mark the skillet as bought');
+    await logGift(tx, a, { householdId: null, giverName: 'Great-aunt Odile', what: 'a hand-stitched quilt', receivedOn: addDays(today, -35) });
+    await logGift(tx, b, { householdId: await household('The Lindqvists'), giverName: '', what: 'a set of copper mugs', receivedOn: addDays(today, -24) });
+    const print = await logGift(tx, a, { householdId: null, giverName: 'Uncle Bram', what: 'a framed print of the river', receivedOn: addDays(today, -40) });
+    await acknowledgeGift(tx, b, print.id);
   });
 
   // Phase 3: the photo wall. One event, "Reception", where each photo waits for approval (the demo story: a guest's
