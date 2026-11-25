@@ -12,27 +12,28 @@ import { hashToken, newToken } from '@/core/tokens';
 import { enqueue } from '@/modules/notifications/outbox';
 import { logChange } from '../changelog';
 import { requireWedding, todayOf, weddingDay, type WeddingRow } from '../context';
-import { addDays, dbOfDay, diffDays, type Day } from '../days';
+import { addDays, dayOfDb, dbOfDay, diffDays, type Day } from '../days';
 import { RSVP_TASK_KEY } from '../schedule/rsvp';
 import { lockWedding } from '../schedule/store';
 import { capState, lockoutRegrets, planRelease, RELEASE_TEXT, type CapState, type HouseholdIn, type ReleasePlan } from './backfill';
 import { chasePlan, type ChasePlan } from './chase';
 import type { ImportHousehold } from './csv';
+import { channelOf, checkMessage, E164, fitsSms, hourIn, smsQuiet, type Channel } from './delivery';
 import { costCents, deltaFor, headcount, type GuestFull, type Headcount, type Prices } from './headcount';
-import { reminderText, type CheckedRsvp } from './projection';
+import { reminderSms, reminderText, type CheckedRsvp } from './projection';
 
 type Ctx = { orgId: string; userId: string | null };
 export const DEFAULT_MEALS = ['Chicken', 'Fish', 'Vegetarian'];
 /** With no booked vendor asking for a count, RSVPs are due this many days plus the chase buffer before the wedding (D-44). */
 export const DEFAULT_COUNT_DAYS = 14;
 
-const PLAN_DEFAULTS = { cap: 100, venueMin: null as number | null, venueMax: null as number | null, perHeadCents: 0, kidsMealCents: 0, vendorMealCents: 0, lockoutDays: 42, minBatchSeats: 4, mealOptions: DEFAULT_MEALS };
+const PLAN_DEFAULTS = { cap: 100, venueMin: null as number | null, venueMax: null as number | null, perHeadCents: 0, kidsMealCents: 0, vendorMealCents: 0, lockoutDays: 42, minBatchSeats: 4, mealOptions: DEFAULT_MEALS, autoReminders: false };
 export type Plan = typeof PLAN_DEFAULTS;
 
 /** The guest plan, or its defaults when none was saved yet (reading never writes). */
 export async function loadPlan(tx: Tx, ctx: { orgId: string }): Promise<Plan> {
   const p = await tx.guestPlan.findUnique({ where: { orgId: ctx.orgId } });
-  return p ? { cap: p.cap, venueMin: p.venueMin, venueMax: p.venueMax, perHeadCents: p.perHeadCents, kidsMealCents: p.kidsMealCents, vendorMealCents: p.vendorMealCents, lockoutDays: p.lockoutDays, minBatchSeats: p.minBatchSeats, mealOptions: p.mealOptions.length ? p.mealOptions : DEFAULT_MEALS } : { ...PLAN_DEFAULTS };
+  return p ? { cap: p.cap, venueMin: p.venueMin, venueMax: p.venueMax, perHeadCents: p.perHeadCents, kidsMealCents: p.kidsMealCents, vendorMealCents: p.vendorMealCents, lockoutDays: p.lockoutDays, minBatchSeats: p.minBatchSeats, mealOptions: p.mealOptions.length ? p.mealOptions : DEFAULT_MEALS, autoReminders: p.autoReminders } : { ...PLAN_DEFAULTS };
 }
 
 export const loadHouseholds = (tx: Tx, ctx: { orgId: string }) => tx.household.findMany({ where: inOrg(ctx), include: { guests: { orderBy: [{ createdAt: 'asc' }, { id: 'asc' }] } }, orderBy: [{ priority: 'asc' }, { name: 'asc' }] });
@@ -94,6 +95,7 @@ export async function updateHousehold(tx: Tx, ctx: Ctx, id: string, input: House
   const h = await tx.household.findFirstOrThrow({ where: { id, ...inOrg(ctx) } });
   if (input.name !== h.name && (await tx.household.findFirst({ where: { ...inOrg(ctx), name: input.name }, select: { id: true } }))) throw new Refused(`There is already a household called ${input.name}.`);
   if (h.state !== 'queued' && input.list !== h.list) throw new Refused('This household has already left the queue; its list can no longer change.');
+  if (h.remindVia === 'sms' && !E164.test(input.phone)) throw new Refused(`${h.name} get reminders by text message, so the phone number has to stay in international form (like +15551234567). Choose another way to remind them first.`);
   const after = await tx.household.update({ where: { id }, data: input });
   await assertWithinCap(tx, ctx, 'That change');
   // PRD P0-3: "per-household overrides logged" — the diff carries plusOneOverride and its note when they change.
@@ -282,9 +284,12 @@ export async function importHouseholds(tx: Tx, ctx: Ctx, parsed: ImportHousehold
   return { households: parsed.length, guests };
 }
 
-// ---- chasing (P0-3)
+// ---- chasing (P0-3), and delivery (Phase 5)
 
-export type ChaseView = { deadline: Day; daysLeft: number; plan: ChasePlan; nonResponders: { id: string; name: string; email: string; phone: string; pending: string[]; remindersSent: number[]; called: boolean }[] };
+export type ChaseView = {
+  deadline: Day; daysLeft: number; plan: ChasePlan;
+  nonResponders: { id: string; name: string; email: string; phone: string; pending: string[]; remindersSent: number[]; called: boolean; remindVia: Channel; channel: 'email' | 'sms' | null; stopped: boolean }[];
+};
 
 export async function loadChase(tx: Tx, ctx: { orgId: string }): Promise<ChaseView> {
   const wedding = await requireWedding(tx, ctx);
@@ -293,24 +298,75 @@ export async function loadChase(tx: Tx, ctx: { orgId: string }): Promise<ChaseVi
   const nonResponders = rows.filter((h) => h.guests.length).map((h) => ({
     id: h.id, name: h.name, email: h.email, phone: h.phone, pending: h.guests.map((g) => g.name),
     remindersSent: h.chaseEvents.filter((e) => e.kind === 'reminder').map((e) => e.step), called: h.chaseEvents.some((e) => e.kind === 'call'),
+    remindVia: h.remindVia, channel: channelOf(h), stopped: h.remindersStoppedAt !== null,
   }));
   const daysLeft = diffDays(deadline, todayOf(wedding));
-  return { deadline, daysLeft, nonResponders, plan: chasePlan(nonResponders.map((h) => ({ id: h.id, hasEmail: !!h.email, remindersSent: h.remindersSent, called: h.called })), daysLeft) };
+  // `hasEmail` in the pure plan means "can be reminded today": on its channel, and not stopped (Phase 5).
+  return { deadline, daysLeft, nonResponders, plan: chasePlan(nonResponders.map((h) => ({ id: h.id, hasEmail: h.channel !== null, remindersSent: h.remindersSent, called: h.called })), daysLeft) };
 }
 
-/** Enqueues every reminder that is due (outbox: captured, never really sent in this project) and records the step. */
+/**
+ * Enqueues every reminder that is due, each on its household's channel (outbox: captured, never really sent in this
+ * project), and records the step. Idempotent: the step is recorded in the same transaction (ChaseEvent is unique per
+ * household and step) under the wedding lock, so the button and the daily schedule never send one step twice.
+ * Every message passes the length guard first; one that does not fit is not sent and its household stays on the
+ * call-personally worklist. The schedule (no person: `userId` null) sends no text message in quiet hours.
+ */
 export async function sendDueReminders(tx: Tx, ctx: Ctx): Promise<number> {
   await lockWedding(tx, ctx.orgId);
   const wedding = await requireWedding(tx, ctx);
   const chase = await loadChase(tx, ctx);
+  const sent = { email: 0, sms: 0 };
+  const scheduled = ctx.userId === null;
+  const quiet = scheduled && smsQuiet(hourIn(wedding.timeZone, now()));
   for (const r of chase.plan.remind) {
     const h = chase.nonResponders.find((x) => x.id === r.id)!;
-    const text = reminderText({ householdName: h.name, weddingTitle: wedding.title, rsvpBy: chase.deadline, url: await rsvpLink(tx, ctx, h.id), step: r.step });
-    await enqueue({ channel: 'email', to: h.email, template: 'notice', data: text, orgId: ctx.orgId }, tx);
+    const channel = h.channel!;
+    if (channel === 'sms' && quiet) continue; // stays due: a later run inside the hours sends it (D-140)
+    const url = await rsvpLink(tx, ctx, h.id);
+    const text = channel === 'sms'
+      ? reminderSms({ weddingTitle: wedding.title, rsvpBy: chase.deadline, url }, fitsSms)
+      : reminderText({ householdName: h.name, weddingTitle: wedding.title, rsvpBy: chase.deadline, url, step: r.step });
+    if (checkMessage(channel, text)) continue;
+    await enqueue({ channel, to: channel === 'sms' ? h.phone : h.email, template: 'notice', data: text, orgId: ctx.orgId }, tx);
     await tx.chaseEvent.create({ data: { orgId: ctx.orgId, householdId: h.id, kind: 'reminder', step: r.step, byId: ctx.userId } });
+    sent[channel]++;
   }
-  if (chase.plan.remind.length) await logChange(tx, ctx, 'household', 'reminded', ctx.orgId, `${chase.plan.remind.length} households`, null, { households: chase.plan.remind.length, step: chase.plan.remind[0]!.step });
-  return chase.plan.remind.length;
+  const n = sent.email + sent.sms;
+  if (n) await logChange(tx, ctx, 'household', 'reminded', ctx.orgId, `${n} households`, null, { households: n, step: chase.plan.remind[0]!.step, email: sent.email, sms: sent.sms }, ctx.userId ? undefined : { via: 'schedule' });
+  return n;
+}
+
+export type ChannelInput = { channel: Channel; smsConsentOn: Day | null };
+
+/**
+ * How a household is reminded. Text messages need a phone in international form and the day the household agreed
+ * to them (a date of fact, recorded by hand); the database checks the pair. A stop the household made from its own
+ * link is never undone by the couple (D-139): a reply still ends the chase, and the couple can still call.
+ */
+export async function setReminderChannel(tx: Tx, ctx: Ctx, householdId: string, input: ChannelInput) {
+  const h = await tx.household.findFirstOrThrow({ where: { id: householdId, ...inOrg(ctx) } });
+  if (h.remindersStoppedAt) throw new Refused(`${h.name} stopped reminders from their own link, so none goes to them. You can still call them.`);
+  if (input.channel === 'sms') {
+    if (!E164.test(h.phone)) throw new Refused(`To remind ${h.name} by text message, first save their phone number in international form (like +15551234567).`);
+    if (!input.smsConsentOn) throw new Refused(`Enter the day ${h.name} agreed to reminders by text message.`);
+    if (input.smsConsentOn > todayOf(await requireWedding(tx, ctx))) throw new Refused('The day they agreed cannot be in the future.');
+  }
+  if (input.channel === 'email' && !h.email) throw new Refused(`There is no email address for ${h.name}. Add one first, or choose another way.`);
+  const smsConsentOn = input.channel === 'sms' ? input.smsConsentOn : null;
+  const before = { remindVia: h.remindVia, smsConsentOn: h.smsConsentOn ? dayOfDb(h.smsConsentOn) : null };
+  const after = { remindVia: input.channel, smsConsentOn };
+  if (JSON.stringify(before) === JSON.stringify(after)) throw new Refused('Nothing changed.');
+  await tx.household.update({ where: { id: householdId }, data: { remindVia: input.channel, smsConsentOn: smsConsentOn ? dbOfDay(smsConsentOn) : null } });
+  await logChange(tx, ctx, 'household', 'updated', householdId, h.name, before, after);
+}
+
+/** The household's own stop, from its RSVP link (guests/public.ts). At once, and once: a second stop changes nothing. */
+export async function stopReminders(tx: Tx, orgId: string, householdId: string): Promise<void> {
+  const h = await tx.household.findFirst({ where: { id: householdId, orgId }, select: { name: true, remindersStoppedAt: true } });
+  if (!h || h.remindersStoppedAt) return;
+  await tx.household.update({ where: { id: householdId }, data: { remindersStoppedAt: now() } });
+  await logChange(tx, { orgId, userId: null }, 'household', 'optedout', householdId, h.name, { reminders: true }, { reminders: false }, { via: 'rsvp-link' });
 }
 
 export async function markCalled(tx: Tx, ctx: Ctx, householdId: string) {

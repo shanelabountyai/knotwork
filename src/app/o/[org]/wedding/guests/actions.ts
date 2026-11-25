@@ -8,13 +8,14 @@ import { Refused } from '@/core/errors';
 import { logChange } from '@/lib/knotwork/changelog';
 import { hasPending, propose } from '@/lib/knotwork/consent/store';
 import { loadWho, need, requireWedding, todayOf } from '@/lib/knotwork/context';
-import { dbOfDay } from '@/lib/knotwork/days';
+import { dbOfDay, isRealDay } from '@/lib/knotwork/days';
 import { parseCents } from '@/lib/knotwork/money';
 import { parseGuestCsv } from '@/lib/knotwork/guests/csv';
+import { CHANNELS } from '@/lib/knotwork/guests/delivery';
 import { ACCESSIBILITY, checkRsvp, DIETARY, rsvpView } from '@/lib/knotwork/guests/projection';
 import {
   addGuest as addGuestRow, addHousehold as addHouseholdRow, applyLockout, applyRsvp, clearRsvp, importHouseholds, loadPlan, markCalled as markCalledRow, releaseWave as releaseWaveRows,
-  replaceRsvpLink, rsvpDeadline, rsvpLink, savePlan, sendDueReminders, updateGuest as updateGuestRow, updateHousehold as updateHouseholdRow,
+  replaceRsvpLink, rsvpDeadline, rsvpLink, savePlan, sendDueReminders, setReminderChannel as setReminderChannelRow, updateGuest as updateGuestRow, updateHousehold as updateHouseholdRow,
 } from '@/lib/knotwork/guests/store';
 
 // Guest-list writes (PRD P0-3, P0-4). Same order as the Phase 1 actions: capability, every ref (another org's row is
@@ -54,6 +55,7 @@ export const saveGuestPlan = orgAction(
     cap: whole('Headcount cap', 0, 5000), venueMin: optionalWhole('Venue minimum', 5000), venueMax: optionalWhole('Venue maximum', 5000),
     perHead: money('Per head'), kidsMeal: money('Kids meal'), vendorMeal: money('Vendor meal'),
     lockoutDays: whole('Lockout', 0, 365), minBatchSeats: whole('Smallest batch', 1, 500), mealOptions: z.string().trim().max(400).default(''),
+    autoReminders: checkbox,
   }),
   async (ctx, i) => {
     const meals = [...new Set(i.mealOptions.split(',').map((m) => m.trim()).filter(Boolean))];
@@ -61,7 +63,7 @@ export const saveGuestPlan = orgAction(
     await withOrg(ctx, async (tx) => {
       need(await loadWho(tx, ctx), 'guests.edit');
       await requireWedding(tx, ctx);
-      await savePlan(tx, ctx, { cap: i.cap, venueMin: i.venueMin, venueMax: i.venueMax, perHeadCents: i.perHead, kidsMealCents: i.kidsMeal, vendorMealCents: i.vendorMeal, lockoutDays: i.lockoutDays, minBatchSeats: i.minBatchSeats, mealOptions: meals.length ? meals : (await loadPlan(tx, ctx)).mealOptions });
+      await savePlan(tx, ctx, { cap: i.cap, venueMin: i.venueMin, venueMax: i.venueMax, perHeadCents: i.perHead, kidsMealCents: i.kidsMeal, vendorMealCents: i.vendorMeal, lockoutDays: i.lockoutDays, minBatchSeats: i.minBatchSeats, mealOptions: meals.length ? meals : (await loadPlan(tx, ctx)).mealOptions, autoReminders: i.autoReminders });
     });
     redirect(page(ctx, '/waves'));
   },
@@ -230,6 +232,17 @@ export const sendReminders = orgAction(null, z.object({}), async (ctx) => {
   });
   if (!n) throw new Refused('No reminder is due today.');
   redirect(page(ctx, '/chase'));
+});
+
+/** How a household's reminders go (Phase 5): email, text message (with the day they agreed to it), or none. */
+export const setReminderChannel = orgAction(null, z.object({ id: ref('household'), channel: z.enum(CHANNELS), smsConsentOn: z.string().trim().max(10).default('') }), async (ctx, i) => {
+  await withOrg(ctx, async (tx) => {
+    need(await loadWho(tx, ctx), 'guests.edit');
+    await householdIn(tx, ctx, i.id);
+    if (i.smsConsentOn && !isRealDay(i.smsConsentOn)) throw new Refused('Pick a real date for the day they agreed.');
+    await setReminderChannelRow(tx, ctx, i.id, { channel: i.channel, smsConsentOn: i.smsConsentOn || null });
+  });
+  redirect(page(ctx, `/${i.id}`));
 });
 
 export const markCalled = orgAction(null, z.object({ id: ref('household') }), async (ctx, i) => {

@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { inOrg, requireOrg } from '@/core/authz/guards';
 import { now } from '@/core/clock';
 import { ActionForm } from '@/core/ui/action-form';
@@ -42,6 +43,7 @@ export default async function MoveDate({ params, searchParams }: { params: Promi
             <button type="submit">Propose this move</button>
           </ActionForm>
           <p>Moving the date also flags every booked vendor for re-confirmation.</p>
+          <p><Link href={`/o/${ctx.slug}/wedding/date/insurance?to=${to}`}>Before you decide: contracts, payments and insurance questions for this move</Link> (general information, not insurance or legal advice).</p>
         </>
       )}
     </main>

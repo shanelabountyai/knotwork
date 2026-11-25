@@ -10,7 +10,7 @@ import { loadBudget } from '../budget-store';
 import { changeLog } from '../changelog';
 import { parseAction } from '../changelog-diff';
 import type { WeddingRow } from '../context';
-import { dayOfDb, type Day } from '../days';
+import { addDays, dayOfDb, type Day } from '../days';
 import { fundingByCategory } from '../funding/store';
 import { loadSchedule, previewDateMove } from '../schedule/store';
 import { listAttachments, readAttachment } from '../vendors/attachments';
@@ -93,6 +93,36 @@ export async function movePreview(tx: Tx, ctx: OrgCtx, v: V, to: Day) {
   const p = await previewDateMove(tx, ctx, v.wedding, to);
   const { rows } = await loadSchedule(tx, ctx, v.wedding);
   return { ...p, plan: lens(seenFor(ctx, v)).plan(p.plan, rows) };
+}
+
+/**
+ * Phase 5, the date-move insurance information page: the couple's own facts a vendor or an insurer will ask about.
+ * Signed contracts, vendor payments made and still due (due days derived from the wedding date, rule 1), other money
+ * recorded against a vendor, and (with a proposed date) the tasks the move would leave late or impossible. Every row
+ * passes the lens: a private vendor, payment, spend or task is a masked line with no name and no amount, and the
+ * totals still count it (how many are hidden is said).
+ */
+export async function insuranceView(tx: Tx, ctx: OrgCtx, v: V, to: Day | null) {
+  const L = lens(seenFor(ctx, v));
+  const vendors = await tx.vendor.findMany({ where: { ...inOrg(ctx), contractSignedOn: { not: null } }, select: { id: true, name: true, category: true, contractSignedOn: true, contractTotalCents: true, ...C }, orderBy: [{ contractSignedOn: 'asc' }, { name: 'asc' }] });
+  const signed = vendors.map((x) => L.vendor({ ...x, signedOn: dayOfDb(x.contractSignedOn!) }));
+  const payments = await tx.vendorPayment.findMany({ where: inOrg(ctx), select: { id: true, label: true, amountCents: true, dueDaysBefore: true, paidOn: true, expenseId: true, vendor: { select: { name: true, ...C } } }, orderBy: [{ dueDaysBefore: 'desc' }, { label: 'asc' }] });
+  const lines = payments.map((p) => ({ p, seen: L.ofVendor({ label: p.label, vendor: p.vendor.name, amountCents: p.amountCents, due: addDays(v.date, -p.dueDaysBefore), paidOn: p.paidOn ? dayOfDb(p.paidOn) : null }, p.vendor) }));
+  const linked = new Set(payments.map((p) => p.expenseId).filter((x): x is string => !!x));
+  const spends = (await tx.expense.findMany({ where: { ...inOrg(ctx), vendorId: { not: null } }, include: { category: { select: C }, vendor: { select: { name: true, ...C } } }, orderBy: [{ paidOn: 'asc' }, { createdAt: 'asc' }] })).filter((e) => !linked.has(e.id));
+  const sum = (xs: { amountCents: number }[]) => xs.reduce((n, x) => n + x.amountCents, 0);
+  const paid = lines.filter((l) => l.p.paidOn);
+  const due = lines.filter((l) => !l.p.paidOn);
+  const move = to ? await movePreview(tx, ctx, v, to) : null;
+  const title = new Map(move?.plan.map((t) => [t.id, t.title]) ?? []);
+  const affected = (xs: { id: string; isNew: boolean }[]) => xs.map((x) => ({ title: title.get(x.id) ?? '', due: move!.preview.tasks[x.id]!.due, isNew: x.isNew }));
+  return {
+    signed: [...signed.filter((x) => !x.hidden), ...signed.filter((x) => x.hidden)],
+    paid: { lines: paid.map((l) => l.seen), totalCents: sum(paid.map((l) => l.p)), hidden: paid.filter((l) => l.seen.hidden).length },
+    due: { lines: due.map((l) => l.seen), totalCents: sum(due.map((l) => l.p)), hidden: due.filter((l) => l.seen.hidden).length },
+    spends: { lines: spends.map((e) => L.expense({ ...e, paidOnDay: dayOfDb(e.paidOn), vendorName: e.vendor!.name })), totalCents: sum(spends), hidden: spends.filter((e) => L.expense(e).hidden).length },
+    move: move && { from: move.from, to: to!, deltaDays: move.preview.deltaDays, late: affected(move.preview.late), impossible: affected(move.preview.impossible) },
+  };
 }
 
 // ---- the budget --------------------------------------------------------------------------------------------------------

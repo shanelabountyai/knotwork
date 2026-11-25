@@ -58,6 +58,9 @@ describe('rule 1: all deadlines derive from the anchor (no free-floating dates)'
     'ContingencyPlan.createdAt': 'row timestamp', 'ContingencyRun.executedAt': 'a date of fact: when the branch was put into action', 'ContingencyItem.doneOn': 'a date of fact: the day the line was ticked off',
     // P1-5: a seating chart holds no date at all; D-42's vendor link stops a set number of days after the wedding date.
     'SeatingTable.createdAt': 'row timestamp', 'SeatingRule.createdAt': 'row timestamp',
+    // Phase 5: when a reminder is due stays derived (the cadence counts back from the RSVP deadline, itself from Wedding.date).
+    'Household.smsConsentOn': 'a date of fact: the day the household agreed to reminders by text message',
+    'Household.remindersStoppedAt': 'a date of fact: when the household stopped reminders from its own link',
   };
 
   it('finds the clone\'s forty-four models', () => {
@@ -152,9 +155,10 @@ describe('rule 2: designated actions only through the consent module', () => {
 describe('rule 3: the guest-facing surfaces are a closed list', () => {
   const strip = (text: string) => text.replace(/\/\/[^\n]*|\/\*[\s\S]*?\*\//g, '');
   // D-42 adds the vendor's read-only page, /v/[token]: outside the workspace like the guest links, for one vendor.
-  const GUEST_FACING = ['src/app/p/[token]/page.tsx', 'src/app/p/[token]/upload/route.ts', 'src/app/r/[token]/gifts/claim/route.ts', 'src/app/r/[token]/gifts/contribute/route.ts', 'src/app/r/[token]/gifts/page.tsx', 'src/app/r/[token]/page.tsx', 'src/app/r/[token]/respond/route.ts', 'src/app/v/[token]/page.tsx'];
+  // Phase 5 adds the opt-out on the household's own link: /r/[token]/stop (a page that changes nothing) and its post.
+  const GUEST_FACING = ['src/app/p/[token]/page.tsx', 'src/app/p/[token]/upload/route.ts', 'src/app/r/[token]/gifts/claim/route.ts', 'src/app/r/[token]/gifts/contribute/route.ts', 'src/app/r/[token]/gifts/page.tsx', 'src/app/r/[token]/page.tsx', 'src/app/r/[token]/respond/route.ts', 'src/app/r/[token]/stop/confirm/route.ts', 'src/app/r/[token]/stop/page.tsx', 'src/app/v/[token]/page.tsx'];
 
-  it('the public Knotwork routes are exactly /r/[token] (+ respond, gifts, gifts/contribute, gifts/claim), /p/[token] (+ upload) and /v/[token]', () => {
+  it('the public Knotwork routes are exactly /r/[token] (+ respond, gifts, gifts/contribute, gifts/claim, stop, stop/confirm), /p/[token] (+ upload) and /v/[token]', () => {
     const routes = globSync('src/app/**/{page,route}.{ts,tsx}', { cwd: ROOT }).sort();
     const isPublic = (f: string) => /^\/\/ public: \S/m.test(read(f));
     expect(routes.filter((f) => /^src\/app\/(r|p|v)\//.test(f))).toEqual(GUEST_FACING);
@@ -189,6 +193,18 @@ describe('rule 3: the guest-facing surfaces are a closed list', () => {
     const pub = strip(read('src/lib/knotwork/photos/public.ts'));
     expect(pub).toMatch(/Promise<UploadView \| 'limited' \| null>/);
     expect(pub).not.toMatch(/\.(household|guest|inviteWave|guestPlan|giftEntry|registryItem)\./);
+  });
+  it('the opt-out page and its post touch no database and no store: only guests/public.ts, which shows only stopView', () => {
+    for (const f of ['src/app/r/[token]/stop/page.tsx', 'src/app/r/[token]/stop/confirm/route.ts']) {
+      expect(strip(read(f)), f).not.toMatch(/@\/core\/db|guests\/store|gifts\/|\btx\b|withOrg|asSystem|formData/);
+      expect([...read(f).matchAll(/from '@\/lib\/knotwork\/([\w/-]+)'/g)].map((m) => m[1]!), f).toEqual(f.endsWith('route.ts') ? ['guests/public', 'guests/same-site'] : ['guests/public']);
+    }
+    expect(strip(read('src/app/r/[token]/stop/confirm/route.ts'))).toMatch(/if \(!fromThisSite\(req\.headers\)\) return new NextResponse\('Not found', \{ status: 404 \}\);/);
+    const projection = strip(read('src/lib/knotwork/guests/projection.ts'));
+    expect(projection).toMatch(/export type StopView = \{ weddingTitle: string \};/);
+    const pub = strip(read('src/lib/knotwork/guests/public.ts'));
+    // Both share the RSVP pages' limit, checked before the token is looked at.
+    for (const fn of ['readStop', 'stopFromLink']) expect(pub.split(`export async function ${fn}(`)[1]!.split('\n').slice(0, 2).join('\n'), fn).toMatch(/if \(!\(await hit\(`rsvp:ip:\$\{ip\}`, RSVP_LIMIT\)\)\) return 'limited';/);
   });
   it('the only three Knotwork files that read across orgs are the three token lookups', () => {
     expect(filesWith(/\basSystem\s*\(/).filter((f) => f.includes('knotwork') || /^src\/app\/(o|r|p|v)\//.test(f))).toEqual(['src/lib/knotwork/guests/public.ts', 'src/lib/knotwork/photos/public.ts', 'src/lib/knotwork/vendors/public.ts']);
@@ -244,7 +260,7 @@ describe('rule 4: uploads are hostile input: one pipeline, and nothing else read
     }
     // A route under the signed-in tree that takes a POST and is not on the list would be a second way in.
     const posts = globSync('src/app/{o,r,p}/**/route.{ts,tsx}', { cwd: ROOT }).sort().filter((f) => /export async function POST\b/.test(read(f)));
-    expect(posts).toEqual([UPLOAD_ROUTES[0]!, UPLOAD_ROUTES[1]!, 'src/app/r/[token]/gifts/claim/route.ts', 'src/app/r/[token]/gifts/contribute/route.ts', 'src/app/r/[token]/respond/route.ts']);
+    expect(posts).toEqual([UPLOAD_ROUTES[0]!, UPLOAD_ROUTES[1]!, 'src/app/r/[token]/gifts/claim/route.ts', 'src/app/r/[token]/gifts/contribute/route.ts', 'src/app/r/[token]/respond/route.ts', 'src/app/r/[token]/stop/confirm/route.ts']); // the last takes no body (Phase 5)
   });
   it('the pipeline is sniff, cap, decode, re-encode, inspect: in that order, in one function', () => {
     const text = strip(read(PROCESS));
@@ -369,7 +385,7 @@ describe('P0-5 privacy: the couple\'s side never reads what one household gave',
     for (const c of ['RegistryItem_target_check', 'GiftEntry_sign_check']) expect(sql).toContain(`ADD CONSTRAINT "${c}"`);
     // Rule 3: the gift page and its route are built from gifts/public.ts, which is built from gifts/projection.ts.
     const guestFacing = globSync('src/app/r/**/*.{ts,tsx}', { cwd: ROOT }).sort();
-    expect(guestFacing).toEqual(['src/app/r/[token]/gifts/claim/route.ts', 'src/app/r/[token]/gifts/contribute/route.ts', 'src/app/r/[token]/gifts/page.tsx', 'src/app/r/[token]/page.tsx', 'src/app/r/[token]/respond/route.ts']);
+    expect(guestFacing).toEqual(['src/app/r/[token]/gifts/claim/route.ts', 'src/app/r/[token]/gifts/contribute/route.ts', 'src/app/r/[token]/gifts/page.tsx', 'src/app/r/[token]/page.tsx', 'src/app/r/[token]/respond/route.ts', 'src/app/r/[token]/stop/confirm/route.ts', 'src/app/r/[token]/stop/page.tsx']);
     for (const f of guestFacing) {
       expect(read(f), f).toMatch(/^\/\/ public: \S/m);
       expect(strip(read(f)), f).not.toMatch(/@\/core\/db|gifts\/(couple|store)|guests\/store|\btx\b|withOrg|asSystem/);
@@ -400,13 +416,14 @@ describe('P1-1 secrecy: every view of a task, expense, vendor or category passes
       'src/app/o/[org]/wedding/funding/page.tsx': /fundingView\(/, 'src/app/o/[org]/wedding/vendors/[id]/attachments/[attachment]/route.ts': /attachmentFile\(/,
       'src/app/o/[org]/wedding/vendors/[id]/attachments/route.ts': /vendorVisible\(/,
       'src/app/o/[org]/wedding/dashboard/page.tsx': /dashboardView\(/,
+      'src/app/o/[org]/wedding/date/insurance/page.tsx': /insuranceView\(/,
     };
     for (const [f, re] of Object.entries(want)) expect(strip(read(f)), f).toMatch(re);
   });
   it('every loader in views.ts builds its answer with lens(); the funding reader does too', () => {
     const views = strip(read(VIEWS));
     const loaders = [...views.matchAll(/export async function (\w+)\(/g)].map((m) => m[1]!);
-    expect(loaders.sort()).toEqual(['activityView', 'attachmentFile', 'budgetView', 'contingencyWorld', 'dashboardView', 'flagsView', 'fundingOptions', 'movePreview', 'overviewView', 'scheduleView', 'vendorView', 'vendorVisible', 'vendorsView']);
+    expect(loaders.sort()).toEqual(['activityView', 'attachmentFile', 'budgetView', 'contingencyWorld', 'dashboardView', 'flagsView', 'fundingOptions', 'insuranceView', 'movePreview', 'overviewView', 'scheduleView', 'vendorView', 'vendorVisible', 'vendorsView']);
     for (const name of loaders) {
       const body = views.slice(views.indexOf(`export async function ${name}(`)).split(/\nexport /)[0]!;
       expect(body, name).toMatch(/lens\(|flagsView\(|vendorVisible\(/); // overview reuses flagsView; attachmentFile reuses vendorVisible
@@ -458,5 +475,53 @@ describe('P1-1 secrecy: every view of a task, expense, vendor or category passes
     expect(filesWith(/\bsetExpenseCompartment\(/)).toEqual(['src/lib/knotwork/budget-store.ts', 'src/lib/knotwork/secrecy/store.ts']);
     expect(filesWith(/\bsetPrivacy\(/)).toEqual(['src/app/o/[org]/wedding/privacy/actions.ts', 'src/lib/knotwork/secrecy/store.ts']);
     expect(filesWith(/\brevealForProposal\(/)).toEqual(['src/app/o/[org]/wedding/actions.ts', 'src/lib/knotwork/secrecy/store.ts']);
+  });
+});
+
+// Phase 5, D-135: the photo classifier is a seam with local implementations only. Nothing it runs can reach a network,
+// a model or the environment's keys; it reads a processed image; and its advice can only hold a new photo for a person.
+describe('the photo classifier: local, advisory, on processed images', () => {
+  const strip = (text: string) => text.replace(/\/\/[^\n]*|\/\*[\s\S]*?\*\//g, '');
+  const SEAM = ['src/lib/knotwork/photos/classifier.ts', 'src/lib/knotwork/photos/classify.ts'];
+  const importsOf = (f: string) => [...read(f).matchAll(/from '([^']+)'/g)].map((m) => m[1]!);
+  const resolve = (from: string, spec: string) => join(from, '..', spec).replace(/\\/g, '/') + '.ts';
+  /** Every file the seam runs, following relative imports. */
+  const closure = () => {
+    const seen = new Set<string>();
+    const walk = (f: string) => {
+      if (seen.has(f)) return;
+      seen.add(f);
+      for (const spec of importsOf(f)) if (spec.startsWith('.')) walk(resolve(f, spec));
+    };
+    SEAM.forEach(walk);
+    return [...seen].sort();
+  };
+  const NETWORK = /\bfetch\s*\(|XMLHttpRequest|WebSocket|EventSource|navigator\.sendBeacon|\bnode:(http|https|http2|net|tls|dgram|dns|child_process|worker_threads)\b|from '(http|https|http2|net|tls|dgram|dns|undici|node-fetch|axios|ws)'|process\.env|@\/core\/env|\bimport\(/;
+
+  it('the seam and everything it imports reach no network, no model, no key: only sharp and relative files', () => {
+    const files = closure();
+    expect(files).toEqual(['src/lib/knotwork/photos/classifier.ts', 'src/lib/knotwork/photos/classify.ts', 'src/lib/knotwork/photos/moderation.ts', 'src/lib/knotwork/uploads/caps.ts', 'src/lib/knotwork/uploads/inspect.ts', 'src/lib/knotwork/uploads/process.ts', 'src/lib/knotwork/uploads/sniff.ts']);
+    for (const f of files) {
+      expect(importsOf(f).filter((i) => !i.startsWith('.') && i !== 'sharp'), f).toEqual([]);
+      expect(strip(read(f)), f).not.toMatch(NETWORK);
+    }
+    // The control: the scan is not blind.
+    for (const bad of ["await fetch('https://model.example')", "import x from 'node:https';", "import x from 'undici';", 'process.env.KEY', "import { env } from '@/core/env';"]) expect(bad).toMatch(NETWORK);
+  });
+  it('a classifier is given a processed image and nothing else', () => {
+    const seam = strip(read(SEAM[0]!));
+    expect(seam).toMatch(/classify\(image: Processed\): Promise<Advice \| null>;/);
+    expect(strip(read('src/lib/knotwork/uploads/process.ts'))).toMatch(/export async function greyStats\(image: Processed\)[^\n]*\n\s*const stats = await sharp\(image\.renditions\.thumb\.bytes,/);
+    expect(filesWith(/\bclassifierFor\(/)).toEqual(['src/lib/knotwork/photos/store.ts']); // the one caller: the ingest
+    expect(filesWith(/\bgreyStats\(/)).toEqual(['src/lib/knotwork/photos/classify.ts', 'src/lib/knotwork/uploads/process.ts']);
+  });
+  it('advice decides only where a new photo starts; the moderation machine and every other write never read it', () => {
+    expect(filesWith(/\bstartStatus\(/)).toEqual(['src/lib/knotwork/photos/classifier.ts', 'src/lib/knotwork/photos/store.ts']);
+    expect(strip(read('src/lib/knotwork/photos/moderation.ts'))).not.toMatch(/suggest|advice|classif/i);
+    const store = strip(read('src/lib/knotwork/photos/store.ts'));
+    const addPhoto = store.split('export async function addPhoto(')[1]!.split(/\nexport /)[0]!;
+    expect(addPhoto).toMatch(/const status = startStatus\(event\.mode, advice\);/);
+    expect(store.replace(addPhoto, '').replace(/^import [^\n]*$/gm, '')).not.toMatch(/advice|suggestion: (?!true)|suggestion[A-Z]\w*: (?!true)/); // outside the ingest nothing writes it; the console only selects it
+    expect(strip(read('src/lib/knotwork/photos/classifier.ts'))).toMatch(/return advice\?\.suggestion === 'hold' \? 'pending' : status;/);
   });
 });

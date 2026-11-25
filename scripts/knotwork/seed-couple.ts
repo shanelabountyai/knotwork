@@ -11,7 +11,7 @@ import { requireWedding } from '@/lib/knotwork/context';
 import { addDays, dbOfDay, todayIn, type Day } from '@/lib/knotwork/days';
 import { addFunder, addPledge, allocate, linkFunder, receive } from '@/lib/knotwork/funding/store';
 import { addItem, contribute } from '@/lib/knotwork/gifts/store';
-import { applyRsvp, importHouseholds, releaseWave, savePlan } from '@/lib/knotwork/guests/store';
+import { applyRsvp, importHouseholds, releaseWave, savePlan, setReminderChannel } from '@/lib/knotwork/guests/store';
 import { addPhoto, createEvent, moderatePhoto } from '@/lib/knotwork/photos/store';
 import { addLink, claim } from '@/lib/knotwork/registry/store';
 import { acknowledgeGift, logGift } from '@/lib/knotwork/thanks/store';
@@ -165,19 +165,21 @@ export async function seedCouple(opts: { today?: Day } = {}): Promise<string[]> 
   const hh = (name: string, list: 'A' | 'B', priority: number, email: string, phone: string, guests: ReturnType<typeof adult>[] | { name: string; ageGroup: 'adult' | 'child' | 'infant'; partnerStatus: 'none' | 'married' | 'engaged'; inWeddingParty: boolean }[]) =>
     ({ name, list, priority, email, phone, address1: '', city: 'Tulsa', region: 'OK', postal: '', guests });
   await withOrg({ orgId }, async (tx) => {
-    await savePlan(tx, a, { cap: 12, venueMin: 8, venueMax: 14, perHeadCents: 8_700, kidsMealCents: 3_500, vendorMealCents: 4_000, lockoutDays: 42, minBatchSeats: 2, mealOptions: ['Chicken', 'Fish', 'Vegetarian'] });
+    await savePlan(tx, a, { cap: 12, venueMin: 8, venueMax: 14, perHeadCents: 8_700, kidsMealCents: 3_500, vendorMealCents: 4_000, lockoutDays: 42, minBatchSeats: 2, mealOptions: ['Chicken', 'Fish', 'Vegetarian'], autoReminders: true });
     await importHouseholds(tx, a, [
       hh('The Lindqvists', 'A', 1, 'linda@lindqvist.example', '918-555-0121', [adult('Linda Lindqvist'), adult('Omar Lindqvist'), { name: 'Wren Lindqvist', ageGroup: 'child', partnerStatus: 'none', inWeddingParty: false }]),
       hh('The Ashbys', 'A', 2, 'hal@ashby.example', '918-555-0122', [adult('Hal Ashby'), adult('Io Ashby')]),
       hh('The Vales', 'A', 3, 'ben@vale.example', '918-555-0123', [adult('Ben Vale'), adult('Cy Vale')]),
       hh('Priya Rao', 'A', 4, 'priya@rao.example', '918-555-0124', [adult('Priya Rao', 'engaged')]),
       hh('Dana Kim', 'A', 5, '', '918-555-0125', [adult('Dana Kim', 'none', true)]),
-      hh('Ruth Stern', 'A', 6, 'ruth@stern.example', '918-555-0126', [adult('Ruth Stern', 'none')]),
+      hh('Ruth Stern', 'A', 6, 'ruth@stern.example', '+19185550126', [adult('Ruth Stern', 'none')]),
       hh('The Okoros', 'B', 10, 'chidi@okoro.example', '918-555-0131', [adult('Chidi Okoro'), adult('Ngozi Okoro')]),
       hh('The Trans', 'B', 11, 'mai@tran.example', '918-555-0132', [adult('Mai Tran'), adult('Huy Tran')]),
       hh('Sam Webb', 'B', 12, 'sam@webb.example', '918-555-0133', [adult('Sam Webb', 'none')]),
     ]);
     await releaseWave(tx, a, 'A');
+    // Phase 5: Ruth asked for reminders by text message (an invented number and consent date; nothing is ever sent).
+    await setReminderChannel(tx, a, (await tx.household.findFirstOrThrow({ where: { orgId, name: 'Ruth Stern' }, select: { id: true } })).id, { channel: 'sms', smsConsentOn: addDays(today, -10) });
     const yes = async (household: string, answers: Record<string, { meal: string | null; dietary?: string[]; accessibility?: string[]; song?: string }>) => {
       const h = await tx.household.findFirstOrThrow({ where: { orgId, name: household }, include: { guests: true } });
       await applyRsvp(tx, { orgId, userId: null }, h.id, { ok: true, plusOneName: null, responses: h.guests.map((g) => ({ guestId: g.id, attending: true, meal: answers[g.name]!.meal, dietary: answers[g.name]!.dietary ?? [], accessibility: answers[g.name]!.accessibility ?? [], songRequest: answers[g.name]!.song ?? '' })) });
@@ -260,7 +262,7 @@ export async function seedCouple(opts: { today?: Day } = {}): Promise<string[]> 
     processed.push({ ...p, image: r.image });
   }
   await withOrg({ orgId }, async (tx) => {
-    const event = await createEvent(tx, a, { name: 'Reception', mode: 'pre', uploadDays: 7, retentionDays: 365 });
+    const event = await createEvent(tx, a, { name: 'Reception', mode: 'pre', uploadDays: 7, retentionDays: 365, classifier: 'stub' }); // D-135: the local stub, for the demo
     for (const [i, p] of processed.entries()) {
       // Two invented devices: no cookie exists for either, so neither can ever be presented by a browser.
       const stored = await addPhoto(tx, orgId, event.id, hashToken(`seed-device-${(i % 2) + 1}`), { name: p.name, caption: p.caption }, p.image);

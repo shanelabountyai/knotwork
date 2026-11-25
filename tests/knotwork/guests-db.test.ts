@@ -261,7 +261,7 @@ describe('rule 3: the undetectability sweep on real responses (PRD P0-4)', () =>
     expect(addDays(today(), 14)).toBe(deadline);
     await ok(sendReminders(c.slug, {}));
     const mail = await db.outbox.findMany({ where: { orgId: c.orgId } });
-    const body = (to: string) => mask((mail.find((m) => m.to === to)!.data as { body: string }).body.replace(/\/r\/[\w-]+/, '/r/TOKEN'));
+    const body = (to: string) => mask((mail.find((m) => m.to === to)!.data as { body: string }).body.replaceAll(/\/r\/[\w-]+/g, '/r/TOKEN')); // Phase 5: the RSVP link and the stop link on it
     expect(body('chidi@okoro.example')).toBe(body('linda@lindqvist.example'));
     expect(mail.map((m) => JSON.stringify(m.data)).join('')).not.toMatch(/wave|list|priority|invited on/i);
     // The tokens themselves carry no order or time: 43 url-safe characters of randomness each.
@@ -409,6 +409,7 @@ describe('change log: a scripted guest-list session covers every guest action', 
       ['proposeGuestRemoval', async () => ({ id: (await guest('Cy Vale')).id }), ['knotwork.request.proposed']],
       ['addDoNotPlay', () => ({ title: 'Macarena', artist: '' }), ['knotwork.song.created']],
       ['removeDoNotPlay', async () => ({ id: (await db.doNotPlay.findFirstOrThrow({ where: { orgId: c.orgId } })).id }), ['knotwork.song.deleted']],
+      ['setReminderChannel', async () => ({ id: (await household('The Sterns')).id, channel: 'none', smsConsentOn: '' }), ['knotwork.household.updated']], // Phase 5
     ];
     const noLog: (keyof typeof guestActions)[] = ['showRsvpLink']; // shows a link; changes nothing a person did
     const later: (keyof typeof guestActions)[] = ['sendReminders', 'markCalled', 'closeBList']; // need the clock moved; logged in the chase and lockout tests above

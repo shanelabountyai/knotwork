@@ -166,4 +166,16 @@ describe('seed:couple', () => {
     expect(caterer.linkTokenHash).toMatch(/^[0-9a-f]{64}$/);
     expect(await db.vendor.count({ where: { orgId, linkTokenHash: { not: null } } })).toBe(1);
   });
+
+  it('Phase 5: reminders go out on the schedule; Ruth agreed to texts; the Reception wall has the local classifier stub, advising only', async () => {
+    expect((await db.guestPlan.findUniqueOrThrow({ where: { orgId } })).autoReminders).toBe(true);
+    const ruth = await db.household.findFirstOrThrow({ where: { orgId, name: 'Ruth Stern' } });
+    expect([ruth.remindVia, ruth.phone, dayOfDb(ruth.smsConsentOn!), ruth.remindersStoppedAt]).toEqual(['sms', '+19185550126', addDays(today(), -10), null]);
+    expect(await db.household.count({ where: { orgId, remindVia: { not: 'email' } } })).toBe(1);
+    const event = await db.photoEvent.findFirstOrThrow({ where: { orgId, name: 'Reception' } });
+    expect([event.mode, event.classifier]).toEqual(['pre', 'stub']);
+    // Flat synthetic colours: each one is worth a look; the three approved were approved by a partner, not the advice.
+    const photos = await db.photo.findMany({ where: { orgId }, orderBy: { createdAt: 'asc' } });
+    expect(photos.map((p) => [p.status, p.suggestion])).toEqual([['live', 'review'], ['live', 'review'], ['live', 'review'], ['pending', 'review']]);
+  });
 });

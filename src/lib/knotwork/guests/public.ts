@@ -6,12 +6,13 @@ import { inOrg } from '@/core/authz/guards';
 import { asSystem, withOrg, type Tx } from '@/core/db/rls';
 import { hit } from '@/core/rate-limit';
 import { Refused } from '@/core/errors';
+import { log } from '@/core/log';
 import { hashToken } from '@/core/tokens';
 import { requireWedding, weddingDay } from '../context';
 import { lockWedding } from '../schedule/store';
 import { entitlement } from './plus-one';
-import { checkGuestReply, RSVP_PROBLEM, rsvpView, type RsvpSubmission, type RsvpView } from './projection';
-import { applyRsvp, loadPlan, rsvpDeadline, toIn } from './store';
+import { checkGuestReply, RSVP_PROBLEM, rsvpView, stopView, type RsvpSubmission, type RsvpView, type StopView } from './projection';
+import { applyRsvp, loadPlan, rsvpDeadline, sendDueReminders, stopReminders, toIn } from './store';
 
 /** Generous for a family filling in a form, tight for someone guessing tokens. Per IP. */
 export const RSVP_LIMIT = { limit: 60, windowMs: 15 * 60_000 };
@@ -78,4 +79,44 @@ export async function submitRsvp(token: string, ip: string, submission: RsvpSubm
     if (e instanceof Refused) return { ok: false as const, message: RSVP_PROBLEM.full };
     throw e;
   });
+}
+
+// ---- the opt-out (Phase 5): /r/[token]/stop, on the same token, the same rate limit and the same 404s
+
+/** What the opt-out page shows: the wedding's title and nothing about the household (stopView). */
+export async function readStop(token: string, ip: string): Promise<StopView | 'limited' | null> {
+  if (!(await hit(`rsvp:ip:${ip}`, RSVP_LIMIT))) return 'limited';
+  const h = await find(token);
+  return h ? withOrg({ orgId: h.orgId }, async (tx) => stopView({ wedding: { title: (await requireWedding(tx, { orgId: h.orgId })).title } })) : null;
+}
+
+/** The household stops its reminders: at once, and a second time changes nothing (the answer is the same). */
+export async function stopFromLink(token: string, ip: string): Promise<'stopped' | 'limited' | null> {
+  if (!(await hit(`rsvp:ip:${ip}`, RSVP_LIMIT))) return 'limited';
+  const h = await find(token);
+  if (!h) return null;
+  await withOrg({ orgId: h.orgId }, (tx) => stopReminders(tx, h.orgId, h.id));
+  return 'stopped';
+}
+
+/**
+ * The cron job (src/app/cron-jobs.ts): due reminders in every workspace that turned the daily schedule on
+ * (GuestPlan.autoReminders). The same `sendDueReminders` as the button, so the cadence and its idempotence are one.
+ * A workspace that cannot send (its saved links can no longer be read) is counted and skipped; the others go on.
+ */
+export async function sendRemindersEverywhere(): Promise<{ orgs: number; reminded: number; skipped: number }> {
+  // Cross-org (cross-org.ts): a cron run has no org; it lists the ones that asked for scheduled reminders.
+  const plans = await asSystem((sys) => sys.guestPlan.findMany({ where: { autoReminders: true }, select: { orgId: true }, orderBy: { orgId: 'asc' } }));
+  let reminded = 0;
+  let skipped = 0;
+  for (const { orgId } of plans) {
+    try {
+      reminded += await withOrg({ orgId }, async (tx) => ((await tx.wedding.findUnique({ where: { orgId }, select: { id: true } })) ? sendDueReminders(tx, { orgId, userId: null }) : 0));
+    } catch (e) {
+      if (!(e instanceof Refused)) throw e;
+      skipped++;
+      log('knotwork.reminders.skipped', { orgId });
+    }
+  }
+  return { orgs: plans.length, reminded, skipped };
 }

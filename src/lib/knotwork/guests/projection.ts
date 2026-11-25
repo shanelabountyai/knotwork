@@ -47,13 +47,34 @@ export function rsvpView(i: RsvpViewInput): RsvpView {
   };
 }
 
-/** The reminder a household gets. Built from the same few facts for every household; nothing about its list. */
+/** The household's own opt-out link: its RSVP link with /stop (Phase 5). The same token; nothing new is minted. */
+export const stopLink = (rsvpUrl: string) => `${rsvpUrl}/stop`;
+
+/**
+ * The reminder a household gets by email. Built from the same few facts for every household; nothing about its list.
+ * Every reminder carries the household's own opt-out link (Phase 5).
+ */
 export function reminderText(i: { householdName: string; weddingTitle: string; rsvpBy: Day; url: string; step: number }): { subject: string; body: string } {
   return {
     subject: `Please reply: ${i.weddingTitle}`,
-    body: `Dear ${i.householdName},\n\nWe would love to know whether you can join us. Please reply by ${showDay(i.rsvpBy)}:\n${i.url}\n\n${i.weddingTitle}`,
+    body: `Dear ${i.householdName},\n\nWe would love to know whether you can join us. Please reply by ${showDay(i.rsvpBy)}:\n${i.url}\n\n${i.weddingTitle}\n\nTo stop these reminders: ${stopLink(i.url)}`,
   };
 }
+
+/**
+ * The same reminder by text message: shorter, no household name, the two links. `fit` shortens the wedding title
+ * (only the title) until the whole message fits the length guard in delivery.ts; the links are never cut.
+ */
+export function reminderSms(i: { weddingTitle: string; rsvpBy: Day; url: string }, fit: (body: string) => boolean): { subject: string; body: string } {
+  const make = (title: string) => `${title ? `${title}: p` : 'P'}lease reply by ${showDay(i.rsvpBy)}: ${i.url}\nStop reminders: ${stopLink(i.url)}`;
+  let title = i.weddingTitle;
+  while (title && !fit(make(title))) title = title.length > 4 ? `${title.slice(0, title.length - 4).trimEnd()}...` : '';
+  return { subject: 'sms', body: make(title) };
+}
+
+/** RULE 3: the opt-out page (/r/[token]/stop) shows the wedding's title and fixed sentences, the same for every household. */
+export type StopView = { weddingTitle: string };
+export const stopView = (i: { wedding: { title: string } }): StopView => ({ weddingTitle: i.wedding.title });
 
 export type RsvpSubmission = { responses: { guestId: string; attending: boolean; meal: string; dietary: string[]; accessibility: string[]; songRequest: string }[]; plusOneName: string };
 export type CheckedRsvp =
