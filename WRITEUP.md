@@ -4,7 +4,7 @@
 who are equals, and the expensive mistakes are the ones one of them makes alone: a vendor booked, a contract signed, a
 large spend, the date moved. Knotwork makes those actions need both partners, and logs everything else.
 
-Status on 2026-11-25: Phases 1 to 4 built (Phases 1 to 3 merged; Phase 4 on branch `phase-4`; gate results in `NEXT.md`), not deployed, synthetic data only. Entries
+Status on 2026-11-25: Phases 1 to 5 built (Phases 1 to 4 merged; Phase 5 on branch `phase-5`, draft PR #6; gate results in `NEXT.md`), not deployed, synthetic data only. Entries
 are added as each artifact lands. Every number in this file comes from a file in the repo or a command that was run;
 none is a benchmark or a user result, because there are no users.
 

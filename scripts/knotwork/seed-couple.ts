@@ -22,6 +22,7 @@ import { processUpload, type Processed } from '@/lib/knotwork/uploads/process';
 import { hashToken } from '@/core/tokens';
 import { createWedding } from '@/lib/knotwork/schedule/store';
 import { addRule, addTable, generateSeating } from '@/lib/knotwork/seating/store';
+import { addAttachment } from '@/lib/knotwork/vendors/attachments';
 import { makeVendorLink } from '@/lib/knotwork/vendors/link';
 import { addPayment, generateBrief, updateVendor } from '@/lib/knotwork/vendors/store';
 import { DEMO_TOTP_SECRET } from '../seed-demo';
@@ -293,8 +294,58 @@ export async function seedCouple(opts: { today?: Day } = {}): Promise<string[]> 
   ];
 }
 
+// ---- Phase 5: a second synthetic couple, married 40 days ago, for life-admin mode ----------------------------------
+// Sage Linden and Wren Calder (both owners) and Ivy Marsh (a helper who moderates the photos). Their wedding is 40
+// days in the past, so the switch into life-admin mode is offered; the workspace is still in PLANNING mode, so the
+// e2e story (e2e/lifeadmin.spec.ts) makes the switch itself with two keys. One venue booked with both keys and its
+// contract page attached, a gift still to thank, a reception album. Juniper and Rowan stay in planning mode.
+export const LIFE_COUPLE = {
+  slug: 'sage-wren',
+  name: 'Sage & Wren',
+  timeZone: 'America/Chicago',
+  daysAgo: 40,
+  sage: { email: 'sage@knotwork.demo.test', name: 'Sage Linden' },
+  wren: { email: 'wren@knotwork.demo.test', name: 'Wren Calder' },
+  ivy: { email: 'ivy@knotwork.demo.test', name: 'Ivy Marsh' },
+} as const;
+
+export async function seedLifeCouple(opts: { today?: Day } = {}): Promise<string[]> {
+  const today = opts.today ?? todayIn(LIFE_COUPLE.timeZone, now());
+  const date = addDays(today, -LIFE_COUPLE.daysAgo);
+  const old = await db.org.findUnique({ where: { slug: LIFE_COUPLE.slug }, select: { id: true } });
+  if (old) await withOrg({ orgId: old.id }, (tx) => tx.org.delete({ where: { id: old.id } }));
+  const [sage, wren, ivy] = [await user(LIFE_COUPLE.sage, true), await user(LIFE_COUPLE.wren, true), await user(LIFE_COUPLE.ivy, false)];
+  const orgId = crypto.randomUUID();
+  await withOrg({ orgId }, async (tx) => {
+    await tx.org.create({ data: { id: orgId, slug: LIFE_COUPLE.slug, name: LIFE_COUPLE.name } });
+    await tx.membership.createMany({ data: [{ orgId, userId: sage.id, role: 'owner' }, { orgId, userId: wren.id, role: 'owner' }, { orgId, userId: ivy.id, role: 'member' }] });
+  });
+  const a: Ctx = { orgId, userId: sage.id, role: 'owner' };
+  const b: Ctx = { orgId, userId: wren.id, role: 'owner' };
+  await withOrg({ orgId }, (tx) => createWedding(tx, a, { title: LIFE_COUPLE.name, date, timeZone: LIFE_COUPLE.timeZone }));
+  await withOrg({ orgId }, async (tx) => {
+    const row = await tx.vendor.create({ data: { orgId, name: 'Old Mill Hall', category: 'venue' } });
+    await logChange(tx, a, 'vendor', 'created', row.id, row.name, null, { name: row.name, category: 'venue', status: 'considering' });
+    await twoKey(tx, a, b, 'book_vendor', { vendorId: row.id }, `Book ${row.name}`);
+    const page = await processUpload(await sharp({ create: { width: 900, height: 1200, channels: 3, background: '#f4f1ea' } }).jpeg().toBuffer());
+    if (!page.ok) throw new Error(`seed: the contract page did not process (${page.code})`);
+    const added = await addAttachment(tx, a, row.id, 'Old Mill Hall contract, page 1', page.image);
+    if (!added.ok) throw new Error(`seed: ${added.code}`);
+    await logGift(tx, a, { householdId: null, giverName: 'Aunt Fern Calder', what: 'a cast-iron skillet', receivedOn: addDays(date, 3) });
+    await createEvent(tx, a, { name: 'Reception', mode: 'post', uploadDays: 7, retentionDays: 365, classifier: 'none' });
+    const g = await tx.helperGrant.create({ data: { orgId, userId: ivy.id, scope: 'photos_moderate', grantedById: sage.id } });
+    await logChange(tx, a, 'grant', 'granted', g.id, `${LIFE_COUPLE.ivy.email}: See and moderate the photo wall`, null, { userId: ivy.id, scope: 'photos_moderate' });
+  });
+  return [
+    `${LIFE_COUPLE.name} (/o/${LIFE_COUPLE.slug}): married on ${date}, in planning mode (life-admin mode is offered), one venue booked with its contract page, one thank-you owed`,
+    `${LIFE_COUPLE.sage.email}  owner (partner)  (TOTP)`,
+    `${LIFE_COUPLE.wren.email}  owner (partner)  (TOTP)`,
+    `${LIFE_COUPLE.ivy.email}  member (helper: moderates the photos)`,
+  ];
+}
+
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-  const lines = await seedCouple();
-  console.log(['Seeded the Knotwork couple (synthetic). Sign in at /demo with DEMO_MODE=1.', ...lines].join('\n'));
+  const lines = [...(await seedCouple()), ...(await seedLifeCouple())];
+  console.log(['Seeded the Knotwork couples (synthetic). Sign in at /demo with DEMO_MODE=1.', ...lines].join('\n'));
   await db.$disconnect();
 }

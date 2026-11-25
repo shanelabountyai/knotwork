@@ -14,7 +14,7 @@ import { loadLinks } from '@/lib/knotwork/registry/store';
 import { loadSeating } from '@/lib/knotwork/seating/store';
 import { ledger } from '@/lib/knotwork/thanks/aging';
 import { loadObligations } from '@/lib/knotwork/thanks/store';
-import { COUPLE, seedCouple } from '../../scripts/knotwork/seed-couple';
+import { COUPLE, LIFE_COUPLE, seedCouple, seedLifeCouple } from '../../scripts/knotwork/seed-couple';
 import { resetAuthTables } from '../helpers/auth';
 
 // The demo seed (PRD Phase 1 gate): one synthetic couple, built through the same stores the actions use.
@@ -177,5 +177,34 @@ describe('seed:couple', () => {
     // Flat synthetic colours: each one is worth a look; the three approved were approved by a partner, not the advice.
     const photos = await db.photo.findMany({ where: { orgId }, orderBy: { createdAt: 'asc' } });
     expect(photos.map((p) => [p.status, p.suggestion])).toEqual([['live', 'review'], ['live', 'review'], ['live', 'review'], ['pending', 'review']]);
+  });
+});
+
+// Phase 5: the second synthetic couple, married 40 days ago, for life-admin mode. Seeded after the checks above (they
+// count one workspace); the demo couple stays in planning mode.
+describe('seed:couple, the life-admin couple (Phase 5)', () => {
+  let lifeOrg: string;
+  beforeAll(async () => {
+    await seedLifeCouple();
+    await seedLifeCouple(); // idempotent
+    lifeOrg = (await db.org.findUniqueOrThrow({ where: { slug: LIFE_COUPLE.slug } })).id;
+  });
+  it('married 40 days ago and still planning, so the switch is offered; Juniper and Rowan stay in planning mode', async () => {
+    const w = await db.wedding.findUniqueOrThrow({ where: { orgId: lifeOrg } });
+    expect(dayOfDb(w.date)).toBe(addDays(today(), -40));
+    expect(w).toMatchObject({ mode: 'planning', modeChangedAt: null });
+    expect(await db.wedding.findUniqueOrThrow({ where: { orgId } })).toMatchObject({ mode: 'planning' });
+    const members = await db.membership.findMany({ where: { orgId: lifeOrg }, include: { user: true }, orderBy: { user: { email: 'asc' } } });
+    expect(members.map((m) => [m.user.email, m.role, m.user.isDemo])).toEqual([['ivy@knotwork.demo.test', 'member', true], ['sage@knotwork.demo.test', 'owner', true], ['wren@knotwork.demo.test', 'owner', true]]);
+    expect(await db.helperGrant.findMany({ where: { orgId: lifeOrg }, select: { scope: true } })).toEqual([{ scope: 'photos_moderate' }]);
+  });
+  it('one venue booked by the other partner\'s key, with its contract page; one thank-you owed; a reception album', async () => {
+    const venue = await db.vendor.findFirstOrThrow({ where: { orgId: lifeOrg }, include: { bookedRequest: true } });
+    expect(venue).toMatchObject({ name: 'Old Mill Hall', status: 'booked' });
+    expect(venue.bookedRequest!.deciderId).not.toBe(venue.bookedRequest!.proposerId);
+    expect(await db.vendorAttachment.count({ where: { orgId: lifeOrg } })).toBe(1);
+    expect(await db.giftLog.count({ where: { orgId: lifeOrg, acknowledgedOn: null } })).toBe(1);
+    expect(await db.photoEvent.count({ where: { orgId: lifeOrg } })).toBe(1);
+    expect(await db.recurringTask.count({ where: { orgId: lifeOrg } })).toBe(0);
   });
 });
