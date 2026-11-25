@@ -11,15 +11,17 @@ import { addFunder, addPledge, linkFunder, payFromPledge, recordReceipt } from '
 import { setCategoryPrivacy, setExpensePrivacy, setTaskPrivacy, setVendorPrivacy } from '@/app/o/[org]/wedding/privacy/actions';
 import { GET as attachmentRoute } from '@/app/o/[org]/wedding/vendors/[id]/attachments/[attachment]/route';
 import { POST as attachRoute } from '@/app/o/[org]/wedding/vendors/[id]/attachments/route';
-import { GET as auditCsv } from '@/app/o/[org]/settings/audit/csv/route';
+import { auditCsv, auditFilter } from '@/core/audit';
+import { AuthzError, requireOrg } from '@/core/authz/guards';
 import { now } from '@/core/clock';
 import { withOrg } from '@/core/db/rls';
 import { buildExport, requestExport } from '@/core/tenancy/export';
 import { addDays, todayIn } from '@/lib/knotwork/days';
 import { previewDateMove } from '@/lib/knotwork/schedule/store';
+import { NavSignal } from '../helpers/next';
 import { addMember, actAs, makeOrg } from '../helpers/org';
 import { as, db, goToDay, log, makeWedding, ok, outcome, refused, type Couple } from './db';
-import { get, NOT_FOUND, PAGES, render } from './render';
+import { FORBIDDEN, get, NOT_FOUND, PAGES, render } from './render';
 import { fixture, multipart } from './uploads';
 
 // P1-1 secrecy compartments (ADR-001). The LEAK SWEEP: Juniper (partner A) keeps a task, a vendor, a budget category and
@@ -53,7 +55,18 @@ async function sweep(): Promise<Record<string, string>> {
     out[file] = await render(await load(), params, search);
   }
   out['vendors/[secret]'] = await render(await PAGES['src/app/o/[org]/wedding/vendors/[id]/page.tsx']!(), { org: c.slug, id: ids.vendor });
-  out['audit.csv'] = (await get(auditCsv as never, { org: c.slug }, `http://${HOST}/o/${c.slug}/settings/audit/csv`)).text;
+  // The template's audit-log CSV, read the way its route reads it (settings/audit/csv/route.ts: requireOrg with
+  // 'audit.read', then auditCsv). Called directly rather than by importing the route: `foundation:check-modules` copies
+  // the tree with `--exclude audit`, which drops every folder named audit, so an import of that route fails the
+  // modules-removed typecheck (CI, PR #5). A viewer without 'audit.read' is refused, as by the route.
+  out['audit.csv'] = await requireOrg(c.slug, 'audit.read').then(
+    async (ctx) => auditCsv(ctx, await auditFilter({})),
+    (e: unknown) => {
+      if (e instanceof NavSignal && e.kind === 'notFound') return NOT_FOUND;
+      if (e instanceof AuthzError) return FORBIDDEN; // as render.ts get() reports the route's refusal
+      throw e;
+    },
+  );
   out['attachment'] = (await get(attachmentRoute as never, { org: c.slug, id: ids.vendor, attachment: ids.attachment })).text;
   return out;
 }
