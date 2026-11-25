@@ -6,7 +6,7 @@
 //   pending → expired               by time (checked on every transition, and swept by cron)
 // Every other state is terminal. The machine decides; consent/store.ts persists; consent/execute.ts does the action.
 
-export const DESIGNATED_KINDS = ['book_vendor', 'sign_contract', 'spend', 'change_date', 'change_settings', 'remove_guest'] as const;
+export const DESIGNATED_KINDS = ['book_vendor', 'sign_contract', 'spend', 'change_date', 'change_settings', 'remove_guest', 'set_mode'] as const;
 export type ConsentKind = (typeof DESIGNATED_KINDS)[number];
 export type ConsentStatus = 'pending' | 'approved' | 'declined' | 'withdrawn' | 'expired';
 export type ConsentEvent = 'approve' | 'decline' | 'withdraw' | 'expire';
@@ -23,7 +23,14 @@ export const KIND_LABEL: Record<ConsentKind, string> = {
   change_date: 'Change the wedding date',
   change_settings: 'Change the approval rules',
   remove_guest: 'Remove a guest',
+  set_mode: 'Switch between planning and life-admin mode',
 };
+
+/**
+ * Phase 5 (D-144): the kinds that change the wedding plan, which is a read-only archive in life-admin mode. They can be
+ * neither proposed nor executed there; the approval rules and the switch itself still can.
+ */
+export const PLAN_KINDS: readonly ConsentKind[] = ['book_vendor', 'sign_contract', 'spend', 'change_date', 'remove_guest'];
 
 export const REFUSAL_MESSAGE: Record<Refusal, string> = {
   'already-decided': 'This request has already been decided.',

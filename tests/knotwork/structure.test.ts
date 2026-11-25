@@ -61,10 +61,23 @@ describe('rule 1: all deadlines derive from the anchor (no free-floating dates)'
     // Phase 5: when a reminder is due stays derived (the cadence counts back from the RSVP deadline, itself from Wedding.date).
     'Household.smsConsentOn': 'a date of fact: the day the household agreed to reminders by text message',
     'Household.remindersStoppedAt': 'a date of fact: when the household stopped reminders from its own link',
+    // Phase 5, slice F: life-admin mode. When the switch happened is a date of fact; a recurring task stores a rule
+    // (unit, every) and the days it was done, and when it is next due is computed on read (lifeadmin/recurrence.ts).
+    'Wedding.modeChangedAt': 'a date of fact: when the workspace last switched mode (D-143)',
+    'RecurringTask.createdAt': 'row timestamp', 'RecurringDone.doneOn': 'a date of fact: the day the task was done', 'RecurringDone.createdAt': 'row timestamp',
   };
 
-  it('finds the clone\'s forty-four models', () => {
-    expect(models.map((m) => m.name)).toHaveLength(44); // twenty from Phases 1 and 2, three for gifting, five for photos and attachments, four for funding (P1-2), three for the gift log and store items (P1-3, P1-8), three for name changes (P1-4), three for contingency plans (P1-6), three for the seating chart (P1-5)
+  it('finds the clone\'s forty-six models', () => {
+    expect(models.map((m) => m.name)).toHaveLength(46); // twenty from Phases 1 and 2, three for gifting, five for photos and attachments, four for funding (P1-2), three for the gift log and store items (P1-3, P1-8), three for name changes (P1-4), three for contingency plans (P1-6), three for the seating chart (P1-5), two for recurring household tasks (Phase 5)
+  });
+  it('a recurring task stores a rule and its done days, never a due day (rule 1 extended to recurrence)', () => {
+    const task = models.find((m) => m.name === 'RecurringTask')!.body;
+    expect(task).toMatch(/unit\s+RecurUnit/);
+    expect(task).toMatch(/every\s+Int/);
+    expect(dateFields.filter((f) => f.startsWith('RecurringTask.'))).toEqual(['RecurringTask.createdAt']);
+    expect(dateFields.filter((f) => f.startsWith('RecurringDone.'))).toEqual(['RecurringDone.doneOn', 'RecurringDone.createdAt']);
+    // The engine that works out the due day is pure, and the only code that calls it is the store's read and the fixtures.
+    expect(filesWith(/\bnextDue\(/)).toEqual(['src/lib/knotwork/lifeadmin/recurrence.ts', 'src/lib/knotwork/lifeadmin/store.ts']);
   });
   it('a photo event stores day counts, and both of its days are worked out from the wedding date', () => {
     const event = models.find((m) => m.name === 'PhotoEvent')!.body;
@@ -138,6 +151,29 @@ describe('rule 2: designated actions only through the consent module', () => {
     expect(actions).not.toMatch(/consent\/execute/);
     expect(actions).not.toMatch(/\bcommitMove\b/);
     expect(actions).not.toMatch(/\bcreateExpense\b(?!,| ,|\(tx, ctx, wedding, input, null\))/); // only the under-threshold call, with no request
+  });
+  it('only the executor switches the workspace between planning and life-admin mode (Phase 5, D-143)', () => {
+    expect(filesWith(/modeRequestId:\s*(?!true)/)).toEqual([EXECUTE]);
+    expect(filesWith(/modeChangedAt:\s*(?!true)/)).toEqual([EXECUTE]);
+    expect(filesWith(/data:\s*\{[^}]*\bmode:/)).toEqual([EXECUTE]);
+    // The proposal is the life-admin actions file's; like the main one it never reaches the executor.
+    const life = read('src/app/o/[org]/wedding/life/actions.ts').replace(/\/\/[^\n]*|\/\*[\s\S]*?\*\//g, '');
+    expect(life).not.toMatch(/consent\/execute|\bexecuteApproved\b|\.wedding\.update/);
+    expect(life).toMatch(/return propose\(tx, ctx, w, 'set_mode', \{ to: i\.to \}, summary\)/);
+    // The database half: born in planning mode; the mode moves only with its own approved request for that mode.
+    const sql = read('prisma/migrations/20261128000000_knotwork_phase5_life_admin/migration.sql');
+    expect(sql).toContain('CREATE TRIGGER "Wedding_mode_guard" BEFORE INSERT OR UPDATE ON "Wedding"');
+    expect(sql).toContain(`PERFORM knotwork_require_approved(NEW."modeRequestId", NEW."orgId", 'set_mode', 'changing the mode');`);
+    expect(sql).toContain('ADD CONSTRAINT "Wedding_mode_check"');
+  });
+  it('the archive (D-144): every write to the plan asks need() or allows() for one of the archived capabilities', () => {
+    const access = read('src/lib/knotwork/access.ts');
+    expect(access).toMatch(/export const ARCHIVED_CAPS: readonly Capability\[\] = \['schedule\.edit', 'budget\.edit', 'vendors\.edit', 'guests\.edit', 'contingency\.edit'\];/);
+    expect(access).toMatch(/export const allows = \(who: Who, cap: Capability\): boolean => !archives\(who, cap\) &&/);
+    // The designated changes to the plan are refused in the archive when proposed and when approved.
+    expect(read('src/lib/knotwork/consent/machine.ts')).toMatch(/export const PLAN_KINDS: readonly ConsentKind\[\] = \['book_vendor', 'sign_contract', 'spend', 'change_date', 'remove_guest'\];/);
+    expect(read('src/lib/knotwork/consent/store.ts')).toMatch(/if \(PLAN_KINDS\.includes\(kind\) && wedding\.mode === 'life'\) throw new Refused\(ARCHIVE_REFUSAL\);/);
+    expect(read(EXECUTE)).toMatch(/if \(PLAN_KINDS\.includes\(r\.kind\) && \(await requireWedding\(tx, ctx\)\)\.mode === 'life'\) throw new Refused\(ARCHIVE_REFUSAL\);/);
   });
   it('the migration carries the database half: four guard triggers and the two-key check', () => {
     const sql = read('prisma/migrations/20261123000001_knotwork_phase1/migration.sql');
@@ -418,12 +454,13 @@ describe('P1-1 secrecy: every view of a task, expense, vendor or category passes
       'src/app/o/[org]/wedding/dashboard/page.tsx': /dashboardView\(/,
       'src/app/o/[org]/wedding/date/insurance/page.tsx': /insuranceView\(/,
     };
+    expect(strip(read('src/app/o/[org]/page.tsx'))).toMatch(/documentsView\(/); // Phase 5: the life-admin home's documents
     for (const [f, re] of Object.entries(want)) expect(strip(read(f)), f).toMatch(re);
   });
   it('every loader in views.ts builds its answer with lens(); the funding reader does too', () => {
     const views = strip(read(VIEWS));
     const loaders = [...views.matchAll(/export async function (\w+)\(/g)].map((m) => m[1]!);
-    expect(loaders.sort()).toEqual(['activityView', 'attachmentFile', 'budgetView', 'contingencyWorld', 'dashboardView', 'flagsView', 'fundingOptions', 'insuranceView', 'movePreview', 'overviewView', 'scheduleView', 'vendorView', 'vendorVisible', 'vendorsView']);
+    expect(loaders.sort()).toEqual(['activityView', 'attachmentFile', 'budgetView', 'contingencyWorld', 'dashboardView', 'documentsView', 'flagsView', 'fundingOptions', 'insuranceView', 'movePreview', 'overviewView', 'scheduleView', 'vendorView', 'vendorVisible', 'vendorsView']);
     for (const name of loaders) {
       const body = views.slice(views.indexOf(`export async function ${name}(`)).split(/\nexport /)[0]!;
       expect(body, name).toMatch(/lens\(|flagsView\(|vendorVisible\(/); // overview reuses flagsView; attachmentFile reuses vendorVisible

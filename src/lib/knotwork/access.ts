@@ -29,10 +29,24 @@ export type Capability =
   | 'photos.view' | 'photos.moderate' | 'photos.manage'
   | 'consent.view' | 'consent.propose' | 'consent.decide'
   | 'namechange.own' | 'contingency.view' | 'contingency.edit'
+  | 'life.view' | 'life.edit'
   | 'activity.view' | 'helpers.manage' | 'wedding.create';
 
-/** `role` is the template's membership role: owner, admin, member or scorekeeper. */
-export type Who = { role: string; grants: readonly GrantScope[] };
+/**
+ * `role` is the template's membership role: owner, admin, member or scorekeeper. `archived`: the workspace is in
+ * life-admin mode (Phase 5, D-144), so the wedding plan is a read-only archive for everyone, partners included.
+ */
+export type Who = { role: string; grants: readonly GrantScope[]; archived?: boolean };
+
+/**
+ * Phase 5 (D-144): what the archive refuses in life-admin mode. The plan itself (schedule, budget and funding, vendors
+ * and their documents, guests and seating, contingency plans) is kept read-only. What carries on into the couple's
+ * life is not on this list: gifts and thank-yous, the photo album and its moderation, the name change, approvals,
+ * helpers, and the life-admin pages themselves.
+ */
+export const ARCHIVED_CAPS: readonly Capability[] = ['schedule.edit', 'budget.edit', 'vendors.edit', 'guests.edit', 'contingency.edit'];
+export const ARCHIVE_REFUSAL = 'The wedding plan is an archive now, read-only in life-admin mode. Switch back to planning mode (on the Archive page) to change it.';
+export const archives = (who: Who, cap: Capability): boolean => !!who.archived && ARCHIVED_CAPS.includes(cap);
 
 export const isPartner = (role: string) => role === 'owner';
 
@@ -64,12 +78,15 @@ const HELPER: Record<Capability, (g: readonly GrantScope[]) => boolean> = {
   // P1-6: contingency plans are the partners' (a branch may propose a spend through consent, and names vendors).
   'contingency.view': () => false,
   'contingency.edit': () => false,
+  // Phase 5 (D-147): life-admin mode's household tasks and anniversaries are the couple's; no grant reaches them.
+  'life.view': () => false,
+  'life.edit': () => false,
   'activity.view': () => true, // filtered per entry by canSeeEntity
   'helpers.manage': () => false,
   'wedding.create': () => false,
 };
 
-export const allows = (who: Who, cap: Capability): boolean => isPartner(who.role) || HELPER[cap](who.grants);
+export const allows = (who: Who, cap: Capability): boolean => !archives(who, cap) && (isPartner(who.role) || HELPER[cap](who.grants));
 
 /** Which change-log entries a person may see: a helper sees only entities inside their grants. */
 const ENTITY_CAP: Record<string, Capability> = {
@@ -88,6 +105,8 @@ const ENTITY_CAP: Record<string, Capability> = {
   namechange: 'namechange.own', contingency: 'contingency.view',
   // P1-5: the seating chart is the guest list's (tables, pair rules, seats).
   seating: 'guests.view',
+  // Phase 5: recurring household tasks and their done days.
+  recurring: 'life.view',
 };
 export const canSeeEntity = (who: Who, entity: string): boolean => {
   const cap = ENTITY_CAP[entity];

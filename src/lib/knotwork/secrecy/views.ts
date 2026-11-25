@@ -186,6 +186,17 @@ export async function vendorVisible(tx: Tx, ctx: { orgId: string }, userId: stri
   return !s || !lens(s).vendor(x).hidden;
 }
 
+/**
+ * Phase 5, the life-admin home: the contract documents (every vendor's attachments), read-only, oldest first. A
+ * private vendor's documents are counted and never named (ADR-001 holds in life-admin mode).
+ */
+export async function documentsView(tx: Tx, ctx: OrgCtx, v: V) {
+  const L = lens(seenFor(ctx, v));
+  const rows = await tx.vendorAttachment.findMany({ where: inOrg(ctx), select: { id: true, label: true, vendor: { select: { id: true, name: true, ...C } } }, orderBy: [{ createdAt: 'asc' }, { id: 'asc' }] });
+  const seen = rows.map((a) => ({ a, hidden: L.vendor(a.vendor).hidden }));
+  return { shown: seen.filter((x) => !x.hidden).map(({ a }) => ({ id: a.id, label: a.label, vendorId: a.vendor.id, vendorName: a.vendor.name })), hidden: seen.filter((x) => x.hidden).length };
+}
+
 /** Vendor flags, newest first (or only the open ones, oldest first, for the home page). */
 export async function flagsView(tx: Tx, ctx: OrgCtx, v: V, openOnly = false) {
   const L = lens(seenFor(ctx, v));

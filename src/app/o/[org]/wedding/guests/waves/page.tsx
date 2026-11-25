@@ -31,7 +31,7 @@ export default async function Waves({ params }: { params: Promise<{ org: string 
 
   return (
     <main>
-      <WeddingNav slug={ctx.slug} />
+      <WeddingNav slug={ctx.slug} mode={v.wedding.mode} />
       <GuestNav slug={ctx.slug} />
       <h1>Invitations and cap</h1>
       <ul aria-label="Cap">

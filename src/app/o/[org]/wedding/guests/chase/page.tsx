@@ -24,7 +24,7 @@ export default async function Chase({ params }: { params: Promise<{ org: string 
   const by = new Map(chase.nonResponders.map((h) => [h.id, h]));
   return (
     <main>
-      <WeddingNav slug={ctx.slug} />
+      <WeddingNav slug={ctx.slug} mode={v.wedding.mode} />
       <GuestNav slug={ctx.slug} />
       <h1>Chasing RSVPs</h1>
       <ul aria-label="Chase summary">

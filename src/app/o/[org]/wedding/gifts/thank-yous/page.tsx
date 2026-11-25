@@ -32,7 +32,7 @@ export default async function ThankYous({ params }: { params: Promise<{ org: str
   const ack = { pooled: acknowledgeThankYou, claimed: acknowledgeClaim, logged: acknowledgeReceivedGift } as const;
   return (
     <main>
-      <WeddingNav slug={ctx.slug} />
+      <WeddingNav slug={ctx.slug} life={v.wedding.mode === 'life'} />
       <GiftNav slug={ctx.slug} />
       <h1>Thank-yous</h1>
       <p><strong aria-label="Overdue thank-yous">{book.headline}</strong></p>

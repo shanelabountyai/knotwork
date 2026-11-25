@@ -22,7 +22,7 @@ export default async function Contingency({ params }: { params: Promise<{ org: s
   const { plans } = data;
   return (
     <main>
-      <WeddingNav slug={ctx.slug} />
+      <WeddingNav slug={ctx.slug} mode={data.v.wedding.mode} />
       <h1>Contingency plans</h1>
       {plans.length === 0 && <p>No plans yet. Start from one of the starters below and change it to fit your day.</p>}
       <ul aria-label="Plans">

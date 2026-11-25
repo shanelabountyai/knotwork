@@ -20,7 +20,7 @@ export default async function Gift({ params }: { params: Promise<{ org: string; 
   if (!item) notFound();
   return (
     <main>
-      <WeddingNav slug={ctx.slug} />
+      <WeddingNav slug={ctx.slug} life={data.v.wedding.mode === 'life'} />
       <GiftNav slug={ctx.slug} />
       <h1>{item.title}</h1>
       <p>{usd(item.raisedCents)} of {usd(item.targetCents)} given so far{item.contributors.length > 0 && `, by ${item.contributors.join(', ')}`}.</p>

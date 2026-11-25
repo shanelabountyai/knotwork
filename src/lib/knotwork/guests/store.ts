@@ -315,6 +315,7 @@ export async function loadChase(tx: Tx, ctx: { orgId: string }): Promise<ChaseVi
 export async function sendDueReminders(tx: Tx, ctx: Ctx): Promise<number> {
   await lockWedding(tx, ctx.orgId);
   const wedding = await requireWedding(tx, ctx);
+  if (wedding.mode === 'life') return 0; // Phase 5 (D-148): no reminder asks for a reply once the plan is an archive
   const chase = await loadChase(tx, ctx);
   const sent = { email: 0, sms: 0 };
   const scheduled = ctx.userId === null;

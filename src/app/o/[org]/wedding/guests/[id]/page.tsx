@@ -37,7 +37,7 @@ export default async function HouseholdPage({ params }: { params: Promise<{ org:
 
   return (
     <main>
-      <WeddingNav slug={ctx.slug} />
+      <WeddingNav slug={ctx.slug} mode={v.wedding.mode} />
       <GuestNav slug={ctx.slug} />
       <h1>{h.name}</h1>
       <p aria-label="Invitation status">

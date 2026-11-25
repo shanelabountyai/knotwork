@@ -21,11 +21,14 @@ export async function POST(req: Request, { params }: { params: Promise<{ org: st
   const { id } = await params;
   if (!isSameOrigin(req.headers)) return new NextResponse('Forbidden', { status: 403 });
   if (!UUID.test(id)) notFound();
-  await withOrg(ctx, async (tx) => {
-    if (!allows(await loadWho(tx, ctx), 'vendors.edit')) notFound();
+  const archived = await withOrg(ctx, async (tx) => {
+    const who = await loadWho(tx, ctx);
+    if (!allows({ ...who, archived: false }, 'vendors.edit')) notFound();
     if (!(await vendorVisible(tx, ctx, ctx.userId, id))) notFound(); // missing, another workspace's, or private to the other partner
+    return who.archived;
   });
   const back = (query: string) => new NextResponse(null, { status: 303, headers: { Location: `/o/${ctx.slug}/wedding/vendors/${id}${query}`, 'Cache-Control': 'no-store' } });
+  if (archived) return back('?e=archived#attachments'); // D-144: the vendor's documents are read-only in life-admin mode; the body is never read
   const got = await receiveImage(req, { field: 'file', text: ['label'] });
   if (!got.ok) return back(`?e=${got.code}#attachments`);
   const added = await withOrg(ctx, async (tx) => {

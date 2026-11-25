@@ -20,7 +20,7 @@ export default async function Helpers({ params }: { params: Promise<{ org: strin
   const bind = <A extends unknown[], R>(fn: (slug: string, ...a: A) => R) => fn.bind(null, ctx.slug);
   return (
     <main>
-      <WeddingNav slug={ctx.slug} />
+      <WeddingNav slug={ctx.slug} life={data.v.wedding.mode === 'life'} />
       <h1>Helpers</h1>
       <p>Everyone here who is not one of the two partners. A helper always sees the schedule and can move their own tasks along; anything else is a permission you give. No permission lets a helper approve anything.</p>
       {members.length === 0 && <p>No helpers yet. Invite one from Members, as a member.</p>}

@@ -26,7 +26,7 @@ export default async function Gifts({ params }: { params: Promise<{ org: string 
   const open = items.filter((i) => i.state === 'open');
   return (
     <main>
-      <WeddingNav slug={ctx.slug} />
+      <WeddingNav slug={ctx.slug} life={v.wedding.mode === 'life'} />
       <GiftNav slug={ctx.slug} />
       <h1>Gifts</h1>
       <p>Guests give through the link on their own invitation. You see how far each gift has come and who gave toward it. What each household gave stays with that household.</p>

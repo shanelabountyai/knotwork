@@ -24,7 +24,7 @@ export default async function Album({ params }: { params: Promise<{ org: string;
   const base = `/o/${ctx.slug}/wedding/photos`;
   return (
     <main>
-      <WeddingNav slug={ctx.slug} />
+      <WeddingNav slug={ctx.slug} life={data.v.wedding.mode === 'life'} />
       <PhotoNav slug={ctx.slug} event={event} />
       <h1>Album: {event.name}</h1>
       <p>{photos.length} {photos.length === 1 ? 'photo' : 'photos'}. {photos.length > 0 && <a href={`${base}/${event.id}/zip`} download>Download the gallery (zip)</a>}</p>

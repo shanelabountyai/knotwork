@@ -24,7 +24,7 @@ export default async function Photos({ params }: { params: Promise<{ org: string
   const due = events.filter((e) => e.purgeDue && e.counts.pending + e.counts.live + e.counts.removed > 0);
   return (
     <main>
-      <WeddingNav slug={ctx.slug} />
+      <WeddingNav slug={ctx.slug} life={v.wedding.mode === 'life'} />
       <PhotoNav slug={ctx.slug} />
       <h1>Photos</h1>
       <p>Guests add photos through an event&apos;s link, with no account. Where and when a photo was taken, and everything else stored inside the file, is removed before it is kept.</p>

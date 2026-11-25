@@ -63,7 +63,7 @@ export default async function Moderate({ params }: { params: Promise<{ org: stri
   );
   return (
     <main>
-      <WeddingNav slug={ctx.slug} />
+      <WeddingNav slug={ctx.slug} life={v.wedding.mode === 'life'} />
       <PhotoNav slug={ctx.slug} event={event} />
       <h1>Moderate: {event.name}</h1>
       <p>{event.mode === 'pre' ? 'Each new photo waits here until someone approves it.' : 'New photos go on the wall at once. Take down what should not be there; a takedown can be undone.'}</p>

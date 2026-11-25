@@ -6,7 +6,7 @@ import { inOrg, type OrgCtx } from '@/core/authz/guards';
 import { withOrg, type Tx } from '@/core/db/rls';
 import { Refused } from '@/core/errors';
 import type { Prisma } from '@/generated/prisma/client';
-import { GRANT_SCOPES, isPartner, SCOPE_LABEL } from '@/lib/knotwork/access';
+import { ARCHIVE_REFUSAL, GRANT_SCOPES, isPartner, SCOPE_LABEL } from '@/lib/knotwork/access';
 import { createExpense, takeSnapshot, type ExpenseInput } from '@/lib/knotwork/budget-store';
 import { logChange } from '@/lib/knotwork/changelog';
 import { spendNeedsConsent } from '@/lib/knotwork/consent/machine';
@@ -203,6 +203,7 @@ export const setTaskStatus = orgAction(null, z.object({ id: ref('task'), status:
   await withOrg(ctx, async (tx) => {
     const who = await loadWho(tx, ctx);
     const t = await taskIn(tx, ctx, i.id);
+    if (who.archived) throw new Refused(ARCHIVE_REFUSAL); // D-144: not even one's own task, in the archive
     if (t.assigneeId !== ctx.userId) need(who, 'schedule.edit'); // anyone may move their own task along
     if (t.kind === 'payment') throw new Refused('A payment task is finished by recording the payment on the vendor\'s page.');
     const wedding = await requireWedding(tx, ctx);

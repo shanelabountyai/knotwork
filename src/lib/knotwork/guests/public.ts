@@ -67,6 +67,9 @@ export async function submitRsvp(token: string, ip: string, submission: RsvpSubm
     await lockWedding(tx, h.orgId);
     const view = await viewOf(tx, h.orgId, h.id);
     if (!view) return null;
+    // Phase 5 (D-148): in life-admin mode the guest list is an archive; the page still shows the invitation, and a
+    // reply gets one fixed sentence, the same for every household.
+    if ((await requireWedding(tx, { orgId: h.orgId })).mode === 'life') return { ok: false as const, message: RSVP_PROBLEM.closed };
     const checked = checkGuestReply(view, submission);
     if (!checked.ok) return checked;
     await applyRsvp(tx, { orgId: h.orgId, userId: null }, h.id, checked);

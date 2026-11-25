@@ -35,7 +35,7 @@ export default async function Dashboard({ params }: { params: Promise<{ org: str
 
   return (
     <main>
-      <WeddingNav slug={ctx.slug} counts={{ approvals: approvals?.waitingForYou ?? 0, flags: flags?.length ?? 0 }} />
+      <WeddingNav slug={ctx.slug} mode={v.wedding.mode} counts={{ approvals: approvals?.waitingForYou ?? 0, flags: flags?.length ?? 0 }} />
       <h1>Dashboard</h1>
       <p>{v.wedding.title}: <strong>{showDay(v.date)}</strong>, {daysToGo >= 0 ? `${daysToGo} days to go` : `${-daysToGo} days ago`}. Every figure is worked out now, from the plan as it stands.</p>
 

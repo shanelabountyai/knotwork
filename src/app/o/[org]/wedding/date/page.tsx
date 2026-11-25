@@ -23,7 +23,7 @@ export default async function MoveDate({ params, searchParams }: { params: Promi
   const { v, move, waiting } = data;
   return (
     <main>
-      <WeddingNav slug={ctx.slug} />
+      <WeddingNav slug={ctx.slug} mode={v.wedding.mode} />
       <h1>Move the date</h1>
       <p>The wedding is on <strong>{showDay(v.date)}</strong>. Pick a new date to see what it does to the plan. Nothing changes until your partner approves.</p>
       {waiting && <p role="status">Already waiting for your partner: {waiting.summary}.</p>}

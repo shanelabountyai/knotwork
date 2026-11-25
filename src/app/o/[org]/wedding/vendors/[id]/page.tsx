@@ -49,7 +49,7 @@ export default async function VendorPage({ params, searchParams }: { params: Pro
 
   return (
     <main>
-      <WeddingNav slug={ctx.slug} />
+      <WeddingNav slug={ctx.slug} mode={v.wedding.mode} />
       <h1>{x.name}</h1>
       {mine && <p role="note">Private to you<MineNote mine={mine} />. Your partner and the helpers see it as &quot;Private vendor&quot;, with no name. Proposing to book it or sign its contract reveals it.</p>}
       <p aria-label="Vendor status">

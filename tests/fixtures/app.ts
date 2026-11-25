@@ -75,6 +75,9 @@ export async function seedApp(org: { orgId: string; userId: string }, key: 'a' |
   const secondGuest = await db.guest.create({ data: { id: id(key, 48), orgId, householdId: household.id, name: `harness second guest ${key}`, dietary: [], accessibility: [] } });
   const seatingRule = await db.seatingRule.create({ data: { id: id(key, 46), orgId, kind: 'apart', hard: true, guestAId: guest.id, guestBId: secondGuest.id } });
   const seat = await db.seat.create({ data: { id: id(key, 47), orgId, guestId: guest.id, tableId: seatingTable.id } });
+  // Phase 5 (life-admin mode): a household task every two weeks and one day it was done.
+  const recurringTask = await db.recurringTask.create({ data: { id: id(key, 49), orgId, title: `harness household task ${key}`, unit: 'week', every: 2 } });
+  const recurringDone = await db.recurringDone.create({ data: { id: id(key, 50), orgId, taskId: recurringTask.id, doneOn: new Date('2026-11-01T00:00:00Z') } });
   return {
     wedding: wedding.id, task: task.id, taskDependency: dependency.id, scheduleBaseline: baseline.id, budgetCategory: category.id, expense: expense.id, budgetSnapshot: snapshot.id,
     vendor: vendor.id, vendorPayment: payment.id, vendorFlag: flag.id, vendorBrief: brief.id, consentRequest: request.id, helperGrant: grant.id,
@@ -86,6 +89,7 @@ export async function seedApp(org: { orgId: string; userId: string }, key: 'a' |
     nameChange: nameChange.id, nameChangeStep: nameChangeStep.id, nameChangeArtifact: nameChangeArtifact.id,
     contingencyPlan: contingencyPlan.id, contingencyRun: contingencyRun.id, contingencyItem: contingencyItem.id,
     seatingTable: seatingTable.id, seatingRule: seatingRule.id, seat: seat.id,
+    recurringTask: recurringTask.id, recurringDone: recurringDone.id,
   };
 }
 

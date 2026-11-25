@@ -96,6 +96,7 @@ export const RSVP_PROBLEM = {
   host: 'A guest can only come with someone who is attending.',
   text: 'Use plain text on one line for names and song requests.',
   full: 'We could not save that reply. Please get in touch with the couple.',
+  closed: 'Replies are closed now. Please get in touch with the couple.',
 } as const;
 export type RsvpProblem = keyof typeof RSVP_PROBLEM;
 export const isRsvpProblem = (code: string): code is RsvpProblem => Object.hasOwn(RSVP_PROBLEM, code);

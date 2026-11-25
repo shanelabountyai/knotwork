@@ -45,7 +45,7 @@ export default async function Seating({ params, searchParams }: { params: Promis
 
   return (
     <main>
-      <WeddingNav slug={ctx.slug} />
+      <WeddingNav slug={ctx.slug} mode={v.wedding.mode} />
       <GuestNav slug={ctx.slug} />
       <h1>Seating</h1>
       <p aria-label="Seating summary">

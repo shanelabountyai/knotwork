@@ -23,7 +23,7 @@ export default async function StoreItem({ params }: { params: Promise<{ org: str
   if (!link) notFound();
   return (
     <main>
-      <WeddingNav slug={ctx.slug} />
+      <WeddingNav slug={ctx.slug} life={data.v.wedding.mode === 'life'} />
       <GiftNav slug={ctx.slug} />
       <h1>{link.title}</h1>
       <p>
