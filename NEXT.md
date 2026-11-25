@@ -39,7 +39,7 @@ secrecy. Synthetic data only. No PR opened yet for `phase-4`.
   from scratch: 44 clone models, 26 enums, 70 tables, no difference; Playwright 45 passed (all specs, one worker).
 - **Not verified:** `prisma migrate deploy` / `migrate diff` (D-04; CI is the proof, the sandbox schema check stands in);
   the seating engine beyond the 200-guest bound test (no load test of the page with hundreds of move forms); the vendor
-  page in a real vendor's mail client; GitHub CI on `phase-4` (nothing pushed from this run).
+  page in a real vendor's mail client; GitHub CI on `phase-4` (see the PR).
 - **Open for Shane** (a line each is enough):
   - D-89: the earlier open questions still stand as built: D-58, D-59, D-60, S4, D-65, D-70, D-72, D-79 to D-82.
   - D-94: with one hidden line, total minus the visible lines is its amount (accepted, as D-70).
@@ -49,7 +49,13 @@ secrecy. Synthetic data only. No PR opened yet for `phase-4`.
   - D-123: contingency plans are partners only; a day-of coordinator helper who may run a plan that proposes nothing?
   - D-125: households are a soft seating rule and guests who have not answered are not seated by default; hard instead?
   - D-129: vendor links stop 7 days after the wedding and show the live brief, not the last generated version.
-- **You:** review `phase-4` (open the draft PR when ready); answer what you care about above.
+- **Re-check after a sandbox restart (2026-11-25):** lint, typecheck, drift, `fixtures:check` and pytest (121) pass
+  again; vitest with RLS off passed 81 files, 1440 / 64 skipped before the restart. After it, on the new machine, the
+  template's action harness (`tests/invariants/inv-01-04-22-actions.test.ts`, "passes INV-01/02/03/04/22") ran past its
+  fixed 180-second budget, with RLS off and enforced: the server actions grew from 79 (main) to 123, and each check
+  truncates every table. An uncommitted copy with no time limit passed every assertion in 229.6 s. The test is
+  template-owned and its budget is not changed (D-131). CI is the judge: the same test took 31 s there on PR #2.
+- **You:** review the Phase 4 draft PR; answer what you care about above.
 
 ## ▶ 2026-11-24 (latest): PR #2 and PR #3 merged; Knotwork Phase 3 built (branch `phase-3`, draft PR, not merged, not deployed)
 Shane asked in chat: "Good to merge and start next phase". PR #2 then PR #3 were merged with merge commits (main at
