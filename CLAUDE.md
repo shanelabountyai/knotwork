@@ -2,7 +2,7 @@
 
 Wedding planning for one couple and their circle, on saas-foundation v1.7.0. **Synthetic data only; not deployed.**
 Spec: `docs/prds/prd-knotwork-wedding.md` (v1.1). Decisions: `docs/knotwork/decisions.md`, which outranks the PRD
-where they differ. Current phase plan: `docs/knotwork/PHASE-4-PLAN.md`. Session state: `NEXT.md`. Write-up: `WRITEUP.md`.
+where they differ. Current phase plan: `docs/knotwork/PHASE-5-PLAN.md`. Session state: `NEXT.md`. Write-up: `WRITEUP.md`.
 
 ## The four build rules (PRD "Build Notes")
 
