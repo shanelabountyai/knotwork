@@ -1,5 +1,56 @@
 # NEXT
 
+## ▶ 2026-11-25 (latest): Knotwork Phase 4 built (branch `phase-4`, four slices, not merged, not deployed)
+Shane asked in chat on 2026-11-24: "Merge it start phase 4" (PR #4 merged; `phase-4` branched from `main` at `a932b6d`). Plan:
+`docs/knotwork/PHASE-4-PLAN.md`. Built in four slices, one after another (D-90). Decisions D-89 to D-130; ADR-001 for
+secrecy. Synthetic data only. No PR opened yet for `phase-4`.
+
+- **Slice A. P1-1 secrecy compartments** (ADR-001, D-93 to D-105): a partner marks a task, spend, vendor or category
+  "private to me until" an offset from the wedding date (or never). The other partner and the helpers see a masked line;
+  amounts count in every total. Every signed-in page reads those four tables through `secrecy/views.ts` (a structure
+  test enforces it) and a leak sweep renders every Knotwork page as three viewers. The change log is masked at write;
+  the export is built for nobody. A designated action reveals what it names (rule 2). **P1-2 multi-funder budget**
+  (D-95, D-103): funders pledge toward categories; pledged, received, spent; a `funder` grant sees only its own pledges.
+- **Slice B. P1-3 thank-you ledger** (D-110 to D-112): one obligation per gift and giver from three sources (pooled gifts,
+  claimed store items, gifts logged by hand), aged on read from a date of fact ("N unthanked > 3 weeks", four buckets), a
+  note template generated, never stored. **P1-8 link-out registry items** (D-107 to D-109, D-113): https-only store
+  links checked from the text, claimed by a household through its own link (`/r/[token]/gifts/claim`).
+- **Slice C. P1-4 name-change sequence** (D-114 to D-117): rules as data for a generic fallback and three US states
+  (illustrative, not legal advice), steps gated on prerequisites and documents held, private to the partner unless
+  shared. **P1-6 contingency decision trees** (D-118 to D-123): create from a starter or pasted JSON, preview a branch,
+  execute once in one transaction; a spend over the threshold is only proposed through consent.
+- **Slice D. P1-5 seating chart** (D-125, D-127): tables with capacities, apart/together pairs (hard or soft),
+  households kept together as a soft rule; generate = seeded greedy draft + bounded local search over six drafts,
+  locked seats kept, a move by hand locks the seat; a chart that cannot keep every hard rule is refused with its
+  reasons and nothing is written. Attending guests are seated; those who have not answered only when the couple turns
+  it on. Twelve fixtures (seven optimal, four infeasible, one unsolvable) re-scored and brute-forced by
+  `tools/seating_oracle.py`; 200 guests at 20 tables in under two seconds (test bound; about 0.6 s measured here).
+  **P1-7 progress dashboard** (D-126): `/wedding/dashboard`, linked first on the home page: % of tasks on track,
+  overdue tasks, open vendor flags, headcount against the cap and seating progress, approvals waiting, budget spent
+  against estimate, the thank-you headline and aging, contingency plans. All read from the engines on the request;
+  private items counted and masked; each section only for its capability. **Vendor read-only link (D-42; D-128, D-129)**:
+  `/v/[token]` (a third public prefix on rule 3's closed list, same headers as `/r/` and `/p/`), 32 random bytes, sha256
+  stored plus a sealed copy, replaceable and endable, works until 7 days after the wedding (derived), rate limited,
+  one 404 for every link that does not work; shows the vendor's own role-filtered brief, worked out on each read
+  (counts, never guests' names). A private vendor has no link.
+- **Gate (sandbox, 2026-11-25, after slice D):** lint 0 problems; typecheck clean; vitest 81 files, 1440 passed / 64 skipped (RLS off) and
+  1503 passed / 1 skipped (RLS enforce); `npm run build` OK; `foundation:drift` clean; `foundation:check-modules` pass;
+  `fixtures:check` 79 the same, no difference; pytest 121 passed; sandbox schema check after rebuilding the test database
+  from scratch: 44 clone models, 26 enums, 70 tables, no difference; Playwright 45 passed (all specs, one worker).
+- **Not verified:** `prisma migrate deploy` / `migrate diff` (D-04; CI is the proof, the sandbox schema check stands in);
+  the seating engine beyond the 200-guest bound test (no load test of the page with hundreds of move forms); the vendor
+  page in a real vendor's mail client; GitHub CI on `phase-4` (nothing pushed from this run).
+- **Open for Shane** (a line each is enough):
+  - D-89: the earlier open questions still stand as built: D-58, D-59, D-60, S4, D-65, D-70, D-72, D-79 to D-82.
+  - D-94: with one hidden line, total minus the visible lines is its amount (accepted, as D-70).
+  - D-98: a category named exactly like a private one is refused, which tells that the name exists (accepted).
+  - D-118: plans are edited as JSON; a form-based tree editor is not built.
+  - D-121: a plan runs once; "run it again" as a copy of the plan is not built.
+  - D-123: contingency plans are partners only; a day-of coordinator helper who may run a plan that proposes nothing?
+  - D-125: households are a soft seating rule and guests who have not answered are not seated by default; hard instead?
+  - D-129: vendor links stop 7 days after the wedding and show the live brief, not the last generated version.
+- **You:** review `phase-4` (open the draft PR when ready); answer what you care about above.
+
 ## ▶ 2026-11-24 (latest): PR #2 and PR #3 merged; Knotwork Phase 3 built (branch `phase-3`, draft PR, not merged, not deployed)
 Shane asked in chat: "Good to merge and start next phase". PR #2 then PR #3 were merged with merge commits (main at
 160b037). He did not pick among the options the review left open, so they were taken "as built" (D-62) and are still

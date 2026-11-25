@@ -21,6 +21,8 @@ import { moveNameChange, startNameChange } from '@/lib/knotwork/namechange/store
 import { processUpload, type Processed } from '@/lib/knotwork/uploads/process';
 import { hashToken } from '@/core/tokens';
 import { createWedding } from '@/lib/knotwork/schedule/store';
+import { addRule, addTable, generateSeating } from '@/lib/knotwork/seating/store';
+import { makeVendorLink } from '@/lib/knotwork/vendors/link';
 import { addPayment, generateBrief, updateVendor } from '@/lib/knotwork/vendors/store';
 import { DEMO_TOTP_SECRET } from '../seed-demo';
 
@@ -29,7 +31,8 @@ import { DEMO_TOTP_SECRET } from '../seed-demo';
 //   Juniper Vale and Rowan Ashby: the two partners (both owners).  Maple Okafor: a helper who can see the budget.
 //   Hazel Vale (Phase 4, P1-2): Juniper's mother, a helper linked to the funder "Hazel & Oren Vale"; she sees only what
 //   that pledge paid for. Juniper also keeps one spend private until the wedding day (P1-1), and has begun her name
-//   change, private to her (P1-4). A rain plan waits, not yet put into action (P1-6).
+//   change, private to her (P1-4). A rain plan waits, not yet put into action (P1-6). The five guests who are coming
+//   are seated at two tables (P1-5), and the caterer has a read-only link to its brief (D-42).
 //   The wedding is 330 days from today (America/Chicago), from the default template, so the demo move of six weeks
 //   has room. Venue and caterer are booked, each by a real two-key request (Juniper proposes, Rowan approves); the
 //   florist is still being considered.
@@ -228,6 +231,17 @@ export async function seedCouple(opts: { today?: Day } = {}): Promise<string[]> 
     await createPlan(tx, a, 'Rain plan', STARTERS.rain.tree);
     await startNameChange(tx, a, 'generic');
     await moveNameChange(tx, a, { op: 'hold', key: 'proof-of-identity' });
+  });
+
+  // Phase 4, P1-5: two tables of four for the five guests who are coming, a wish that Wren sits with Io (her
+  // godmother), and a first seating (arrangement 1). D-42: the caterer has a read-only link to its brief (counts only).
+  await withOrg({ orgId }, async (tx) => {
+    await addTable(tx, a, { name: 'Table 1', capacity: 4 });
+    await addTable(tx, a, { name: 'Table 2', capacity: 4 });
+    const guest = async (name: string) => (await tx.guest.findFirstOrThrow({ where: { orgId, name }, select: { id: true } })).id;
+    await addRule(tx, a, { a: await guest('Wren Lindqvist'), b: await guest('Io Ashby'), kind: 'together', hard: false });
+    await generateSeating(tx, a, 1);
+    await makeVendorLink(tx, a, vendors.get('Fennel & Fig Catering')!);
   });
 
   // Phase 3: the photo wall. One event, "Reception", where each photo waits for approval (the demo story: a guest's

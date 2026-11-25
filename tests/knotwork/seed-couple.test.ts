@@ -11,6 +11,7 @@ import { inspect } from '@/lib/knotwork/uploads/inspect';
 import { addDays, dayOfDb, todayIn } from '@/lib/knotwork/days';
 import { loadSchedule } from '@/lib/knotwork/schedule/store';
 import { loadLinks } from '@/lib/knotwork/registry/store';
+import { loadSeating } from '@/lib/knotwork/seating/store';
 import { ledger } from '@/lib/knotwork/thanks/aging';
 import { loadObligations } from '@/lib/knotwork/thanks/store';
 import { COUPLE, seedCouple } from '../../scripts/knotwork/seed-couple';
@@ -153,5 +154,16 @@ describe('seed:couple', () => {
     const entries = (await db.auditEvent.findMany({ where: { orgId, action: { startsWith: 'knotwork.namechange.' } } })).map((e) => e.data);
     expect(entries).toHaveLength(2);
     for (const d of entries) expect(d).toMatchObject({ label: 'a private item', private: true });
+  });
+
+  it('Phase 4: the five guests who are coming are seated at two tables with no broken rule; the caterer has a working link', async () => {
+    const s = await withOrg({ orgId }, (tx) => loadSeating(tx, { orgId }));
+    expect(s.tables.map((t) => [t.name, t.capacity])).toEqual([['Table 1', 4], ['Table 2', 4]]);
+    expect(Object.keys(s.seats)).toHaveLength(5);
+    expect(s.score.hard).toBe(0);
+    expect(s.rules.map((r) => [r.a.name, r.b.name, r.kind, r.hard])).toEqual([['Io Ashby', 'Wren Lindqvist', 'together', false]]);
+    const caterer = await db.vendor.findFirstOrThrow({ where: { orgId, name: 'Fennel & Fig Catering' } });
+    expect(caterer.linkTokenHash).toMatch(/^[0-9a-f]{64}$/);
+    expect(await db.vendor.count({ where: { orgId, linkTokenHash: { not: null } } })).toBe(1);
   });
 });
