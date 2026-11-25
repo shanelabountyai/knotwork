@@ -43,12 +43,15 @@ Synthetic data only; no live email, SMS, payments or model calls; no env var or 
   `foundation:drift` clean; `foundation:check-modules` pass; `fixtures:check` 88 the same, no difference; pytest 132
   passed; sandbox schema check after rebuilding the test database from scratch: 46 clone models, 31 enums, 72 tables,
   no difference; Playwright 52 passed (all specs, one worker).
-- **Not verified:** `prisma migrate deploy` / `migrate diff` (D-04; CI is the proof); the action harness's time in CI
-  with 126 actions; real sends through Resend or Twilio (no keys, by rule); a real photo classifier; the life-admin
+- **CI (GitHub Actions) at `de056af`:** `ci (off)` success (migrate deploy, "Migrations match the schema", vitest 87
+  files 1531 passed / 66 skipped, Playwright 52 passed), `modules-removed` success, `oracles` success. The action harness
+  took **154.5 s** of its 180 s at 126 actions (149.5 s at 123, 158.5 s at 124: CI's run-to-run spread is as large as
+  the per-action cost; D-152).
+- **Not verified:** real sends through Resend or Twilio (no keys, by rule); a real photo classifier; the life-admin
   pages with years of done-day history (the household page lists the last five days per task).
 - **Open for Shane** (a line each is enough):
-  - D-133/D-150: the template's action harness has a fixed 180 s; at 126 actions CI may run out of it. A per-action
-    budget upstream, or a `FOUNDATION_PATCHES.md` entry?
+  - D-133/D-150/D-152: the template's action harness has a fixed 180 s; CI used 154.5 s at 126 actions. A per-action
+    budget upstream, or a `FOUNDATION_PATCHES.md` entry, before a phase adds many more actions?
   - D-134: delivery uses the template's Resend and Twilio transports; another provider only if those are not the ones.
   - D-135/D-137: plug a real classifier into the seam at productionize; should `review` hold a photo too?
   - D-138/D-139: may the couple undo a household's own stop (with a recorded reason)? Drop the `none` channel?
