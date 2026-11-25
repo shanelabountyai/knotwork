@@ -1,0 +1,151 @@
+{
+  "name": "03-three-sources-oldest-first",
+  "note": "A pooled gift, a store item bought and a hand-logged gift: one ledger, oldest first; same day ties go by giver, then what, then source.",
+  "today": "2027-07-15",
+  "obligations": [
+    {
+      "source": "claimed",
+      "id": "c1",
+      "giver": "The Ashbys",
+      "what": "Cast-iron skillet",
+      "receivedOn": "2027-06-01",
+      "acknowledgedOn": null
+    },
+    {
+      "source": "pooled",
+      "id": "p1",
+      "giver": "The Lindqvists",
+      "what": "Honeymoon canoe trip",
+      "receivedOn": "2027-05-20",
+      "acknowledgedOn": null
+    },
+    {
+      "source": "logged",
+      "id": "g1",
+      "giver": "Aunt Odile",
+      "what": "linen napkins",
+      "receivedOn": "2027-06-01",
+      "acknowledgedOn": null
+    },
+    {
+      "source": "pooled",
+      "id": "p2",
+      "giver": "Priya Rao",
+      "what": "Record player",
+      "receivedOn": "2027-06-01",
+      "acknowledgedOn": null
+    },
+    {
+      "source": "claimed",
+      "id": "c2",
+      "giver": "Priya Rao",
+      "what": "Record player",
+      "receivedOn": "2027-06-01",
+      "acknowledgedOn": null
+    },
+    {
+      "source": "logged",
+      "id": "g2",
+      "giver": "The Vales",
+      "what": "a picnic basket",
+      "receivedOn": "2027-07-14",
+      "acknowledgedOn": null
+    }
+  ],
+  "expect": {
+    "owed": [
+      {
+        "source": "pooled",
+        "id": "p1",
+        "giver": "The Lindqvists",
+        "what": "Honeymoon canoe trip",
+        "receivedOn": "2027-05-20",
+        "acknowledgedOn": null,
+        "ageDays": 56,
+        "bucket": "later",
+        "overdue": true
+      },
+      {
+        "source": "logged",
+        "id": "g1",
+        "giver": "Aunt Odile",
+        "what": "linen napkins",
+        "receivedOn": "2027-06-01",
+        "acknowledgedOn": null,
+        "ageDays": 44,
+        "bucket": "later",
+        "overdue": true
+      },
+      {
+        "source": "pooled",
+        "id": "p2",
+        "giver": "Priya Rao",
+        "what": "Record player",
+        "receivedOn": "2027-06-01",
+        "acknowledgedOn": null,
+        "ageDays": 44,
+        "bucket": "later",
+        "overdue": true
+      },
+      {
+        "source": "claimed",
+        "id": "c2",
+        "giver": "Priya Rao",
+        "what": "Record player",
+        "receivedOn": "2027-06-01",
+        "acknowledgedOn": null,
+        "ageDays": 44,
+        "bucket": "later",
+        "overdue": true
+      },
+      {
+        "source": "claimed",
+        "id": "c1",
+        "giver": "The Ashbys",
+        "what": "Cast-iron skillet",
+        "receivedOn": "2027-06-01",
+        "acknowledgedOn": null,
+        "ageDays": 44,
+        "bucket": "later",
+        "overdue": true
+      },
+      {
+        "source": "logged",
+        "id": "g2",
+        "giver": "The Vales",
+        "what": "a picnic basket",
+        "receivedOn": "2027-07-14",
+        "acknowledgedOn": null,
+        "ageDays": 1,
+        "bucket": "fresh",
+        "overdue": false
+      }
+    ],
+    "thanked": [],
+    "total": 6,
+    "overdue": 5,
+    "headline": "5 unthanked > 3 weeks",
+    "buckets": [
+      {
+        "key": "fresh",
+        "label": "Under a week",
+        "count": 1
+      },
+      {
+        "key": "weeks",
+        "label": "1 to 3 weeks",
+        "count": 0
+      },
+      {
+        "key": "late",
+        "label": "3 to 6 weeks",
+        "count": 0
+      },
+      {
+        "key": "later",
+        "label": "Over 6 weeks",
+        "count": 5
+      }
+    ]
+  }
+}

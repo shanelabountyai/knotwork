@@ -38,6 +38,7 @@ export const readAttachment = (tx: Tx, ctx: { orgId: string }, vendorId: string,
 
 export async function removeAttachment(tx: Tx, ctx: Ctx, id: string) {
   const a = await tx.vendorAttachment.findFirstOrThrow({ where: { id, ...inOrg(ctx) }, select: { label: true, vendor: { select: { name: true } } } });
-  await tx.vendorAttachment.delete({ where: { id } });
+  // Logged first: whether the entry may name the vendor is read from the row (P1-1), which is about to go.
   await logChange(tx, ctx, 'attachment', 'removed', id, `${a.label} (${a.vendor.name})`, { vendor: a.vendor.name, label: a.label }, null);
+  await tx.vendorAttachment.delete({ where: { id } });
 }

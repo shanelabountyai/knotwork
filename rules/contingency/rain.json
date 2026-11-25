@@ -1,0 +1,151 @@
+{
+  "title": "Rain plan",
+  "note": "A starter plan (illustrative). Copy it, then change any of it to fit your day.",
+  "root": "forecast",
+  "nodes": {
+    "forecast": {
+      "type": "question",
+      "text": "Two days out, what does the forecast say for the ceremony?",
+      "branches": [
+        {
+          "label": "Rain most of the afternoon",
+          "next": "inside"
+        },
+        {
+          "label": "Showers possible",
+          "next": "showers"
+        },
+        {
+          "label": "Dry",
+          "next": "dry"
+        }
+      ]
+    },
+    "inside": {
+      "type": "question",
+      "text": "Can the ceremony move into the barn?",
+      "branches": [
+        {
+          "label": "Yes, move it inside",
+          "next": "move-inside"
+        },
+        {
+          "label": "No, put up a tent on the lawn",
+          "next": "tent"
+        }
+      ]
+    },
+    "move-inside": {
+      "type": "leaf",
+      "title": "Move the ceremony into the barn",
+      "checklist": [
+        "Walk the barn with the planner and mark where the aisle goes",
+        "Tell the wedding party the ceremony is inside",
+        "Put a sign at the lawn entrance pointing to the barn"
+      ],
+      "notify": [
+        {
+          "vendorCategory": "venue",
+          "message": "The ceremony moves inside the barn; we need the chairs set there by 2 pm."
+        },
+        {
+          "vendorCategory": "caterer",
+          "message": "Cocktail hour moves to the barn porch."
+        },
+        {
+          "vendorCategory": "florist",
+          "message": "The arch goes up inside the barn instead of on the lawn."
+        }
+      ],
+      "tasks": [
+        {
+          "key": "umbrellas",
+          "title": "Buy umbrellas for the walk from parking",
+          "leadDays": 1,
+          "bufferDays": 1,
+          "after": []
+        }
+      ],
+      "spends": []
+    },
+    "tent": {
+      "type": "leaf",
+      "title": "Rent a tent for the lawn",
+      "checklist": [
+        "Confirm where the tent can be staked with the venue",
+        "Tell the wedding party to expect the tent"
+      ],
+      "notify": [
+        {
+          "vendorCategory": "venue",
+          "message": "A tent rental company will set up on the lawn the day before."
+        }
+      ],
+      "tasks": [
+        {
+          "key": "tent",
+          "title": "Book a tent for the lawn",
+          "leadDays": 2,
+          "bufferDays": 1,
+          "after": []
+        },
+        {
+          "key": "tent-check",
+          "title": "Check the tent is up, lit and dry",
+          "leadDays": 0,
+          "bufferDays": 0,
+          "after": [
+            "tent"
+          ]
+        }
+      ],
+      "spends": [
+        {
+          "category": "Venue",
+          "description": "Tent rental for the lawn",
+          "amountCents": 180000
+        }
+      ]
+    },
+    "showers": {
+      "type": "leaf",
+      "title": "Keep the lawn, with a fallback",
+      "checklist": [
+        "Put towels and a basket of umbrellas at the lawn entrance",
+        "Decide by noon on the day whether to move inside"
+      ],
+      "notify": [
+        {
+          "vendorCategory": "venue",
+          "message": "Please keep the barn ready as a fallback for the ceremony."
+        }
+      ],
+      "tasks": [
+        {
+          "key": "umbrellas",
+          "title": "Buy umbrellas for the walk from parking",
+          "leadDays": 1,
+          "bufferDays": 1,
+          "after": []
+        }
+      ],
+      "spends": [
+        {
+          "category": "Venue",
+          "description": "Umbrellas for guests",
+          "amountCents": 12000
+        }
+      ]
+    },
+    "dry": {
+      "type": "leaf",
+      "title": "Nothing changes",
+      "checklist": [
+        "Nothing to do: enjoy the lawn"
+      ],
+      "notify": [],
+      "tasks": [],
+      "spends": []
+    }
+  }
+}

@@ -2,18 +2,41 @@
 import Link from 'next/link';
 import { showDay, type Day } from '@/lib/knotwork/days';
 import type { MovePreview, PlanTask } from '@/lib/knotwork/schedule/engine';
+import { PRIVACY_CHOICES } from '@/lib/knotwork/secrecy/compartment';
+import type { Hidden } from '@/lib/knotwork/secrecy/lens';
 
 export function WeddingNav({ slug, counts }: { slug: string; counts?: { approvals: number; flags: number } }) {
   const base = `/o/${slug}/wedding`;
   return (
     <nav aria-label="Wedding">
-      <Link href={`/o/${slug}`}>Overview</Link> · <Link href={`${base}/schedule`}>Schedule</Link> · <Link href={`${base}/budget`}>Budget</Link> ·{' '}
-      <Link href={`${base}/vendors`}>Vendors</Link> · <Link href={`${base}/guests`}>Guests</Link> · <Link href={`${base}/gifts`}>Gifts</Link> · <Link href={`${base}/photos`}>Photos</Link> · <Link href={`${base}/approvals`}>Approvals{counts?.approvals ? ` (${counts.approvals})` : ''}</Link> ·{' '}
+      <Link href={`/o/${slug}`}>Overview</Link> · <Link href={`${base}/dashboard`}>Dashboard</Link> · <Link href={`${base}/schedule`}>Schedule</Link> · <Link href={`${base}/budget`}>Budget</Link> · <Link href={`${base}/funding`}>Funding</Link> ·{' '}
+      <Link href={`${base}/vendors`}>Vendors</Link> · <Link href={`${base}/guests`}>Guests</Link> · <Link href={`${base}/gifts`}>Gifts</Link> · <Link href={`${base}/photos`}>Photos</Link> · <Link href={`${base}/contingency`}>Contingency plans</Link> · <Link href={`${base}/name-change`}>Name change</Link> · <Link href={`${base}/approvals`}>Approvals{counts?.approvals ? ` (${counts.approvals})` : ''}</Link> ·{' '}
       <Link href={`${base}/flags`}>Vendor flags{counts?.flags ? ` (${counts.flags})` : ''}</Link> · <Link href={`${base}/activity`}>Activity</Link> ·{' '}
       <Link href={`${base}/helpers`}>Helpers</Link>
     </nav>
   );
 }
+
+// ---- P1-1 secrecy (ADR-001) ---------------------------------------------------------------------------------------
+
+/** The "private to me until …" choice on a form. Partners only (the action refuses a helper anyway). */
+export function PrivacySelect({ label = 'Who sees it', defaultValue = '', name = 'privacy' }: { label?: string; defaultValue?: string; name?: string }) {
+  return (
+    <label>
+      {label}{' '}
+      <select name={name} defaultValue={defaultValue}>
+        {PRIVACY_CHOICES.map((c) => <option key={c.value} value={c.value}>{c.text}</option>)}
+      </select>
+    </label>
+  );
+}
+
+const revealsOn = (d: Day | null) => (d ? `reveals ${showDay(d)}` : 'until revealed');
+/** A masked line: what kind of thing, whose, and when it shows. Nothing else of it exists on the page. */
+export const HiddenText = ({ h, owner }: { h: Hidden; owner: string }) => <span aria-label={h.label}><em>{h.label}</em> <small>({owner}&apos;s, {revealsOn(h.revealsOn)})</small></span>;
+/** On the owner's own private item. */
+export const MineNote = ({ mine }: { mine: { revealsOn: Day | null } | null }) => (mine ? <small> (private to you, {revealsOn(mine.revealsOn)})</small> : null);
+export const privacyValue = (row: { privateToId: string | null; revealDays: number | null }, mine: unknown) => (mine ? (row.revealDays === null ? 'never' : String(row.revealDays)) : '');
 
 export const NoWedding = ({ slug }: { slug: string }) => (
   <main>

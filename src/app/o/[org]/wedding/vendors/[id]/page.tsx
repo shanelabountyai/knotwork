@@ -1,38 +1,43 @@
 import { notFound } from 'next/navigation';
-import { inOrg, requireOrg } from '@/core/authz/guards';
+import { requireOrg } from '@/core/authz/guards';
 import { ActionForm } from '@/core/ui/action-form';
 import { allows, isPartner } from '@/lib/knotwork/access';
 import { addDays, dayOfDb, showDay } from '@/lib/knotwork/days';
 import { usd } from '@/lib/knotwork/money';
 import { isUploadProblem, UPLOAD_PROBLEM } from '@/lib/knotwork/uploads/caps';
-import { ATTACHMENT_PROBLEM, ATTACHMENTS_PER_VENDOR, listAttachments } from '@/lib/knotwork/vendors/attachments';
+import { vendorView } from '@/lib/knotwork/secrecy/views';
+import { ATTACHMENT_PROBLEM, ATTACHMENTS_PER_VENDOR } from '@/lib/knotwork/vendors/attachments';
 import { VENDOR_CATEGORIES } from '@/lib/knotwork/vendors/brief';
 import { hhmm } from '@/lib/knotwork/vendors/scope';
+import { vendorLinkOf } from '@/lib/knotwork/vendors/link';
 import { flagText } from '@/lib/knotwork/vendors/store';
 import { acknowledgeFlag, addVendorPayment, payVendorPayment, proposeBooking, proposeContract, regenerateBrief, updateVendor } from '../../actions';
-import { NoWedding, WeddingNav } from '../../bits';
+import { MineNote, NoWedding, PrivacySelect, privacyValue, WeddingNav } from '../../bits';
+import { setVendorPrivacy } from '../../privacy/actions';
 import { nameOf, view } from '../../view';
-import { removeVendorAttachment } from '../actions';
+import { endVendorReadLink, newVendorLink, removeVendorAttachment, showVendorLink } from '../actions';
 
 export const metadata = { title: 'Vendor' };
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 // One vendor: contact, scope (a change here on a booked vendor raises a re-confirmation flag), the two designated
 // steps (book, sign), scheduled payments, the brief, and contract attachments (images only, D-65; rule 4: the form
-// posts the file to ./attachments, a route handler that hands it to src/lib/knotwork/uploads).
+// posts the file to ./attachments, a route handler that hands it to src/lib/knotwork/uploads). P1-1: a vendor private
+// to the other partner is a 404 to them and to every helper (secrecy/views.ts `vendorView`).
 export default async function VendorPage({ params, searchParams }: { params: Promise<{ org: string; id: string }>; searchParams: Promise<{ e?: string; attached?: string }> }) {
   const ctx = await requireOrg((await params).org);
   const { id } = await params;
   const q = await searchParams;
   if (!UUID.test(id)) notFound();
-  const data = await view(ctx, 'vendors.view', async (tx) => ({
-    vendor: await tx.vendor.findFirst({ where: { id, ...inOrg(ctx) }, include: { payments: { orderBy: { dueDaysBefore: 'desc' } }, flags: { where: { ackAt: null }, orderBy: { raisedAt: 'asc' } }, briefs: { orderBy: { version: 'desc' }, take: 1 } } }),
-    categories: await tx.budgetCategory.findMany({ where: inOrg(ctx), select: { id: true, name: true }, orderBy: { name: 'asc' } }),
-    attachments: await listAttachments(tx, ctx, id),
-  }));
+  const data = await view(ctx, 'vendors.view', async (tx, v) => {
+    const page = await vendorView(tx, ctx, v, id);
+    // D-42: the read-only link's state (never the token itself: that is shown only by an action, to vendors.edit).
+    return { page, link: page && allows(v.who, 'vendors.edit') ? await vendorLinkOf(tx, ctx, id) : null };
+  });
   if (!data) return <NoWedding slug={ctx.slug} />;
-  const { v, vendor: x, categories, attachments } = data;
-  if (!x) notFound();
+  const { v, page, link } = data;
+  if (!page) notFound();
+  const { vendor: x, mine, categories, attachments } = page;
   const canEdit = allows(v.who, 'vendors.edit');
   const partner = isPartner(ctx.role);
   const bind = <A extends unknown[], R>(fn: (slug: string, ...a: A) => R) => fn.bind(null, ctx.slug);
@@ -46,6 +51,7 @@ export default async function VendorPage({ params, searchParams }: { params: Pro
     <main>
       <WeddingNav slug={ctx.slug} />
       <h1>{x.name}</h1>
+      {mine && <p role="note">Private to you<MineNote mine={mine} />. Your partner and the helpers see it as &quot;Private vendor&quot;, with no name. Proposing to book it or sign its contract reveals it.</p>}
       <p aria-label="Vendor status">
         {x.category} · <strong>{x.status}</strong>
         {x.contractSignedOn && <> · contract signed {showDay(dayOfDb(x.contractSignedOn))}{x.contractTotalCents !== null && ` for ${usd(x.contractTotalCents)}`}</>}
@@ -88,6 +94,13 @@ export default async function VendorPage({ params, searchParams }: { params: Pro
             </ActionForm>
           )}
           {x.status !== 'considering' && x.contractSignedOn && <p>Booked and signed.</p>}
+          {x.status === 'considering' && !x.contractSignedOn && (
+            <ActionForm action={bind(setVendorPrivacy)}>
+              <input type="hidden" name="id" value={x.id} />
+              <PrivacySelect defaultValue={privacyValue(x, mine)} />
+              <button type="submit">Save privacy</button>
+            </ActionForm>
+          )}
         </section>
       )}
 
@@ -157,6 +170,33 @@ export default async function VendorPage({ params, searchParams }: { params: Pro
           </ActionForm>
         )}
       </section>
+
+      {link && (
+        <section aria-label="Read-only link">
+          <h2>Read-only link for the vendor</h2>
+          <p>
+            A link the vendor can open without an account. It shows this brief, worked out fresh each time (counts, never guests&apos; names), and nothing else.{' '}
+            {link.exists ? (link.working ? `It works until ${showDay(link.lastDay)}.` : 'It does not work at the moment.') : `No link yet. A link works until ${showDay(link.lastDay)}.`}
+          </p>
+          {link.exists && (
+            <ActionForm action={bind(showVendorLink)}>
+              <input type="hidden" name="id" value={x.id} />
+              <button type="submit">Show the vendor link</button>
+            </ActionForm>
+          )}
+          <ActionForm action={bind(newVendorLink)}>
+            <input type="hidden" name="id" value={x.id} />
+            <button type="submit">{link.exists ? 'Replace the vendor link' : 'Make a vendor link'}</button>
+          </ActionForm>
+          {link.exists && (
+            <ActionForm action={bind(endVendorReadLink)}>
+              <input type="hidden" name="id" value={x.id} />
+              <button type="submit">End the vendor link</button>
+            </ActionForm>
+          )}
+          {mine && <p><small>While this vendor is private there is no link: making one is refused.</small></p>}
+        </section>
+      )}
 
       <section aria-label="Contract attachments" id="attachments">
         <h2>Contract attachments</h2>

@@ -2,7 +2,7 @@
 
 Wedding planning for one couple and their circle, on saas-foundation v1.7.0. **Synthetic data only; not deployed.**
 Spec: `docs/prds/prd-knotwork-wedding.md` (v1.1). Decisions: `docs/knotwork/decisions.md`, which outranks the PRD
-where they differ. Current phase plan: `docs/knotwork/PHASE-3-PLAN.md`. Session state: `NEXT.md`. Write-up: `WRITEUP.md`.
+where they differ. Current phase plan: `docs/knotwork/PHASE-4-PLAN.md`. Session state: `NEXT.md`. Write-up: `WRITEUP.md`.
 
 ## The four build rules (PRD "Build Notes")
 
@@ -16,11 +16,13 @@ where they differ. Current phase plan: `docs/knotwork/PHASE-3-PLAN.md`. Session 
    file writes those fields itself (`tests/knotwork/structure.test.ts` scans for it; the database also checks it).
    One exception, by owner decision (D-33): while a workspace has one partner and has never had two, that partner's
    requests are approved at once, marked `solo`, through the same `executeApproved`.
-3. **Guest-facing surfaces never leak wave data.** The guest-facing surfaces are a closed list: `/r/[token]` (page,
-   `respond`, `gifts`, `gifts/contribute`) and `/p/[token]` (page, `upload`). Each returns only what its projection
-   builds: `src/lib/knotwork/guests/projection.ts`, `gifts/projection.ts`, `photos/projection.ts`. None has a list,
-   wave, priority, invite date, creation time or state in it; the photo page shows the wedding title and the event
-   name and nothing else. Add a field there deliberately or not at all. The sweep (`tests/knotwork/guests-pure.test.ts`,
+3. **Guest-facing surfaces never leak wave data.** The public surfaces are a closed list: `/r/[token]` (page,
+   `respond`, `gifts`, `gifts/contribute`, `gifts/claim`), `/p/[token]` (page, `upload`) and, for one vendor,
+   `/v/[token]` (page; D-42). Each returns only what its projection builds: `src/lib/knotwork/guests/projection.ts`,
+   `gifts/projection.ts`, `photos/projection.ts`, `vendors/projection.ts`. None has a list, wave, priority, invite
+   date, creation time or state in it; the photo page shows the wedding title and the event name and nothing else; the
+   vendor page shows the wedding title, the vendor's name and its own role-filtered brief (counts, never guests'
+   names). Add a field there deliberately or not at all. The sweep (`tests/knotwork/guests-pure.test.ts`,
    `guests-db.test.ts`, `gifts-db.test.ts`, `e2e/guests.spec.ts`) compares an A household with a B household;
    `tests/knotwork/structure.test.ts` holds the list of routes. A guest is never deleted, only removed by an approved
    request.

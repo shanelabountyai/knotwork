@@ -134,6 +134,22 @@ model Org {
   photos Photo[] // app
   photoBlobs PhotoBlob[] // app
   vendorAttachments VendorAttachment[] // app
+  funders Funder[] // app
+  funderPledges FunderPledge[] // app
+  funderReceipts FunderReceipt[] // app
+  funderAllocations FunderAllocation[] // app
+  giftLogs GiftLog[] // app
+  registryLinks RegistryLink[] // app
+  registryClaims RegistryClaim[] // app
+  nameChanges NameChange[] // app
+  nameChangeSteps NameChangeStep[] // app
+  nameChangeArtifacts NameChangeArtifact[] // app
+  contingencyPlans ContingencyPlan[] // app
+  contingencyRuns ContingencyRun[] // app
+  contingencyItems ContingencyItem[] // app
+  seatingTables SeatingTable[] // app
+  seatingRules SeatingRule[] // app
+  seats Seat[] // app
 }
 
 model Membership {

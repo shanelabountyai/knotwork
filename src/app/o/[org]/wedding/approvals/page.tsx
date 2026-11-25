@@ -4,7 +4,7 @@ import { PAYLOAD } from '@/lib/knotwork/consent/execute';
 import { KIND_LABEL } from '@/lib/knotwork/consent/machine';
 import { expireDue } from '@/lib/knotwork/consent/store';
 import { usd } from '@/lib/knotwork/money';
-import { previewDateMove } from '@/lib/knotwork/schedule/store';
+import { movePreview } from '@/lib/knotwork/secrecy/views';
 import { approveRequest, declineRequest, proposeSettings, withdrawRequest } from '../actions';
 import { MovePreviewView, NoWedding, WeddingNav } from '../bits';
 import { nameOf, view } from '../view';
@@ -20,10 +20,10 @@ export default async function Approvals({ params }: { params: Promise<{ org: str
     await expireDue(tx, ctx); // overdue requests become expired before anything is listed
     const requests = await tx.consentRequest.findMany({ where: inOrg(ctx), orderBy: { proposedAt: 'desc' }, take: 100 });
     // For a date move, the approver is shown the cascade as it is NOW; approving sends this preview's fingerprint.
-    const previews = new Map<string, Awaited<ReturnType<typeof previewDateMove>>>();
+    const previews = new Map<string, Awaited<ReturnType<typeof movePreview>>>(); // P1-1: private task titles masked
     for (const r of requests.filter((x) => x.status === 'pending' && x.kind === 'change_date')) {
       const p = PAYLOAD.change_date.safeParse(r.payload);
-      if (p.success && p.data.to !== v.date) previews.set(r.id, await previewDateMove(tx, ctx, v.wedding, p.data.to));
+      if (p.success && p.data.to !== v.date) previews.set(r.id, await movePreview(tx, ctx, v, p.data.to));
     }
     return { requests, previews };
   });

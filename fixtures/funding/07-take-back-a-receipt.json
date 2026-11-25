@@ -1,0 +1,121 @@
+{
+  "name": "07-take-back-a-receipt",
+  "note": "A receipt recorded by mistake can be taken back only while what stays received still covers what was spent.",
+  "steps": [
+    {
+      "op": "expense",
+      "id": "e1",
+      "category": "c-music",
+      "amountCents": 120000
+    },
+    {
+      "op": "pledge",
+      "id": "p1",
+      "funder": "f-wren",
+      "category": "c-music",
+      "amountCents": 200000
+    },
+    {
+      "op": "receive",
+      "id": "r1",
+      "pledge": "p1",
+      "amountCents": 100000
+    },
+    {
+      "op": "receive",
+      "id": "r2",
+      "pledge": "p1",
+      "amountCents": 100000
+    },
+    {
+      "op": "spend",
+      "id": "a1",
+      "pledge": "p1",
+      "expense": "e1",
+      "amountCents": 120000
+    },
+    {
+      "op": "unreceive",
+      "receipt": "r2"
+    },
+    {
+      "op": "unspend",
+      "allocation": "a1"
+    },
+    {
+      "op": "unreceive",
+      "receipt": "r2"
+    },
+    {
+      "op": "unreceive",
+      "receipt": "r2"
+    }
+  ],
+  "expect": {
+    "steps": [
+      {
+        "ok": true
+      },
+      {
+        "ok": true
+      },
+      {
+        "ok": true
+      },
+      {
+        "ok": true
+      },
+      {
+        "ok": true
+      },
+      {
+        "ok": false,
+        "code": "spent"
+      },
+      {
+        "ok": true
+      },
+      {
+        "ok": true
+      },
+      {
+        "ok": false,
+        "code": "unknown"
+      }
+    ],
+    "pledges": [
+      {
+        "pledgeId": "p1",
+        "funderId": "f-wren",
+        "categoryId": "c-music",
+        "pledgedCents": 200000,
+        "receivedCents": 100000,
+        "spentCents": 0,
+        "outstandingCents": 100000,
+        "unspentCents": 100000,
+        "stage": "partly_received"
+      }
+    ],
+    "categories": [
+      {
+        "categoryId": "c-music",
+        "pledgedCents": 200000,
+        "receivedCents": 100000,
+        "spentCents": 0,
+        "pledges": [
+          {
+            "pledgeId": "p1",
+            "funderId": "f-wren",
+            "categoryId": "c-music",
+            "pledgedCents": 200000,
+            "receivedCents": 100000,
+            "spentCents": 0,
+            "outstandingCents": 100000,
+            "unspentCents": 100000,
+            "stage": "partly_received"
+          }
+        ]
+      }
+    ]
+  }
+}

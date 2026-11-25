@@ -1,0 +1,139 @@
+{
+  "name": "02-prerequisites-gate",
+  "note": "A step cannot start, or be marked done, before the steps it waits for are done, even with every document held.",
+  "rules": "generic",
+  "weddingDate": "2027-10-09",
+  "ops": [
+    {
+      "op": "hold",
+      "key": "marriage-certificate"
+    },
+    {
+      "op": "hold",
+      "key": "proof-of-identity"
+    },
+    {
+      "op": "hold",
+      "key": "current-passport"
+    },
+    {
+      "op": "hold",
+      "key": "passport-photo"
+    },
+    {
+      "op": "start",
+      "key": "dmv"
+    },
+    {
+      "op": "start",
+      "key": "passport"
+    },
+    {
+      "op": "finish",
+      "key": "bank"
+    },
+    {
+      "op": "finish",
+      "key": "other-accounts"
+    },
+    {
+      "op": "start",
+      "key": "ssa"
+    },
+    {
+      "op": "start",
+      "key": "passport"
+    },
+    {
+      "op": "finish",
+      "key": "ssa"
+    },
+    {
+      "op": "start",
+      "key": "passport"
+    }
+  ],
+  "expect": {
+    "outcomes": [
+      {
+        "ok": true
+      },
+      {
+        "ok": true
+      },
+      {
+        "ok": true
+      },
+      {
+        "ok": true
+      },
+      {
+        "ok": false,
+        "code": "prerequisites",
+        "keys": [
+          "ssa"
+        ]
+      },
+      {
+        "ok": false,
+        "code": "prerequisites",
+        "keys": [
+          "ssa"
+        ]
+      },
+      {
+        "ok": false,
+        "code": "prerequisites",
+        "keys": [
+          "dmv"
+        ]
+      },
+      {
+        "ok": false,
+        "code": "prerequisites",
+        "keys": [
+          "bank"
+        ]
+      },
+      {
+        "ok": true
+      },
+      {
+        "ok": false,
+        "code": "prerequisites",
+        "keys": [
+          "ssa"
+        ]
+      },
+      {
+        "ok": true
+      },
+      {
+        "ok": true
+      }
+    ],
+    "final": {
+      "steps": {
+        "passport": "started",
+        "ssa": "done"
+      },
+      "held": [
+        "current-passport",
+        "marriage-certificate",
+        "passport-photo",
+        "proof-of-identity"
+      ]
+    },
+    "invariants": [],
+    "next": [],
+    "from": {
+      "ssa": "2027-10-16",
+      "dmv": "2027-10-23",
+      "vehicle": "2027-10-23",
+      "passport": "2027-10-30",
+      "employer": "2027-10-23",
+      "bank": "2027-10-30",
+      "other-accounts": "2027-11-06"
+    }
+  }
+}

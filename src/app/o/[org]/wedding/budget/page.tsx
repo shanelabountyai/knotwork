@@ -1,55 +1,69 @@
-import { inOrg, requireOrg } from '@/core/authz/guards';
+import Link from 'next/link';
+import { requireOrg } from '@/core/authz/guards';
 import { ActionForm } from '@/core/ui/action-form';
-import { allows } from '@/lib/knotwork/access';
-import { loadBudget } from '@/lib/knotwork/budget-store';
-import type { Rollup } from '@/lib/knotwork/budget';
+import { allows, isPartner } from '@/lib/knotwork/access';
 import { dayOfDb, showDay } from '@/lib/knotwork/days';
 import { usd } from '@/lib/knotwork/money';
+import { budgetView } from '@/lib/knotwork/secrecy/views';
 import { addCategory, addExpense, takeBudgetSnapshot, updateCategory } from '../actions';
-import { NoWedding, WeddingNav } from '../bits';
-import { view } from '../view';
+import { HiddenText, MineNote, NoWedding, PrivacySelect, privacyValue, WeddingNav } from '../bits';
+import { setCategoryPrivacy, setExpensePrivacy } from '../privacy/actions';
+import { nameOf, view } from '../view';
 
 export const metadata = { title: 'Budget' };
 
-// PRD P0-7: categories, estimates vs actuals in integer cents, snapshots.
+// PRD P0-7: categories, estimates vs actuals in integer cents, snapshots. P1-2: each category's funding mix.
+// P1-1: lines come through secrecy/views.ts. A category or spend private to the other partner is a masked line with
+// no name and no figures; its amounts are in the totals ("amounts visible in totals, line hidden").
 export default async function Budget({ params }: { params: Promise<{ org: string }> }) {
   const ctx = await requireOrg((await params).org);
-  const data = await view(ctx, 'budget.view', async (tx) => ({
-    budget: await loadBudget(tx, ctx),
-    expenses: await tx.expense.findMany({ where: inOrg(ctx), include: { category: { select: { name: true } }, vendor: { select: { name: true } } }, orderBy: [{ paidOn: 'desc' }, { createdAt: 'desc' }], take: 100 }),
-    snapshots: await tx.budgetSnapshot.findMany({ where: inOrg(ctx), orderBy: { takenAt: 'desc' }, take: 20 }),
-    vendors: await tx.vendor.findMany({ where: inOrg(ctx), select: { id: true, name: true }, orderBy: { name: 'asc' } }),
-  }));
+  const data = await view(ctx, 'budget.view', async (tx, v) => ({ b: await budgetView(tx, ctx, v) }));
   if (!data) return <NoWedding slug={ctx.slug} />;
-  const { v, budget, expenses, snapshots, vendors } = data;
+  const { v, b } = data;
   const canEdit = allows(v.who, 'budget.edit');
+  const partner = isPartner(ctx.role);
   const bind = <A extends unknown[], R>(fn: (slug: string, ...a: A) => R) => fn.bind(null, ctx.slug);
+  const hiddenLines = b.lines.filter((l) => l.hidden).length + b.expenses.filter((e) => e.hidden).length;
+  const t = b.totals;
   return (
     <main>
       <WeddingNav slug={ctx.slug} />
       <h1>Budget</h1>
       <table aria-label="Budget">
-        <thead><tr><th scope="col">Category</th><th scope="col">Estimate</th><th scope="col">Actual</th><th scope="col">Remaining</th>{canEdit && <th scope="col">Change estimate</th>}</tr></thead>
+        <thead><tr><th scope="col">Category</th><th scope="col">Estimate</th><th scope="col">Actual</th><th scope="col">Remaining</th><th scope="col">Funded by</th>{canEdit && <th scope="col">Change estimate</th>}</tr></thead>
         <tbody>
-          {budget.lines.map((l) => (
-            <tr key={l.id} aria-label={`Category ${l.name}`}>
-              <th scope="row">{l.name}</th><td>{usd(l.estimateCents)}</td><td>{usd(l.actualCents)}</td><td>{l.over ? `over by ${usd(-l.remainingCents)}` : usd(l.remainingCents)}</td>
-              {canEdit && (
-                <td>
-                  <ActionForm action={bind(updateCategory)}>
-                    <input type="hidden" name="id" value={l.id} /><input type="hidden" name="name" value={l.name} />
-                    <input name="estimate" defaultValue={(l.estimateCents / 100).toFixed(2)} aria-label={`Estimate for ${l.name}`} size={10} />
-                    <button type="submit">Save</button>
-                  </ActionForm>
-                </td>
-              )}
-            </tr>
-          ))}
+          {b.lines.map((x, n) => {
+            if (x.hidden) return <tr key={`hidden-${n}`} aria-label={x.label}><th scope="row"><HiddenText h={x} owner={nameOf(v, x.owner)} /></th><td /><td /><td /><td />{canEdit && <td />}</tr>;
+            const l = x.row;
+            return (
+              <tr key={l.id} aria-label={`Category ${l.name}`}>
+                <th scope="row">{l.name}<MineNote mine={x.mine} /></th><td>{usd(l.estimateCents)}</td><td>{usd(l.actualCents)}</td><td>{l.over ? `over by ${usd(-l.remainingCents)}` : usd(l.remainingCents)}</td>
+                <td>{l.funding.length === 0 ? '' : l.funding.map((f) => `${f.funder}: ${usd(f.line.pledgedCents)} pledged, ${usd(f.line.receivedCents)} received, ${usd(f.line.spentCents)} spent`).join('; ')}</td>
+                {canEdit && (
+                  <td>
+                    <ActionForm action={bind(updateCategory)}>
+                      <input type="hidden" name="id" value={l.id} /><input type="hidden" name="name" value={l.name} />
+                      <input name="estimate" defaultValue={(l.estimateCents / 100).toFixed(2)} aria-label={`Estimate for ${l.name}`} size={10} />
+                      <button type="submit">Save</button>
+                    </ActionForm>
+                    {partner && (
+                      <ActionForm action={bind(setCategoryPrivacy)}>
+                        <input type="hidden" name="id" value={l.id} />
+                        <PrivacySelect label={`Who sees ${l.name}`} defaultValue={privacyValue(l, x.mine)} />
+                        <button type="submit">Save privacy</button>
+                      </ActionForm>
+                    )}
+                  </td>
+                )}
+              </tr>
+            );
+          })}
         </tbody>
         <tfoot>
-          <tr aria-label="Budget total"><th scope="row">Total</th><td>{usd(budget.estimateCents)}</td><td>{usd(budget.actualCents)}</td><td>{budget.over ? `over by ${usd(-budget.remainingCents)}` : usd(budget.remainingCents)}</td>{canEdit && <td />}</tr>
+          <tr aria-label="Budget total"><th scope="row">Total</th><td>{usd(t.estimateCents)}</td><td>{usd(t.actualCents)}</td><td>{t.over ? `over by ${usd(-t.remainingCents)}` : usd(t.remainingCents)}</td><td><Link href={`/o/${ctx.slug}/wedding/funding`}>Funding</Link></td>{canEdit && <td />}</tr>
         </tfoot>
       </table>
+      {hiddenLines > 0 && <p role="note">The totals include {hiddenLines} private {hiddenLines === 1 ? 'line' : 'lines'}, shown here without a name or an amount until they are revealed.</p>}
 
       {canEdit && (
         <>
@@ -57,16 +71,18 @@ export default async function Budget({ params }: { params: Promise<{ org: string
           <ActionForm action={bind(addCategory)}>
             <label>Name <input name="name" required maxLength={60} /></label>
             <label>Estimate <input name="estimate" required placeholder="3,000.00" /></label>
+            {partner && <PrivacySelect />}
             <button type="submit">Add category</button>
           </ActionForm>
           <h2>Record a spend</h2>
-          <p>A spend over {usd(v.wedding.spendThresholdCents)} is not recorded here: it goes to your partner for approval first.</p>
+          <p>A spend over {usd(v.wedding.spendThresholdCents)} is not recorded here: it goes to your partner for approval first, so it cannot be private, and proposing it reveals a private category or vendor it names.</p>
           <ActionForm action={bind(addExpense)}>
-            <label>Category <select name="categoryId" required aria-label="Spend category">{budget.lines.map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}</select></label>
-            <label>Vendor <select name="vendorId" aria-label="Spend vendor"><option value="">none</option>{vendors.map((x) => <option key={x.id} value={x.id}>{x.name}</option>)}</select></label>
+            <label>Category <select name="categoryId" required aria-label="Spend category">{b.categoryOptions.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}</select></label>
+            <label>Vendor <select name="vendorId" aria-label="Spend vendor"><option value="">none</option>{b.vendorOptions.map((x) => <option key={x.id} value={x.id}>{x.name}</option>)}</select></label>
             <label>What it was for <input name="description" required maxLength={200} /></label>
             <label>Amount <input name="amount" required placeholder="250.00" /></label>
             <label>Paid on <input name="paidOn" type="date" /></label>
+            {partner && <PrivacySelect />}
             <button type="submit">Record spend</button>
           </ActionForm>
           <h2>Snapshots</h2>
@@ -77,19 +93,33 @@ export default async function Budget({ params }: { params: Promise<{ org: string
         </>
       )}
       <ul aria-label="Snapshots">
-        {snapshots.map((s) => {
-          const t = s.totals as unknown as Rollup;
-          return <li key={s.id}>{s.takenAt.toISOString().slice(0, 16).replace('T', ' ')} UTC: estimate {usd(t.estimateCents)}, actual {usd(t.actualCents)}{s.note && ` (${s.note})`}</li>;
-        })}
+        {b.snapshots.map((s) => <li key={s.id}>{s.takenAt.toISOString().slice(0, 16).replace('T', ' ')} UTC: estimate {usd(s.totals.estimateCents)}, actual {usd(s.totals.actualCents)}{s.note && ` (${s.note})`}</li>)}
       </ul>
 
       <h2>Spends</h2>
       <table aria-label="Spends">
         <thead><tr><th scope="col">Paid on</th><th scope="col">What</th><th scope="col">Category</th><th scope="col">Vendor</th><th scope="col">Amount</th><th scope="col">Approved by both</th></tr></thead>
         <tbody>
-          {expenses.map((e) => (
-            <tr key={e.id}><td>{showDay(dayOfDb(e.paidOn))}</td><th scope="row">{e.description}</th><td>{e.category.name}</td><td>{e.vendor?.name ?? ''}</td><td>{usd(e.amountCents)}</td><td>{e.requestId ? 'yes' : ''}</td></tr>
-          ))}
+          {b.expenses.map((x, n) => {
+            if (x.hidden) return <tr key={`hidden-${n}`} aria-label={x.label}><td /><th scope="row"><HiddenText h={x} owner={nameOf(v, x.owner)} /></th><td /><td /><td /><td /></tr>;
+            const e = x.row;
+            return (
+              <tr key={e.id}>
+                <td>{showDay(dayOfDb(e.paidOn))}</td>
+                <th scope="row">
+                  {e.description}<MineNote mine={x.mine} />
+                  {partner && canEdit && !e.requestId && (
+                    <ActionForm action={bind(setExpensePrivacy)}>
+                      <input type="hidden" name="id" value={e.id} />
+                      <PrivacySelect label={`Who sees ${e.description}`} defaultValue={privacyValue(e, x.mine)} />
+                      <button type="submit">Save privacy</button>
+                    </ActionForm>
+                  )}
+                </th>
+                <td>{e.category.name}</td><td>{e.vendor?.name ?? ''}</td><td>{usd(e.amountCents)}</td><td>{e.requestId ? 'yes' : ''}</td>
+              </tr>
+            );
+          })}
         </tbody>
       </table>
     </main>

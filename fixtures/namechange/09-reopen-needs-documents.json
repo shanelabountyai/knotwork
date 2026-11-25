@@ -1,0 +1,85 @@
+{
+  "name": "09-reopen-needs-documents",
+  "note": "Reopening a done step puts it back in progress, so it needs its documents again: given up after it was done, they must be held again first.",
+  "rules": "us-tx",
+  "weddingDate": "2027-10-09",
+  "ops": [
+    {
+      "op": "hold",
+      "key": "marriage-certificate"
+    },
+    {
+      "op": "hold",
+      "key": "proof-of-identity"
+    },
+    {
+      "op": "finish",
+      "key": "ssa"
+    },
+    {
+      "op": "release",
+      "key": "marriage-certificate"
+    },
+    {
+      "op": "reopen",
+      "key": "ssa"
+    },
+    {
+      "op": "hold",
+      "key": "marriage-certificate"
+    },
+    {
+      "op": "reopen",
+      "key": "ssa"
+    }
+  ],
+  "expect": {
+    "outcomes": [
+      {
+        "ok": true
+      },
+      {
+        "ok": true
+      },
+      {
+        "ok": true
+      },
+      {
+        "ok": true
+      },
+      {
+        "ok": false,
+        "code": "artifacts",
+        "keys": [
+          "marriage-certificate"
+        ]
+      },
+      {
+        "ok": true
+      },
+      {
+        "ok": true
+      }
+    ],
+    "final": {
+      "steps": {
+        "ssa": "started"
+      },
+      "held": [
+        "marriage-certificate",
+        "proof-of-identity"
+      ]
+    },
+    "invariants": [],
+    "next": [],
+    "from": {
+      "ssa": "2027-10-16",
+      "dmv": "2027-10-23",
+      "vehicle": "2027-10-23",
+      "passport": "2027-10-30",
+      "employer": "2027-10-23",
+      "bank": "2027-10-30",
+      "other-accounts": "2027-11-06"
+    }
+  }
+}

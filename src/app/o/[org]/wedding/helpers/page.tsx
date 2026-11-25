@@ -1,6 +1,6 @@
 import { inOrg, requireOrg } from '@/core/authz/guards';
 import { ActionForm } from '@/core/ui/action-form';
-import { GRANT_SCOPES, SCOPE_LABEL, type GrantScope } from '@/lib/knotwork/access';
+import { PLAIN_GRANT_SCOPES, SCOPE_LABEL, type GrantScope } from '@/lib/knotwork/access';
 import { grantHelper, revokeHelper } from '../actions';
 import { NoWedding, WeddingNav } from '../bits';
 import { view } from '../view';
@@ -26,7 +26,7 @@ export default async function Helpers({ params }: { params: Promise<{ org: strin
       {members.length === 0 && <p>No helpers yet. Invite one from Members, as a member.</p>}
       {members.map((m) => {
         const theirs = grants.filter((g) => g.userId === m.userId);
-        const missing = GRANT_SCOPES.filter((s) => !theirs.some((g) => g.scope === s));
+        const missing = PLAIN_GRANT_SCOPES.filter((s) => !theirs.some((g) => g.scope === s)); // funder: linked on the Funding page
         return (
           <section key={m.userId} aria-label={`Helper ${m.user.email}`}>
             <h2>{m.user.name || m.user.email}</h2>

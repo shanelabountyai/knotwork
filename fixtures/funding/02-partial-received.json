@@ -1,0 +1,91 @@
+{
+  "name": "02-partial-received",
+  "note": "Money arrives in three parts; the pledge stays partly received until the last part, and nothing more than is left can arrive.",
+  "steps": [
+    {
+      "op": "pledge",
+      "id": "p1",
+      "funder": "f-wren",
+      "category": "c-flowers",
+      "amountCents": 150000
+    },
+    {
+      "op": "receive",
+      "id": "r1",
+      "pledge": "p1",
+      "amountCents": 50000
+    },
+    {
+      "op": "receive",
+      "id": "r2",
+      "pledge": "p1",
+      "amountCents": 50000
+    },
+    {
+      "op": "receive",
+      "id": "r3",
+      "pledge": "p1",
+      "amountCents": 50001
+    },
+    {
+      "op": "receive",
+      "id": "r4",
+      "pledge": "p1",
+      "amountCents": 50000
+    }
+  ],
+  "expect": {
+    "steps": [
+      {
+        "ok": true
+      },
+      {
+        "ok": true
+      },
+      {
+        "ok": true
+      },
+      {
+        "ok": false,
+        "code": "over-pledge"
+      },
+      {
+        "ok": true
+      }
+    ],
+    "pledges": [
+      {
+        "pledgeId": "p1",
+        "funderId": "f-wren",
+        "categoryId": "c-flowers",
+        "pledgedCents": 150000,
+        "receivedCents": 150000,
+        "spentCents": 0,
+        "outstandingCents": 0,
+        "unspentCents": 150000,
+        "stage": "received"
+      }
+    ],
+    "categories": [
+      {
+        "categoryId": "c-flowers",
+        "pledgedCents": 150000,
+        "receivedCents": 150000,
+        "spentCents": 0,
+        "pledges": [
+          {
+            "pledgeId": "p1",
+            "funderId": "f-wren",
+            "categoryId": "c-flowers",
+            "pledgedCents": 150000,
+            "receivedCents": 150000,
+            "spentCents": 0,
+            "outstandingCents": 0,
+            "unspentCents": 150000,
+            "stage": "received"
+          }
+        ]
+      }
+    ]
+  }
+}

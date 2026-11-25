@@ -71,6 +71,7 @@ enum GrantScope {
   vendors_edit
   guests_edit
   photos_moderate
+  funder
 }
 
 enum BaselineKind {
@@ -122,6 +123,10 @@ model Task {
   vendorId    String?          @db.Uuid
   vendor      Vendor?          @relation(fields: [vendorId], references: [id], onDelete: SetNull)
   notes       String           @default("")
+  /// P1-1 (ADR-001): private to this partner until the reveal point; null means shared. Never a deadline (rule 1).
+  privateToId String? @db.Uuid
+  /// The reveal point: days after the wedding date (negative: before; 0: the wedding day). Null while private: only by hand.
+  revealDays  Int?
   createdAt   DateTime         @default(now()) @db.Timestamptz(6)
   dependsOn   TaskDependency[] @relation("dependencyTask")
   dependents  TaskDependency[] @relation("dependencyOn")
@@ -171,8 +176,13 @@ model BudgetCategory {
   org           Org       @relation(fields: [orgId], references: [id], onDelete: Cascade)
   name          String
   estimateCents Int
+  /// P1-1 (ADR-001): private to this partner until the reveal point; null means shared. Never a deadline (rule 1).
+  privateToId String? @db.Uuid
+  /// The reveal point: days after the wedding date (negative: before; 0: the wedding day). Null while private: only by hand.
+  revealDays  Int?
   createdAt     DateTime  @default(now()) @db.Timestamptz(6)
   expenses      Expense[]
+  pledges       FunderPledge[]
 
   @@unique([orgId, name])
 }
@@ -193,8 +203,13 @@ model Expense {
   requestId   String?         @db.Uuid
   request     ConsentRequest? @relation(fields: [requestId], references: [id], onDelete: NoAction)
   createdById String?         @db.Uuid
+  /// P1-1 (ADR-001): private to this partner until the reveal point; null means shared. Never a deadline (rule 1).
+  privateToId String? @db.Uuid
+  /// The reveal point: days after the wedding date (negative: before; 0: the wedding day). Null while private: only by hand.
+  revealDays  Int?
   createdAt   DateTime        @default(now()) @db.Timestamptz(6)
   payment     VendorPayment?
+  allocations FunderAllocation[]
 
   @@index([orgId])
   @@index([categoryId])
@@ -242,6 +257,14 @@ model Vendor {
   countDueDaysBefore Int?
   /// Eats on site (a vendor meal in Phase 2's counts).
   onSite             Boolean         @default(false)
+  /// P1-1 (ADR-001): private to this partner until the reveal point; null means shared. Never a deadline (rule 1).
+  privateToId String? @db.Uuid
+  /// The reveal point: days after the wedding date (negative: before; 0: the wedding day). Null while private: only by hand.
+  revealDays  Int?
+  /// D-42: the vendor's read-only link (/v/[token]): sha256 of the token, and a sealed copy so the couple can show it
+  /// again. Null: no link. Replacing it stops the old one at once. Never exported.
+  linkTokenHash      String?         @unique
+  linkTokenSealed    String?
   createdAt          DateTime        @default(now()) @db.Timestamptz(6)
   tasks              Task[]
   payments           VendorPayment[]
@@ -249,6 +272,7 @@ model Vendor {
   briefs             VendorBrief[]
   expenses           Expense[]
   attachments        VendorAttachment[]
+  contingencyItems   ContingencyItem[]
 
   @@index([orgId])
 }
@@ -416,6 +440,8 @@ model GuestPlan {
   /// A B wave releases at least this many seats, unless it is everything left.
   minBatchSeats   Int      @default(4)
   mealOptions     String[]
+  /// P1-5: whether the seating chart also seats guests who have not answered yet (attending guests always are).
+  seatPending     Boolean  @default(false)
   updatedAt       DateTime @updatedAt @db.Timestamptz(6)
 }
 
@@ -450,6 +476,8 @@ model Household {
   chaseEvents       ChaseEvent[]
   giftEntries       GiftEntry[]
   thankYous         ThankYou[]
+  giftLogs          GiftLog[]
+  registryClaims    RegistryClaim[]
 
   @@unique([orgId, name])
 }
@@ -479,6 +507,9 @@ model Guest {
   removedRequestId String?         @db.Uuid
   removedRequest   ConsentRequest? @relation(fields: [removedRequestId], references: [id], onDelete: NoAction)
   createdAt        DateTime        @default(now()) @db.Timestamptz(6)
+  seat             Seat?
+  seatingRulesA    SeatingRule[]   @relation("seatingRuleA")
+  seatingRulesB    SeatingRule[]   @relation("seatingRuleB")
 
   @@index([orgId])
   @@index([householdId])
@@ -748,4 +779,332 @@ model VendorAttachment {
 
   @@index([orgId])
   @@index([vendorId])
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
+// Phase 4, P1-2: the multi-funder family budget. A funder is a named source (a parent, a relative), not a member; a
+// member may be linked to one with the `funder` helper grant and then sees only what that funder gave toward.
+// Integer cents. Pledged >= received >= spent, per pledge; the database checks the sums at commit.
+
+/// A named source of money. `userId` links a helper (with the `funder` grant) who sees this funder's part only.
+model Funder {
+  id          String         @id @default(uuid()) @db.Uuid
+  orgId       String         @db.Uuid
+  org         Org            @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  name        String
+  note        String         @default("")
+  userId      String?        @db.Uuid
+  createdById String?        @db.Uuid
+  createdAt   DateTime       @default(now()) @db.Timestamptz(6)
+  pledges     FunderPledge[]
+
+  @@unique([orgId, name])
+  @@unique([orgId, userId])
+}
+
+/// What one funder promised toward one budget category.
+model FunderPledge {
+  id          String             @id @default(uuid()) @db.Uuid
+  orgId       String             @db.Uuid
+  org         Org                @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  funderId    String             @db.Uuid
+  funder      Funder             @relation(fields: [funderId], references: [id], onDelete: Cascade)
+  categoryId  String             @db.Uuid
+  category    BudgetCategory     @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  amountCents Int
+  createdById String?            @db.Uuid
+  createdAt   DateTime           @default(now()) @db.Timestamptz(6)
+  receipts    FunderReceipt[]
+  allocations FunderAllocation[]
+
+  @@unique([funderId, categoryId])
+  @@index([orgId])
+  @@index([categoryId])
+}
+
+/// Money that arrived against a pledge (may be partial).
+model FunderReceipt {
+  id          String       @id @default(uuid()) @db.Uuid
+  orgId       String       @db.Uuid
+  org         Org          @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  pledgeId    String       @db.Uuid
+  pledge      FunderPledge @relation(fields: [pledgeId], references: [id], onDelete: Cascade)
+  amountCents Int
+  /// A date of fact: the day the money arrived.
+  receivedOn  DateTime     @db.Date
+  note        String       @default("")
+  createdById String?      @db.Uuid
+  createdAt   DateTime     @default(now()) @db.Timestamptz(6)
+
+  @@index([orgId])
+  @@index([pledgeId])
+}
+
+/// Received money spent: part of an expense in the pledge's category paid from this pledge.
+model FunderAllocation {
+  id          String       @id @default(uuid()) @db.Uuid
+  orgId       String       @db.Uuid
+  org         Org          @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  pledgeId    String       @db.Uuid
+  pledge      FunderPledge @relation(fields: [pledgeId], references: [id], onDelete: Cascade)
+  expenseId   String       @db.Uuid
+  expense     Expense      @relation(fields: [expenseId], references: [id], onDelete: Cascade)
+  amountCents Int
+  createdById String?      @db.Uuid
+  createdAt   DateTime     @default(now()) @db.Timestamptz(6)
+
+  @@unique([pledgeId, expenseId])
+  @@index([orgId])
+  @@index([expenseId])
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
+// Phase 4, P1-3 and P1-8: the thank-you ledger and link-out registry items. RULE 1: every date here is a date of fact
+// (a gift arrived, a household said it bought something, a partner sent the note); how long a thank-you has been owed
+// is computed on read (src/lib/knotwork/thanks/aging.ts) and never stored.
+
+/// P1-3: a gift the couple records by hand (the gift log): from a household or from a named person, never both.
+model GiftLog {
+  id               String     @id @default(uuid()) @db.Uuid
+  orgId            String     @db.Uuid
+  org              Org        @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  householdId      String?    @db.Uuid
+  household        Household? @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  giverName        String     @default("")
+  what             String
+  /// A date of fact: the day the gift arrived. The thank-you ages from here.
+  receivedOn       DateTime   @db.Date
+  /// A date of fact: the day a partner marked the thank-you as sent.
+  acknowledgedOn   DateTime?  @db.Date
+  acknowledgedById String?    @db.Uuid
+  createdById      String?    @db.Uuid
+  createdAt        DateTime   @default(now()) @db.Timestamptz(6)
+
+  @@index([orgId])
+  @@index([householdId])
+}
+
+/// P1-8: a registry item bought from a store. The URL is https only and checked (registry/links.ts); nothing is ever
+/// fetched from it. Guests mark "I bought this" through their household link.
+model RegistryLink {
+  id             String          @id @default(uuid()) @db.Uuid
+  orgId          String          @db.Uuid
+  org            Org             @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  title          String
+  store          String
+  url            String
+  priceCents     Int?
+  quantityWanted Int
+  createdById    String?         @db.Uuid
+  createdAt      DateTime        @default(now()) @db.Timestamptz(6)
+  claims         RegistryClaim[]
+
+  @@unique([orgId, title])
+}
+
+/// One household's "I bought this" against a link-out item. It is also a gift on the thank-you ledger (P1-3).
+model RegistryClaim {
+  id               String       @id @default(uuid()) @db.Uuid
+  orgId            String       @db.Uuid
+  org              Org          @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  linkId           String       @db.Uuid
+  link             RegistryLink @relation(fields: [linkId], references: [id], onDelete: Cascade)
+  householdId      String       @db.Uuid
+  household        Household    @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  quantity         Int
+  /// A date of fact: the day the household said it bought the item. The thank-you ages from here.
+  claimedOn        DateTime     @db.Date
+  /// A date of fact: the day a partner marked the thank-you as sent.
+  acknowledgedOn   DateTime?    @db.Date
+  acknowledgedById String?      @db.Uuid
+  createdAt        DateTime     @default(now()) @db.Timestamptz(6)
+
+  @@unique([linkId, householdId])
+  @@index([orgId])
+  @@index([householdId])
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
+// Phase 4, P1-4: the name-change sequence. The workflow itself is data (rules/name-change/*.json, illustrative only);
+// these tables hold one partner's progress through it. RULE 1: a step stores no date but the day it was finished (a
+// date of fact); "start after the wedding" is an offset in the rules, worked out from Wedding.date on read. Private
+// to its partner unless shared (D-114): the change log is masked at write like a sealed item (secrecy/seal.ts).
+
+enum NameStepStatus {
+  started
+  done
+}
+
+/// One partner's name change: which jurisdiction's rules it follows, and whether the other partner may see it.
+model NameChange {
+  id           String               @id @default(uuid()) @db.Uuid
+  orgId        String               @db.Uuid
+  org          Org                  @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  /// The partner whose name change this is. Only they change it.
+  userId       String               @db.Uuid
+  /// A rules file's key (rules/name-change/<key>.json); 'generic' is the fallback.
+  jurisdiction String
+  /// False: private to its partner (the default). True: the other partner may read it (never change it).
+  shared       Boolean              @default(false)
+  createdAt    DateTime             @default(now()) @db.Timestamptz(6)
+  steps        NameChangeStep[]
+  artifacts    NameChangeArtifact[]
+
+  @@unique([orgId, userId])
+}
+
+/// A step that has been started or finished. A step with no row has not been started.
+model NameChangeStep {
+  id           String         @id @default(uuid()) @db.Uuid
+  orgId        String         @db.Uuid
+  org          Org            @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  nameChangeId String         @db.Uuid
+  nameChange   NameChange     @relation(fields: [nameChangeId], references: [id], onDelete: Cascade)
+  /// The step's key in the rules file.
+  step         String
+  status       NameStepStatus
+  /// A date of fact: the day it was marked done.
+  completedOn  DateTime?      @db.Date
+
+  @@unique([nameChangeId, step])
+  @@index([orgId])
+}
+
+/// A document the partner holds (a certified marriage certificate, a new Social Security card).
+model NameChangeArtifact {
+  id           String     @id @default(uuid()) @db.Uuid
+  orgId        String     @db.Uuid
+  org          Org        @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  nameChangeId String     @db.Uuid
+  nameChange   NameChange @relation(fields: [nameChangeId], references: [id], onDelete: Cascade)
+  /// The artifact's key in the rules file.
+  artifact     String
+  createdAt    DateTime   @default(now()) @db.Timestamptz(6)
+
+  @@unique([nameChangeId, artifact])
+  @@index([orgId])
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
+// Phase 4, P1-6: contingency decision trees (a rain plan, a vendor no-show). A plan is a small tree of questions whose
+// leaves are actions; executing one branch writes a run, its checklist, the tasks it adds (ordinary tasks with
+// leadDays and bufferDays, so their dates derive from the wedding date, rule 1) and the spends it records or PROPOSES
+// (rule 2: a spend over the threshold only ever becomes a consent request). One run per plan (D-121).
+
+enum ContingencyItemKind {
+  check
+  notify
+}
+
+/// A decision tree (validated by src/lib/knotwork/contingency/tree.ts before it is stored).
+model ContingencyPlan {
+  id          String           @id @default(uuid()) @db.Uuid
+  orgId       String           @db.Uuid
+  org         Org              @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  title       String
+  tree        Json
+  createdById String?          @db.Uuid
+  createdAt   DateTime         @default(now()) @db.Timestamptz(6)
+  run         ContingencyRun?
+
+  @@unique([orgId, title])
+}
+
+/// The one time a plan was put into action: which answers were given, and the fingerprint of the preview executed.
+model ContingencyRun {
+  id           String            @id @default(uuid()) @db.Uuid
+  orgId        String            @db.Uuid
+  org          Org               @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  planId       String            @unique @db.Uuid
+  plan         ContingencyPlan   @relation(fields: [planId], references: [id], onDelete: Cascade)
+  /// The branch taken at each question, from the root (indexes), and the leaf it reached.
+  path         Json
+  leaf         String
+  /// 16 hex characters of the preview that was executed.
+  fingerprint  String
+  /// What executing did: the tasks added, the spends recorded and the requests proposed (ids).
+  result       Json
+  executedById String?           @db.Uuid
+  /// A date of fact: when the branch was executed.
+  executedAt   DateTime          @default(now()) @db.Timestamptz(6)
+  items        ContingencyItem[]
+
+  @@index([orgId])
+}
+
+/// One line of an executed branch's checklist: a thing to do, or a vendor to tell.
+model ContingencyItem {
+  id       String              @id @default(uuid()) @db.Uuid
+  orgId    String              @db.Uuid
+  org      Org                 @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  runId    String              @db.Uuid
+  run      ContingencyRun      @relation(fields: [runId], references: [id], onDelete: Cascade)
+  position Int
+  kind     ContingencyItemKind
+  text     String
+  vendorId String?             @db.Uuid
+  vendor   Vendor?             @relation(fields: [vendorId], references: [id], onDelete: SetNull)
+  /// A date of fact: the day it was ticked off.
+  doneOn   DateTime?           @db.Date
+  doneById String?             @db.Uuid
+
+  @@unique([runId, position])
+  @@index([orgId])
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
+// Phase 4, P1-5: the seating chart. A guest-list feature (guests.view / guests.edit); never on a guest-facing surface
+// (rule 3). Tables and pair rules are the couple's input; seats are what generate (src/lib/knotwork/seating/engine.ts),
+// a manual move or a lock wrote. Nothing here is a date (rule 1).
+
+enum SeatingRuleKind {
+  apart
+  together
+}
+
+/// A table at the reception, with how many it seats.
+model SeatingTable {
+  id        String   @id @default(uuid()) @db.Uuid
+  orgId     String   @db.Uuid
+  org       Org      @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  name      String
+  capacity  Int
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+  seats     Seat[]
+
+  @@unique([orgId, name])
+}
+
+/// Two guests who must sit apart, or together. `hard`: a seating that breaks it is not acceptable; otherwise a
+/// preference the score weighs. Stored with the smaller guest id first (the database checks it), so a pair is one row.
+model SeatingRule {
+  id          String          @id @default(uuid()) @db.Uuid
+  orgId       String          @db.Uuid
+  org         Org             @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  kind        SeatingRuleKind
+  hard        Boolean
+  guestAId    String          @db.Uuid
+  guestA      Guest           @relation("seatingRuleA", fields: [guestAId], references: [id], onDelete: Cascade)
+  guestBId    String          @db.Uuid
+  guestB      Guest           @relation("seatingRuleB", fields: [guestBId], references: [id], onDelete: Cascade)
+  createdById String?         @db.Uuid
+  createdAt   DateTime        @default(now()) @db.Timestamptz(6)
+
+  @@unique([guestAId, guestBId])
+  @@index([orgId])
+}
+
+/// Where one guest sits. `locked`: a regenerate keeps it.
+model Seat {
+  id      String       @id @default(uuid()) @db.Uuid
+  orgId   String       @db.Uuid
+  org     Org          @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  guestId String       @unique @db.Uuid
+  guest   Guest        @relation(fields: [guestId], references: [id], onDelete: Cascade)
+  tableId String       @db.Uuid
+  table   SeatingTable @relation(fields: [tableId], references: [id], onDelete: Cascade)
+  locked  Boolean      @default(false)
+
+  @@index([orgId])
+  @@index([tableId])
 }

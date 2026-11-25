@@ -1,0 +1,170 @@
+{
+  "name": "02-bucket-edges",
+  "note": "One gift on each side of every bucket edge: 0 and 6 days, 7 and 21, 22 and 42, 43. Over 3 weeks means more than 21 days.",
+  "today": "2027-06-30",
+  "obligations": [
+    {
+      "source": "logged",
+      "id": "g0",
+      "giver": "Ada",
+      "what": "a vase",
+      "receivedOn": "2027-06-30",
+      "acknowledgedOn": null
+    },
+    {
+      "source": "logged",
+      "id": "g6",
+      "giver": "Ben",
+      "what": "a toaster",
+      "receivedOn": "2027-06-24",
+      "acknowledgedOn": null
+    },
+    {
+      "source": "logged",
+      "id": "g7",
+      "giver": "Cy",
+      "what": "a quilt",
+      "receivedOn": "2027-06-23",
+      "acknowledgedOn": null
+    },
+    {
+      "source": "logged",
+      "id": "g21",
+      "giver": "Dee",
+      "what": "a lamp",
+      "receivedOn": "2027-06-09",
+      "acknowledgedOn": null
+    },
+    {
+      "source": "logged",
+      "id": "g22",
+      "giver": "Eve",
+      "what": "a kettle",
+      "receivedOn": "2027-06-08",
+      "acknowledgedOn": null
+    },
+    {
+      "source": "logged",
+      "id": "g42",
+      "giver": "Fay",
+      "what": "a rug",
+      "receivedOn": "2027-05-19",
+      "acknowledgedOn": null
+    },
+    {
+      "source": "logged",
+      "id": "g43",
+      "giver": "Gus",
+      "what": "a clock",
+      "receivedOn": "2027-05-18",
+      "acknowledgedOn": null
+    }
+  ],
+  "expect": {
+    "owed": [
+      {
+        "source": "logged",
+        "id": "g43",
+        "giver": "Gus",
+        "what": "a clock",
+        "receivedOn": "2027-05-18",
+        "acknowledgedOn": null,
+        "ageDays": 43,
+        "bucket": "later",
+        "overdue": true
+      },
+      {
+        "source": "logged",
+        "id": "g42",
+        "giver": "Fay",
+        "what": "a rug",
+        "receivedOn": "2027-05-19",
+        "acknowledgedOn": null,
+        "ageDays": 42,
+        "bucket": "late",
+        "overdue": true
+      },
+      {
+        "source": "logged",
+        "id": "g22",
+        "giver": "Eve",
+        "what": "a kettle",
+        "receivedOn": "2027-06-08",
+        "acknowledgedOn": null,
+        "ageDays": 22,
+        "bucket": "late",
+        "overdue": true
+      },
+      {
+        "source": "logged",
+        "id": "g21",
+        "giver": "Dee",
+        "what": "a lamp",
+        "receivedOn": "2027-06-09",
+        "acknowledgedOn": null,
+        "ageDays": 21,
+        "bucket": "weeks",
+        "overdue": false
+      },
+      {
+        "source": "logged",
+        "id": "g7",
+        "giver": "Cy",
+        "what": "a quilt",
+        "receivedOn": "2027-06-23",
+        "acknowledgedOn": null,
+        "ageDays": 7,
+        "bucket": "weeks",
+        "overdue": false
+      },
+      {
+        "source": "logged",
+        "id": "g6",
+        "giver": "Ben",
+        "what": "a toaster",
+        "receivedOn": "2027-06-24",
+        "acknowledgedOn": null,
+        "ageDays": 6,
+        "bucket": "fresh",
+        "overdue": false
+      },
+      {
+        "source": "logged",
+        "id": "g0",
+        "giver": "Ada",
+        "what": "a vase",
+        "receivedOn": "2027-06-30",
+        "acknowledgedOn": null,
+        "ageDays": 0,
+        "bucket": "fresh",
+        "overdue": false
+      }
+    ],
+    "thanked": [],
+    "total": 7,
+    "overdue": 3,
+    "headline": "3 unthanked > 3 weeks",
+    "buckets": [
+      {
+        "key": "fresh",
+        "label": "Under a week",
+        "count": 2
+      },
+      {
+        "key": "weeks",
+        "label": "1 to 3 weeks",
+        "count": 2
+      },
+      {
+        "key": "late",
+        "label": "3 to 6 weeks",
+        "count": 2
+      },
+      {
+        "key": "later",
+        "label": "Over 6 weeks",
+        "count": 1
+      }
+    ]
+  }
+}

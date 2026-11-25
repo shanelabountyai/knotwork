@@ -1,0 +1,102 @@
+{
+  "name": "03-spend-only-what-was-received",
+  "note": "A pledge cannot pay for more than has arrived: the first spend is refused, a smaller one goes through, and the rest waits for the money.",
+  "steps": [
+    {
+      "op": "expense",
+      "id": "e1",
+      "category": "c-catering",
+      "amountCents": 900000
+    },
+    {
+      "op": "pledge",
+      "id": "p1",
+      "funder": "f-vale",
+      "category": "c-catering",
+      "amountCents": 600000
+    },
+    {
+      "op": "receive",
+      "id": "r1",
+      "pledge": "p1",
+      "amountCents": 250000
+    },
+    {
+      "op": "spend",
+      "id": "a1",
+      "pledge": "p1",
+      "expense": "e1",
+      "amountCents": 300000
+    },
+    {
+      "op": "spend",
+      "id": "a2",
+      "pledge": "p1",
+      "expense": "e1",
+      "amountCents": 250000
+    },
+    {
+      "op": "receive",
+      "id": "r2",
+      "pledge": "p1",
+      "amountCents": 350000
+    }
+  ],
+  "expect": {
+    "steps": [
+      {
+        "ok": true
+      },
+      {
+        "ok": true
+      },
+      {
+        "ok": true
+      },
+      {
+        "ok": false,
+        "code": "over-received"
+      },
+      {
+        "ok": true
+      },
+      {
+        "ok": true
+      }
+    ],
+    "pledges": [
+      {
+        "pledgeId": "p1",
+        "funderId": "f-vale",
+        "categoryId": "c-catering",
+        "pledgedCents": 600000,
+        "receivedCents": 600000,
+        "spentCents": 250000,
+        "outstandingCents": 0,
+        "unspentCents": 350000,
+        "stage": "received"
+      }
+    ],
+    "categories": [
+      {
+        "categoryId": "c-catering",
+        "pledgedCents": 600000,
+        "receivedCents": 600000,
+        "spentCents": 250000,
+        "pledges": [
+          {
+            "pledgeId": "p1",
+            "funderId": "f-vale",
+            "categoryId": "c-catering",
+            "pledgedCents": 600000,
+            "receivedCents": 600000,
+            "spentCents": 250000,
+            "outstandingCents": 0,
+            "unspentCents": 350000,
+            "stage": "received"
+          }
+        ]
+      }
+    ]
+  }
+}

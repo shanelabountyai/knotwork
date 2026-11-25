@@ -1,0 +1,113 @@
+{
+  "name": "07-across-a-year-end",
+  "note": "Ages are whole calendar days across a month, a year and a leap day.",
+  "today": "2028-03-01",
+  "obligations": [
+    {
+      "source": "logged",
+      "id": "g1",
+      "giver": "Ada",
+      "what": "a vase",
+      "receivedOn": "2027-12-31",
+      "acknowledgedOn": null
+    },
+    {
+      "source": "logged",
+      "id": "g2",
+      "giver": "Ben",
+      "what": "a toaster",
+      "receivedOn": "2028-02-28",
+      "acknowledgedOn": null
+    },
+    {
+      "source": "logged",
+      "id": "g3",
+      "giver": "Cy",
+      "what": "a quilt",
+      "receivedOn": "2028-02-29",
+      "acknowledgedOn": null
+    },
+    {
+      "source": "logged",
+      "id": "g4",
+      "giver": "Dee",
+      "what": "a lamp",
+      "receivedOn": "2028-02-08",
+      "acknowledgedOn": null
+    }
+  ],
+  "expect": {
+    "owed": [
+      {
+        "source": "logged",
+        "id": "g1",
+        "giver": "Ada",
+        "what": "a vase",
+        "receivedOn": "2027-12-31",
+        "acknowledgedOn": null,
+        "ageDays": 61,
+        "bucket": "later",
+        "overdue": true
+      },
+      {
+        "source": "logged",
+        "id": "g4",
+        "giver": "Dee",
+        "what": "a lamp",
+        "receivedOn": "2028-02-08",
+        "acknowledgedOn": null,
+        "ageDays": 22,
+        "bucket": "late",
+        "overdue": true
+      },
+      {
+        "source": "logged",
+        "id": "g2",
+        "giver": "Ben",
+        "what": "a toaster",
+        "receivedOn": "2028-02-28",
+        "acknowledgedOn": null,
+        "ageDays": 2,
+        "bucket": "fresh",
+        "overdue": false
+      },
+      {
+        "source": "logged",
+        "id": "g3",
+        "giver": "Cy",
+        "what": "a quilt",
+        "receivedOn": "2028-02-29",
+        "acknowledgedOn": null,
+        "ageDays": 1,
+        "bucket": "fresh",
+        "overdue": false
+      }
+    ],
+    "thanked": [],
+    "total": 4,
+    "overdue": 2,
+    "headline": "2 unthanked > 3 weeks",
+    "buckets": [
+      {
+        "key": "fresh",
+        "label": "Under a week",
+        "count": 2
+      },
+      {
+        "key": "weeks",
+        "label": "1 to 3 weeks",
+        "count": 0
+      },
+      {
+        "key": "late",
+        "label": "3 to 6 weeks",
+        "count": 1
+      },
+      {
+        "key": "later",
+        "label": "Over 6 weeks",
+        "count": 1
+      }
+    ]
+  }
+}

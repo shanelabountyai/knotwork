@@ -93,8 +93,12 @@ describe('a scripted edit session', () => {
     // Every entity type the log knows was touched by the session, and every entry has a time.
     // (The five guest-list entities are covered by their own scripted session in guests-db.test.ts, and the three
     // gifting entities by theirs in gifts-db.test.ts; the three photo entities and contract attachments by
-    // photos-db.test.ts and attachments.test.ts, whose writes come in through other action files and two upload routes.)
-    const guestEntities = ['household', 'guest', 'wave', 'guestplan', 'song', 'registry', 'gift', 'thankyou', 'photoevent', 'photo', 'photodevice', 'attachment'];
+    // photos-db.test.ts and attachments.test.ts, whose writes come in through other action files and two upload routes;
+    // the four funding entities (P1-2) by the scripted session in funders-db.test.ts, through funding/actions.ts; the
+    // gift log, store items and claims (P1-3, P1-8) by gifts-db.test.ts's session, through gifts/actions.ts; name changes
+    // (P1-4) and contingency plans (P1-6) by namechange-db.test.ts and contingency-db.test.ts, and the seating chart (P1-5) by
+    // seating-db.test.ts, through their own action files.)
+    const guestEntities = ['household', 'guest', 'wave', 'guestplan', 'song', 'registry', 'gift', 'thankyou', 'photoevent', 'photo', 'photodevice', 'attachment', 'funder', 'pledge', 'receipt', 'allocation', 'giftlog', 'registrylink', 'claim', 'namechange', 'contingency', 'seating'];
     expect([...new Set(all.map((e) => parseAction(e.action)!.entity))].sort()).toEqual(ENTITIES.filter((e) => !guestEntities.includes(e)).sort());
     expect(all.every((e) => e.at instanceof Date)).toBe(true);
     // An update logs only what changed: the vendor's name was posted every time and never appears as a change.

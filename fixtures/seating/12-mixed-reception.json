@@ -1,0 +1,139 @@
+{
+  "name": "12-mixed-reception",
+  "note": "Ten guests, three tables, households, a hard feud, a hard pair who must sit together across households and two soft wishes. The search reaches the best score the oracle finds by brute force.",
+  "claim": "optimal",
+  "seed": 1,
+  "tables": [
+    {
+      "id": "t1",
+      "name": "Table 1",
+      "capacity": 4
+    },
+    {
+      "id": "t2",
+      "name": "Table 2",
+      "capacity": 3
+    },
+    {
+      "id": "t3",
+      "name": "Table 3",
+      "capacity": 3
+    }
+  ],
+  "guests": [
+    {
+      "id": "linda",
+      "name": "Linda",
+      "household": "lind"
+    },
+    {
+      "id": "omar",
+      "name": "Omar",
+      "household": "lind"
+    },
+    {
+      "id": "wren",
+      "name": "Wren",
+      "household": "lind"
+    },
+    {
+      "id": "hal",
+      "name": "Hal",
+      "household": "ash"
+    },
+    {
+      "id": "io",
+      "name": "Io",
+      "household": "ash"
+    },
+    {
+      "id": "ben",
+      "name": "Ben",
+      "household": "vale"
+    },
+    {
+      "id": "cy",
+      "name": "Cy",
+      "household": "vale"
+    },
+    {
+      "id": "priya",
+      "name": "Priya",
+      "household": "rao"
+    },
+    {
+      "id": "dana",
+      "name": "Dana",
+      "household": "kim"
+    },
+    {
+      "id": "sam",
+      "name": "Sam",
+      "household": "webb"
+    }
+  ],
+  "rules": [
+    {
+      "a": "omar",
+      "b": "hal",
+      "kind": "apart",
+      "hard": true
+    },
+    {
+      "a": "priya",
+      "b": "dana",
+      "kind": "together",
+      "hard": true
+    },
+    {
+      "a": "wren",
+      "b": "sam",
+      "kind": "together",
+      "hard": false
+    },
+    {
+      "a": "io",
+      "b": "ben",
+      "kind": "apart",
+      "hard": false
+    },
+    {
+      "a": "cy",
+      "b": "linda",
+      "kind": "together",
+      "hard": false
+    }
+  ],
+  "locked": {},
+  "expect": {
+    "status": "ok",
+    "reasons": [],
+    "seats": {
+      "linda": "t3",
+      "omar": "t2",
+      "wren": "t2",
+      "hal": "t1",
+      "io": "t1",
+      "ben": "t3",
+      "cy": "t3",
+      "priya": "t1",
+      "dana": "t1",
+      "sam": "t2"
+    },
+    "score": {
+      "hard": 0,
+      "soft": 2,
+      "total": 2,
+      "violations": [
+        {
+          "code": "household",
+          "hard": false,
+          "guests": [],
+          "table": null,
+          "household": "lind",
+          "count": 1
+        }
+      ]
+    }
+  }
+}

@@ -44,10 +44,24 @@ describe('rule 1: all deadlines derive from the anchor (no free-floating dates)'
     'PhotoDevice.blockedAt': 'a date of fact: when a moderator blocked the device', 'Photo.createdAt': 'row timestamp: when the photo was stored',
     'Photo.purgedAt': 'a date of fact: when the retention purge deleted its bytes (the day it falls due is derived, never stored)',
     'VendorAttachment.createdAt': 'row timestamp',
+    // Phase 4. P1-1 adds no date: a reveal point is Task/Expense/Vendor/BudgetCategory.revealDays, a whole number of days
+    // from Wedding.date (D-92). P1-2: the day money arrived is a date of fact.
+    'Funder.createdAt': 'row timestamp', 'FunderPledge.createdAt': 'row timestamp', 'FunderAllocation.createdAt': 'row timestamp: when the payment from the pledge was recorded',
+    'FunderReceipt.receivedOn': 'a date of fact: the day the money arrived', 'FunderReceipt.createdAt': 'row timestamp',
+    // P1-3: how long a thank-you has been owed is computed on read from the day the gift arrived (thanks/aging.ts).
+    'GiftLog.receivedOn': 'a date of fact: the day the gift arrived', 'GiftLog.acknowledgedOn': 'a date of fact: when a partner marked the thank-you as sent', 'GiftLog.createdAt': 'row timestamp',
+    'RegistryLink.createdAt': 'row timestamp',
+    'RegistryClaim.claimedOn': 'a date of fact: the day the household said it bought the item', 'RegistryClaim.acknowledgedOn': 'a date of fact: when a partner marked the thank-you as sent', 'RegistryClaim.createdAt': 'row timestamp',
+    // P1-4: a step's "from" day is the wedding date plus the rules' startAfterDays, worked out on read (namechange/workflow.ts).
+    'NameChange.createdAt': 'row timestamp', 'NameChangeStep.completedOn': 'a date of fact: the day the step was marked done', 'NameChangeArtifact.createdAt': 'row timestamp: when the document was marked held',
+    // P1-6: tasks a plan adds are ordinary tasks (leadDays, bufferDays); nothing in a plan is a date.
+    'ContingencyPlan.createdAt': 'row timestamp', 'ContingencyRun.executedAt': 'a date of fact: when the branch was put into action', 'ContingencyItem.doneOn': 'a date of fact: the day the line was ticked off',
+    // P1-5: a seating chart holds no date at all; D-42's vendor link stops a set number of days after the wedding date.
+    'SeatingTable.createdAt': 'row timestamp', 'SeatingRule.createdAt': 'row timestamp',
   };
 
-  it('finds the clone\'s twenty-eight models', () => {
-    expect(models.map((m) => m.name)).toHaveLength(28); // twenty from Phases 1 and 2, three for gifting, five for photos and attachments
+  it('finds the clone\'s forty-four models', () => {
+    expect(models.map((m) => m.name)).toHaveLength(44); // twenty from Phases 1 and 2, three for gifting, five for photos and attachments, four for funding (P1-2), three for the gift log and store items (P1-3, P1-8), three for name changes (P1-4), three for contingency plans (P1-6), three for the seating chart (P1-5)
   });
   it('a photo event stores day counts, and both of its days are worked out from the wedding date', () => {
     const event = models.find((m) => m.name === 'PhotoEvent')!.body;
@@ -137,16 +151,33 @@ describe('rule 2: designated actions only through the consent module', () => {
 // and exactly which files may touch an uploaded file. Anything outside either list fails here by name.
 describe('rule 3: the guest-facing surfaces are a closed list', () => {
   const strip = (text: string) => text.replace(/\/\/[^\n]*|\/\*[\s\S]*?\*\//g, '');
-  const GUEST_FACING = ['src/app/p/[token]/page.tsx', 'src/app/p/[token]/upload/route.ts', 'src/app/r/[token]/gifts/contribute/route.ts', 'src/app/r/[token]/gifts/page.tsx', 'src/app/r/[token]/page.tsx', 'src/app/r/[token]/respond/route.ts'];
+  // D-42 adds the vendor's read-only page, /v/[token]: outside the workspace like the guest links, for one vendor.
+  const GUEST_FACING = ['src/app/p/[token]/page.tsx', 'src/app/p/[token]/upload/route.ts', 'src/app/r/[token]/gifts/claim/route.ts', 'src/app/r/[token]/gifts/contribute/route.ts', 'src/app/r/[token]/gifts/page.tsx', 'src/app/r/[token]/page.tsx', 'src/app/r/[token]/respond/route.ts', 'src/app/v/[token]/page.tsx'];
 
-  it('the public Knotwork routes are exactly /r/[token] (+ respond, gifts, gifts/contribute) and /p/[token] (+ upload)', () => {
+  it('the public Knotwork routes are exactly /r/[token] (+ respond, gifts, gifts/contribute, gifts/claim), /p/[token] (+ upload) and /v/[token]', () => {
     const routes = globSync('src/app/**/{page,route}.{ts,tsx}', { cwd: ROOT }).sort();
     const isPublic = (f: string) => /^\/\/ public: \S/m.test(read(f));
-    expect(routes.filter((f) => /^src\/app\/(r|p)\//.test(f))).toEqual(GUEST_FACING);
+    expect(routes.filter((f) => /^src\/app\/(r|p|v)\//.test(f))).toEqual(GUEST_FACING);
     for (const f of GUEST_FACING) expect(isPublic(f), f).toBe(true);
     // Nothing under the signed-in tree is public, whatever it is called.
     expect(routes.filter((f) => f.startsWith('src/app/o/') && isPublic(f))).toEqual([]);
-    expect(routes.filter((f) => /^src\/app\/(o|r|p)\//.test(f) && isPublic(f))).toEqual(GUEST_FACING);
+    expect(routes.filter((f) => /^src\/app\/(o|r|p|v)\//.test(f) && isPublic(f))).toEqual(GUEST_FACING);
+  });
+  it('the vendor link\'s page touches no database and no store: only vendors/public.ts, which shows only the projection', () => {
+    const page = strip(read('src/app/v/[token]/page.tsx'));
+    expect(page).not.toMatch(/@\/core\/db|vendors\/(store|link|brief)|guests\/|gifts\/|secrecy\/|\btx\b|withOrg|asSystem/);
+    expect([...read('src/app/v/[token]/page.tsx').matchAll(/from '@\/lib\/knotwork\/([\w/-]+)'/g)].map((m) => m[1]!)).toEqual(['vendors/public']);
+    // The vendor's whole view is three strings: the wedding's title, its own name and its own brief (counts, never names).
+    const projection = strip(read('src/lib/knotwork/vendors/projection.ts'));
+    expect(projection).toMatch(/export type VendorLinkView = \{ weddingTitle: string; vendorName: string; brief: string \};/);
+    expect(projection).toMatch(/brief: renderBrief\(i\)\.body/);
+    const pub = strip(read('src/lib/knotwork/vendors/public.ts'));
+    expect(pub).toMatch(/Promise<VendorLinkView \| 'limited' \| null>/);
+    expect(pub).toMatch(/return vendorLinkView\(await briefInput\(/);
+    expect(pub).not.toMatch(/\.(household|guest|inviteWave|guestPlan|giftEntry|registryItem|expense|budgetCategory)\./);
+    // The brief it renders is the brief: role-filtered, no guest name in its input shape.
+    const brief = strip(read('src/lib/knotwork/vendors/brief.ts'));
+    expect(brief.split('guests?: {')[1]!.split('};')[0]).not.toMatch(/\bname\b/);
   });
   it('the photo link\'s two files touch no database and no store: only photos/public.ts, which shows only the projection', () => {
     for (const f of GUEST_FACING.slice(0, 2)) expect(strip(read(f)), f).not.toMatch(/@\/core\/db|photos\/(store|blobs|qr)|guests\/(store|public)|gifts\/|\btx\b|withOrg|asSystem/);
@@ -159,12 +190,12 @@ describe('rule 3: the guest-facing surfaces are a closed list', () => {
     expect(pub).toMatch(/Promise<UploadView \| 'limited' \| null>/);
     expect(pub).not.toMatch(/\.(household|guest|inviteWave|guestPlan|giftEntry|registryItem)\./);
   });
-  it('the only two Knotwork files that read across orgs are the two token lookups', () => {
-    expect(filesWith(/\basSystem\s*\(/).filter((f) => f.includes('knotwork') || /^src\/app\/(o|r|p)\//.test(f))).toEqual(['src/lib/knotwork/guests/public.ts', 'src/lib/knotwork/photos/public.ts']);
+  it('the only three Knotwork files that read across orgs are the three token lookups', () => {
+    expect(filesWith(/\basSystem\s*\(/).filter((f) => f.includes('knotwork') || /^src\/app\/(o|r|p|v)\//.test(f))).toEqual(['src/lib/knotwork/guests/public.ts', 'src/lib/knotwork/photos/public.ts', 'src/lib/knotwork/vendors/public.ts']);
   });
-  it('/p/:path* carries the same three headers as /r/:path* (the token is in the URL)', () => {
+  it('/p/:path* and /v/:path* carry the same three headers as /r/:path* (the token is in the URL)', () => {
     const config = read('next.config.ts');
-    for (const source of ['/r/:path*', '/p/:path*']) {
+    for (const source of ['/r/:path*', '/p/:path*', '/v/:path*']) {
       const block = config.slice(config.indexOf(`source: '${source}'`)).split('},\n    //')[0]!;
       expect(block, source).toContain(`{ key: 'Referrer-Policy', value: 'no-referrer' }`);
       expect(block, source).toContain(`{ key: 'X-Robots-Tag', value: 'noindex, nofollow' }`);
@@ -185,7 +216,7 @@ describe('rule 4: uploads are hostile input: one pipeline, and nothing else read
   it('only uploads/read.ts takes a file, or raw bytes, out of a request', () => {
     expect(ours(filesWith(/\.arrayBuffer\(\)|\.blob\(\)|\.bytes\(\)|\breq(uest)?\.body\b|getReader\(|\bFile\b|\bBlob\b/))).toEqual([READ]);
     // formData() elsewhere is the two plain-text guest forms from Phase 2, which keep only strings.
-    const TEXT_FORMS = ['src/app/r/[token]/gifts/contribute/route.ts', 'src/app/r/[token]/respond/route.ts'];
+    const TEXT_FORMS = ['src/app/r/[token]/gifts/claim/route.ts', 'src/app/r/[token]/gifts/contribute/route.ts', 'src/app/r/[token]/respond/route.ts'];
     expect(ours(filesWith(/\.formData\(\)/))).toEqual([...TEXT_FORMS, READ]);
     for (const f of TEXT_FORMS) {
       expect(strip(read(f)).match(/form\.get(All)?\(/g)!.length, f).toBeGreaterThan(0);
@@ -213,7 +244,7 @@ describe('rule 4: uploads are hostile input: one pipeline, and nothing else read
     }
     // A route under the signed-in tree that takes a POST and is not on the list would be a second way in.
     const posts = globSync('src/app/{o,r,p}/**/route.{ts,tsx}', { cwd: ROOT }).sort().filter((f) => /export async function POST\b/.test(read(f)));
-    expect(posts).toEqual([UPLOAD_ROUTES[0]!, UPLOAD_ROUTES[1]!, 'src/app/r/[token]/gifts/contribute/route.ts', 'src/app/r/[token]/respond/route.ts']);
+    expect(posts).toEqual([UPLOAD_ROUTES[0]!, UPLOAD_ROUTES[1]!, 'src/app/r/[token]/gifts/claim/route.ts', 'src/app/r/[token]/gifts/contribute/route.ts', 'src/app/r/[token]/respond/route.ts']);
   });
   it('the pipeline is sniff, cap, decode, re-encode, inspect: in that order, in one function', () => {
     const text = strip(read(PROCESS));
@@ -284,7 +315,7 @@ describe('P0-5 privacy: the couple\'s side never reads what one household gave',
   const coupleSide = [...couplePages, 'src/app/export-hooks.ts'];
 
   it('finds the couple\'s gift pages and actions', () => {
-    expect(giftPages).toEqual(['actions.ts', 'nav.tsx', 'page.tsx', '[id]/page.tsx', 'thank-yous/page.tsx'].map((f) => `src/app/o/[org]/wedding/gifts/${f}`).sort());
+    expect(giftPages).toEqual(['actions.ts', 'nav.tsx', 'page.tsx', '[id]/page.tsx', 'links/[id]/page.tsx', 'thank-yous/page.tsx'].map((f) => `src/app/o/[org]/wedding/gifts/${f}`).sort());
   });
   it('no page, action or export hook on the couple\'s side names a ledger entry or its amount', () => {
     for (const f of [...giftPages, 'src/app/export-hooks.ts']) expect(strip(read(f)), f).not.toMatch(/amountCents/);
@@ -338,12 +369,94 @@ describe('P0-5 privacy: the couple\'s side never reads what one household gave',
     for (const c of ['RegistryItem_target_check', 'GiftEntry_sign_check']) expect(sql).toContain(`ADD CONSTRAINT "${c}"`);
     // Rule 3: the gift page and its route are built from gifts/public.ts, which is built from gifts/projection.ts.
     const guestFacing = globSync('src/app/r/**/*.{ts,tsx}', { cwd: ROOT }).sort();
-    expect(guestFacing).toEqual(['src/app/r/[token]/gifts/contribute/route.ts', 'src/app/r/[token]/gifts/page.tsx', 'src/app/r/[token]/page.tsx', 'src/app/r/[token]/respond/route.ts']);
+    expect(guestFacing).toEqual(['src/app/r/[token]/gifts/claim/route.ts', 'src/app/r/[token]/gifts/contribute/route.ts', 'src/app/r/[token]/gifts/page.tsx', 'src/app/r/[token]/page.tsx', 'src/app/r/[token]/respond/route.ts']);
     for (const f of guestFacing) {
       expect(read(f), f).toMatch(/^\/\/ public: \S/m);
       expect(strip(read(f)), f).not.toMatch(/@\/core\/db|gifts\/(couple|store)|guests\/store|\btx\b|withOrg|asSystem/);
     }
     expect(strip(read('src/lib/knotwork/gifts/public.ts'))).not.toMatch(/asSystem|gifts\/couple|\.\/couple/);
     expect(strip(read('src/lib/knotwork/gifts/projection.ts'))).not.toMatch(/\b(list|wave\w*|priority|invitedOn|createdAt)\b/); // the words do not occur in the guest's shape at all
+  });
+});
+
+// Phase 4, P1-1 (ADR-001): the other partner's view, and every helper's, passes through ONE masking function.
+describe('P1-1 secrecy: every view of a task, expense, vendor or category passes through the lens', () => {
+  const strip = (text: string) => text.replace(/\/\/[^\n]*|\/\*[\s\S]*?\*\//g, '');
+  const LENS = 'src/lib/knotwork/secrecy/lens.ts';
+  const VIEWS = 'src/lib/knotwork/secrecy/views.ts';
+  // Knotwork's signed-in entry points: the workspace home and everything under /wedding (pages and route handlers).
+  const entry = src.filter((f) => /^src\/app\/o\/\[org\]\/(page\.tsx|wedding\/(.+\/)?(page|route)\.tsx?)$/.test(f));
+  const READS = /\.(task|vendor|expense|budgetCategory|vendorPayment|vendorFlag|vendorBrief|vendorAttachment|budgetSnapshot|scheduleBaseline|funder|funderPledge|funderReceipt|funderAllocation)\.(findMany|findFirst|findUnique|findFirstOrThrow|findUniqueOrThrow|count|aggregate|groupBy)\(|\b(loadSchedule|loadTasks|loadBudget|changeLog|previewDateMove|listAttachments|readAttachment|briefInput|fundingByCategory)\(/;
+
+  it('no signed-in page or route reads those tables, the schedule, the budget or the change log itself', () => {
+    expect(entry.length).toBeGreaterThanOrEqual(30);
+    expect(entry.filter((f) => READS.test(strip(read(f))))).toEqual([]);
+  });
+  it('the pages that show them read them from secrecy/views.ts (or, for funding, funding/store.ts fundingView)', () => {
+    const want: Record<string, RegExp> = {
+      'src/app/o/[org]/page.tsx': /overviewView\(/, 'src/app/o/[org]/wedding/schedule/page.tsx': /scheduleView\(/, 'src/app/o/[org]/wedding/budget/page.tsx': /budgetView\(/,
+      'src/app/o/[org]/wedding/vendors/page.tsx': /vendorsView\(/, 'src/app/o/[org]/wedding/vendors/[id]/page.tsx': /vendorView\(/, 'src/app/o/[org]/wedding/flags/page.tsx': /flagsView\(/,
+      'src/app/o/[org]/wedding/activity/page.tsx': /activityView\(/, 'src/app/o/[org]/wedding/approvals/page.tsx': /movePreview\(/, 'src/app/o/[org]/wedding/date/page.tsx': /movePreview\(/,
+      'src/app/o/[org]/wedding/funding/page.tsx': /fundingView\(/, 'src/app/o/[org]/wedding/vendors/[id]/attachments/[attachment]/route.ts': /attachmentFile\(/,
+      'src/app/o/[org]/wedding/vendors/[id]/attachments/route.ts': /vendorVisible\(/,
+      'src/app/o/[org]/wedding/dashboard/page.tsx': /dashboardView\(/,
+    };
+    for (const [f, re] of Object.entries(want)) expect(strip(read(f)), f).toMatch(re);
+  });
+  it('every loader in views.ts builds its answer with lens(); the funding reader does too', () => {
+    const views = strip(read(VIEWS));
+    const loaders = [...views.matchAll(/export async function (\w+)\(/g)].map((m) => m[1]!);
+    expect(loaders.sort()).toEqual(['activityView', 'attachmentFile', 'budgetView', 'contingencyWorld', 'dashboardView', 'flagsView', 'fundingOptions', 'movePreview', 'overviewView', 'scheduleView', 'vendorView', 'vendorVisible', 'vendorsView']);
+    for (const name of loaders) {
+      const body = views.slice(views.indexOf(`export async function ${name}(`)).split(/\nexport /)[0]!;
+      expect(body, name).toMatch(/lens\(|flagsView\(|vendorVisible\(/); // overview reuses flagsView; attachmentFile reuses vendorVisible
+    }
+    const fundingView = strip(read('src/lib/knotwork/funding/store.ts')).split('export async function fundingView(')[1]!.split(/\nexport /)[0]!;
+    expect(fundingView).toMatch(/const L = lens\(seen\);/);
+    expect(fundingView).toMatch(/L\.ofCategory</);
+    expect(fundingView).toMatch(/L\.expense\(/);
+  });
+  it('lens.ts is the only maker of a masked line, and it is pure', () => {
+    expect(filesWith(/hidden: true/)).toEqual([LENS]);
+    expect([...read(LENS).matchAll(/from '([^']+)'/g)].map((m) => m[1]).every((i) => i!.startsWith('.'))).toBe(true);
+  });
+  it('the change log is masked at write: logChange asks sealedNow before every entry', () => {
+    const log = strip(read('src/lib/knotwork/changelog.ts'));
+    expect(log).toMatch(/\(await sealedNow\(tx, ctx\.orgId, entity, id\)\)\s+\? \{ label: PRIVATE_ENTRY, before: null, after: null, private: true/);
+    expect(filesWith(/\baudit\(ctx, `\$\{PREFIX\}/)).toEqual(['src/lib/knotwork/changelog.ts']);
+    // An entry about a row that is about to be deleted is written first, while its privacy can still be read.
+    for (const [f, del] of [['src/app/o/[org]/wedding/actions.ts', 'tx.task.delete('], ['src/lib/knotwork/vendors/attachments.ts', 'tx.vendorAttachment.delete('], ['src/lib/knotwork/funding/store.ts', 'tx.funderReceipt.delete(']] as const) {
+      const text = strip(read(f));
+      expect(text.indexOf(del), f).toBeGreaterThan(text.lastIndexOf('logChange(', text.indexOf(del)));
+    }
+  });
+  it('what is stored and shared is written for nobody, and the export is built for nobody', () => {
+    expect(strip(read('src/lib/knotwork/schedule/store.ts'))).toMatch(/nobodyLens\(tx, ctx\.orgId\)\)\?\.titles\(/);
+    expect(strip(read('src/lib/knotwork/budget-store.ts'))).toMatch(/const L = await nobodyLens\(tx, ctx\.orgId\);/);
+    expect(strip(read('src/lib/knotwork/vendors/store.ts'))).toMatch(/!L\?\.task\(t\)\.hidden/);
+    const hooks = strip(read('src/app/export-hooks.ts'));
+    for (const [table, fn] of [['Task', 'exportTasks'], ['Expense', 'exportExpenses'], ['BudgetCategory', 'exportCategories'], ['Vendor', 'exportVendors'], ['VendorPayment', 'exportVendorPayments'], ['VendorBrief', 'exportVendorBriefs'], ['VendorAttachment', 'exportVendorAttachments'], ['ScheduleBaseline', 'exportBaselines'], ['BudgetSnapshot', 'exportBudgetSnapshots']]) {
+      expect(hooks, table).toContain(`whole('${table}', ${fn})`);
+    }
+  });
+  it('privacy is two columns on four tables, an offset in days (no stored reveal date), and the database half is in the migration', () => {
+    const schema = read('prisma/schema/knotwork.prisma');
+    const withPrivacy = [...schema.matchAll(/^model (\w+) \{([\s\S]*?)^\}/gm)].filter((m) => /privateToId/.test(m[2]!)).map((m) => m[1]);
+    expect(withPrivacy).toEqual(['Task', 'BudgetCategory', 'Expense', 'Vendor']);
+    for (const m of withPrivacy) expect(schema).toMatch(new RegExp(`model ${m} \\{[\\s\\S]*?revealDays\\s+Int\\?`));
+    const sql = read('prisma/migrations/20261126000000_knotwork_secrecy_funders/migration.sql');
+    for (const c of ['Vendor_designated_shared_check', 'Expense_designated_shared_check', 'Task_reveal_check', 'Vendor_reveal_check', 'Expense_reveal_check', 'BudgetCategory_reveal_check']) expect(sql).toContain(`"${c}"`);
+    for (const t of ['Task_private_owner', 'BudgetCategory_private_owner', 'Expense_private_owner', 'Vendor_private_owner', 'FunderPledge_check', 'FunderReceipt_check', 'FunderAllocation_check']) expect(sql).toContain(`CREATE ${/_check$/.test(t) ? 'CONSTRAINT ' : ''}TRIGGER "${t}"`);
+  });
+  it('a designated proposal reveals what it names first; only the secrecy store writes privacy on an existing row', () => {
+    const actions = strip(read('src/app/o/[org]/wedding/actions.ts'));
+    for (const kind of ['book_vendor', 'sign_contract', 'spend']) {
+      const at = actions.search(new RegExp(`await propose\\(tx, ctx, [^\\n]*?'${kind}'`));
+      expect(at, kind).toBeGreaterThan(0);
+      expect(actions.lastIndexOf('revealForProposal(', at), kind).toBeGreaterThan(actions.lastIndexOf('orgAction(', at));
+    }
+    expect(filesWith(/\bsetExpenseCompartment\(/)).toEqual(['src/lib/knotwork/budget-store.ts', 'src/lib/knotwork/secrecy/store.ts']);
+    expect(filesWith(/\bsetPrivacy\(/)).toEqual(['src/app/o/[org]/wedding/privacy/actions.ts', 'src/lib/knotwork/secrecy/store.ts']);
+    expect(filesWith(/\brevealForProposal\(/)).toEqual(['src/app/o/[org]/wedding/actions.ts', 'src/lib/knotwork/secrecy/store.ts']);
   });
 });

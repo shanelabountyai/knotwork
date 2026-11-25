@@ -1,0 +1,134 @@
+{
+  "jurisdiction": "generic",
+  "name": "Any other place (generic fallback)",
+  "fallback": true,
+  "illustrative": true,
+  "notice": "Illustrative example only, not legal advice. Knotwork does not know the current rules, forms, fees or waiting times of any agency; check each office's own instructions before you go. The 'from' day on each step is a planning placeholder counted from your wedding date, not a processing time.",
+  "artifacts": [
+    {
+      "key": "marriage-certificate",
+      "label": "Certified copy of your marriage certificate",
+      "producedBy": null
+    },
+    {
+      "key": "proof-of-identity",
+      "label": "A current photo ID in your previous name",
+      "producedBy": null
+    },
+    {
+      "key": "new-ss-card",
+      "label": "Your new Social Security card (or the agency's confirmation)",
+      "producedBy": "ssa"
+    },
+    {
+      "key": "new-license",
+      "label": "Your updated driver's license or state ID",
+      "producedBy": "dmv"
+    },
+    {
+      "key": "current-passport",
+      "label": "Your current passport, or another proof of citizenship",
+      "producedBy": null
+    },
+    {
+      "key": "passport-photo",
+      "label": "A recent passport photo",
+      "producedBy": null
+    }
+  ],
+  "steps": [
+    {
+      "key": "ssa",
+      "phase": "federal",
+      "title": "Update your name with the Social Security Administration",
+      "notes": "Usually the first step: other offices often look for the updated federal record. Illustrative; ask the agency what it currently needs.",
+      "prerequisites": [],
+      "artifacts": [
+        "marriage-certificate",
+        "proof-of-identity"
+      ],
+      "startAfterDays": 7
+    },
+    {
+      "key": "dmv",
+      "phase": "state",
+      "title": "Update your driver's license or state ID",
+      "notes": "At your state's motor vehicle office. Illustrative; states differ in what they ask for.",
+      "prerequisites": [
+        "ssa"
+      ],
+      "artifacts": [
+        "marriage-certificate",
+        "new-ss-card",
+        "proof-of-identity"
+      ],
+      "startAfterDays": 14
+    },
+    {
+      "key": "vehicle",
+      "phase": "state",
+      "title": "Update the name on your vehicle title and registration",
+      "notes": "Often handled by the same office as the license, sometimes by another. Illustrative.",
+      "prerequisites": [
+        "dmv"
+      ],
+      "artifacts": [
+        "new-license"
+      ],
+      "startAfterDays": 14
+    },
+    {
+      "key": "passport",
+      "phase": "passport",
+      "title": "Update your passport",
+      "notes": "Illustrative; which form applies depends on how recently your passport was issued. Check the official instructions.",
+      "prerequisites": [
+        "ssa"
+      ],
+      "artifacts": [
+        "marriage-certificate",
+        "current-passport",
+        "passport-photo"
+      ],
+      "startAfterDays": 21
+    },
+    {
+      "key": "employer",
+      "phase": "accounts",
+      "title": "Tell your employer's payroll and benefits team",
+      "notes": "So your pay records match the federal record.",
+      "prerequisites": [
+        "ssa"
+      ],
+      "artifacts": [
+        "new-ss-card"
+      ],
+      "startAfterDays": 14
+    },
+    {
+      "key": "bank",
+      "phase": "accounts",
+      "title": "Update your bank and card accounts",
+      "notes": "Many banks ask to see the updated ID and the certificate.",
+      "prerequisites": [
+        "dmv"
+      ],
+      "artifacts": [
+        "new-license",
+        "marriage-certificate"
+      ],
+      "startAfterDays": 21
+    },
+    {
+      "key": "other-accounts",
+      "phase": "accounts",
+      "title": "Update insurance, utilities, medical and other accounts",
+      "notes": "Work down your own list; most only need a call or a form.",
+      "prerequisites": [
+        "bank"
+      ],
+      "artifacts": [],
+      "startAfterDays": 28
+    }
+  ]
+}

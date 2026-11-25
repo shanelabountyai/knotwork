@@ -9,18 +9,30 @@ import { logChange } from '@/lib/knotwork/changelog';
 import { decide, propose } from '@/lib/knotwork/consent/store';
 import { requireWedding } from '@/lib/knotwork/context';
 import { addDays, dbOfDay, todayIn, type Day } from '@/lib/knotwork/days';
+import { addFunder, addPledge, allocate, linkFunder, receive } from '@/lib/knotwork/funding/store';
 import { addItem, contribute } from '@/lib/knotwork/gifts/store';
 import { applyRsvp, importHouseholds, releaseWave, savePlan } from '@/lib/knotwork/guests/store';
 import { addPhoto, createEvent, moderatePhoto } from '@/lib/knotwork/photos/store';
+import { addLink, claim } from '@/lib/knotwork/registry/store';
+import { acknowledgeGift, logGift } from '@/lib/knotwork/thanks/store';
+import { STARTERS } from '@/lib/knotwork/contingency/schema';
+import { createPlan } from '@/lib/knotwork/contingency/store';
+import { moveNameChange, startNameChange } from '@/lib/knotwork/namechange/store';
 import { processUpload, type Processed } from '@/lib/knotwork/uploads/process';
 import { hashToken } from '@/core/tokens';
 import { createWedding } from '@/lib/knotwork/schedule/store';
+import { addRule, addTable, generateSeating } from '@/lib/knotwork/seating/store';
+import { makeVendorLink } from '@/lib/knotwork/vendors/link';
 import { addPayment, generateBrief, updateVendor } from '@/lib/knotwork/vendors/store';
 import { DEMO_TOTP_SECRET } from '../seed-demo';
 
 // `npm run seed:couple` (after db:setup; independent of seed:demo): the Knotwork demo seed (PRD Phase 1 gate).
 // ONE SYNTHETIC COUPLE. Every person, vendor, address and amount here is invented; none is a real person or business.
 //   Juniper Vale and Rowan Ashby: the two partners (both owners).  Maple Okafor: a helper who can see the budget.
+//   Hazel Vale (Phase 4, P1-2): Juniper's mother, a helper linked to the funder "Hazel & Oren Vale"; she sees only what
+//   that pledge paid for. Juniper also keeps one spend private until the wedding day (P1-1), and has begun her name
+//   change, private to her (P1-4). A rain plan waits, not yet put into action (P1-6). The five guests who are coming
+//   are seated at two tables (P1-5), and the caterer has a read-only link to its brief (D-42).
 //   The wedding is 330 days from today (America/Chicago), from the default template, so the demo move of six weeks
 //   has room. Venue and caterer are booked, each by a real two-key request (Juniper proposes, Rowan approves); the
 //   florist is still being considered.
@@ -35,6 +47,7 @@ export const COUPLE = {
   juniper: { email: 'juniper@knotwork.demo.test', name: 'Juniper Vale' },
   rowan: { email: 'rowan@knotwork.demo.test', name: 'Rowan Ashby' },
   maple: { email: 'maple@knotwork.demo.test', name: 'Maple Okafor' },
+  hazel: { email: 'hazel@knotwork.demo.test', name: 'Hazel Vale' },
 } as const;
 
 type Ctx = { orgId: string; userId: string; role: 'owner' };
@@ -57,11 +70,11 @@ export async function seedCouple(opts: { today?: Day } = {}): Promise<string[]> 
   const old = await db.org.findUnique({ where: { slug: COUPLE.slug }, select: { id: true } });
   if (old) await withOrg({ orgId: old.id }, (tx) => tx.org.delete({ where: { id: old.id } }));
 
-  const [juniper, rowan, maple] = [await user(COUPLE.juniper, true), await user(COUPLE.rowan, true), await user(COUPLE.maple, false)];
+  const [juniper, rowan, maple, hazel] = [await user(COUPLE.juniper, true), await user(COUPLE.rowan, true), await user(COUPLE.maple, false), await user(COUPLE.hazel, false)];
   const orgId = crypto.randomUUID();
   await withOrg({ orgId }, async (tx) => {
     await tx.org.create({ data: { id: orgId, slug: COUPLE.slug, name: COUPLE.name } });
-    await tx.membership.createMany({ data: [{ orgId, userId: juniper.id, role: 'owner' }, { orgId, userId: rowan.id, role: 'owner' }, { orgId, userId: maple.id, role: 'member' }] });
+    await tx.membership.createMany({ data: [{ orgId, userId: juniper.id, role: 'owner' }, { orgId, userId: rowan.id, role: 'owner' }, { orgId, userId: maple.id, role: 'member' }, { orgId, userId: hazel.id, role: 'member' }] });
   });
   const a: Ctx = { orgId, userId: juniper.id, role: 'owner' };
   const b: Ctx = { orgId, userId: rowan.id, role: 'owner' };
@@ -125,6 +138,27 @@ export async function seedCouple(opts: { today?: Day } = {}): Promise<string[]> 
     await takeSnapshot(tx, a, 'After the venue deposit');
   });
 
+  // Phase 4, P1-1: Juniper's surprise for Rowan, a spend private to her until the wedding day. Rowan and the helpers
+  // see a "Private spend" line; its $180.00 is in every total.
+  await withOrg({ orgId }, async (tx) => {
+    await createExpense(tx, a, await requireWedding(tx, a), { categoryId: categories.get('Attire')!, vendorId: null, description: 'Engraved cufflinks for Rowan', amountCents: 18_000, paidOn: today, paymentId: null, secret: { privateToId: juniper.id, revealDays: 0 } }, null);
+  });
+
+  // Phase 4, P1-2: two families help pay. Juniper's parents pledged $5,000.00 toward the venue, sent $3,000.00 in two
+  // parts, and $2,000.00 of it paid the venue deposit; Rowan's aunt pledged $1,500.00 toward catering, nothing sent yet.
+  // Hazel's own account is linked to her funder, so she sees that part only.
+  await withOrg({ orgId }, async (tx) => {
+    const vales = await addFunder(tx, a, 'Hazel & Oren Vale', 'Juniper\'s parents');
+    const wren = await addFunder(tx, b, 'Aunt Wren Ashby', 'Rowan\'s aunt');
+    const venue = await addPledge(tx, a, vales.id, categories.get('Venue')!, 500_000);
+    await addPledge(tx, b, wren.id, categories.get('Catering')!, 150_000);
+    await receive(tx, a, venue.id, 200_000, addDays(today, -1), 'first cheque');
+    await receive(tx, a, venue.id, 100_000, today, 'second cheque');
+    const deposit = await tx.expense.findFirstOrThrow({ where: { orgId, description: 'Cedar Hollow Barn: Deposit' }, select: { id: true } });
+    await allocate(tx, a, venue.id, deposit.id, 200_000);
+    await linkFunder(tx, a, vales.id, hazel.id, COUPLE.hazel.email);
+  });
+
   // Phase 2: the guest list. Cap 12. The A list fills it exactly (12 seats, two of them plus-ones still open); the B
   // list waits. The Lindqvists and the Ashbys have said yes; everyone else has not answered.
   const adult = (name: string, partnerStatus: 'none' | 'married' | 'engaged' = 'married', inWeddingParty = false) => ({ name, ageGroup: 'adult' as const, partnerStatus, inWeddingParty });
@@ -175,6 +209,41 @@ export async function seedCouple(opts: { today?: Day } = {}): Promise<string[]> 
     await gives('Priya Rao', player.id, 10_000);
   });
 
+  // Phase 4, P1-8: two things to buy from a store (invented store names on example domains; nothing is fetched). The
+  // Ashbys marked one of the two skillets as bought. P1-3: three gifts logged by hand: a quilt from Great-aunt Odile
+  // five weeks ago and copper mugs from the Lindqvists three and a half weeks ago, neither thanked yet (so the ledger
+  // reads "2 unthanked > 3 weeks"), and a framed print from Uncle Bram, thanked.
+  await withOrg({ orgId }, async (tx) => {
+    const skillet = await addLink(tx, a, { title: 'Cast-iron skillet', store: 'Example Kitchen Co.', url: 'https://www.example.com/skillet', priceCents: 4_500, quantityWanted: 2 });
+    await addLink(tx, b, { title: 'Linen napkins', store: 'Example Linens', url: 'https://shop.example.net/napkins', priceCents: null, quantityWanted: 1 });
+    const household = async (name: string) => (await tx.household.findFirstOrThrow({ where: { orgId, name }, select: { id: true } })).id;
+    const bought = await claim(tx, orgId, await household('The Ashbys'), skillet.id, 1);
+    if (!bought?.ok) throw new Error('seed: the Ashbys could not mark the skillet as bought');
+    await logGift(tx, a, { householdId: null, giverName: 'Great-aunt Odile', what: 'a hand-stitched quilt', receivedOn: addDays(today, -35) });
+    await logGift(tx, b, { householdId: await household('The Lindqvists'), giverName: '', what: 'a set of copper mugs', receivedOn: addDays(today, -24) });
+    const print = await logGift(tx, a, { householdId: null, giverName: 'Uncle Bram', what: 'a framed print of the river', receivedOn: addDays(today, -40) });
+    await acknowledgeGift(tx, b, print.id);
+  });
+
+  // Phase 4, P1-6: a rain plan from the starter, not put into action (the demo runs it). P1-4: Juniper has begun her
+  // name change. Tulsa is in a state Knotwork has no file for, so it follows the generic fallback; private to her.
+  await withOrg({ orgId }, async (tx) => {
+    await createPlan(tx, a, 'Rain plan', STARTERS.rain.tree);
+    await startNameChange(tx, a, 'generic');
+    await moveNameChange(tx, a, { op: 'hold', key: 'proof-of-identity' });
+  });
+
+  // Phase 4, P1-5: two tables of four for the five guests who are coming, a wish that Wren sits with Io (her
+  // godmother), and a first seating (arrangement 1). D-42: the caterer has a read-only link to its brief (counts only).
+  await withOrg({ orgId }, async (tx) => {
+    await addTable(tx, a, { name: 'Table 1', capacity: 4 });
+    await addTable(tx, a, { name: 'Table 2', capacity: 4 });
+    const guest = async (name: string) => (await tx.guest.findFirstOrThrow({ where: { orgId, name }, select: { id: true } })).id;
+    await addRule(tx, a, { a: await guest('Wren Lindqvist'), b: await guest('Io Ashby'), kind: 'together', hard: false });
+    await generateSeating(tx, a, 1);
+    await makeVendorLink(tx, a, vendors.get('Fennel & Fig Catering')!);
+  });
+
   // Phase 3: the photo wall. One event, "Reception", where each photo waits for approval (the demo story: a guest's
   // photo reaches the moderated wall once approved). Four SYNTHETIC pictures: flat colours drawn here, no photograph
   // of anything or anyone, each put through the real upload pipeline. Three are approved; one is still waiting.
@@ -218,6 +287,7 @@ export async function seedCouple(opts: { today?: Day } = {}): Promise<string[]> 
     `${COUPLE.juniper.email}  owner (partner)  (TOTP)`,
     `${COUPLE.rowan.email}  owner (partner)  (TOTP)`,
     `${COUPLE.maple.email}  member (helper: sees the budget)`,
+    `${COUPLE.hazel.email}  member (helper: a funder, sees only her own pledge)`,
   ];
 }
 

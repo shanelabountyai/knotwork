@@ -1,6 +1,8 @@
 import { moduleExportTables } from '@/app/modules';
 import type { ExportTable } from '@/core/tenancy/export';
 import { exportRegistry } from '@/lib/knotwork/gifts/couple';
+import { exportNameChangeArtifacts, exportNameChanges, exportNameChangeSteps } from '@/lib/knotwork/namechange/store';
+import { exportBaselines, exportBudgetSnapshots, exportCategories, exportExpenses, exportTasks, exportVendorAttachments, exportVendorBriefs, exportVendorPayments, exportVendors } from '@/lib/knotwork/secrecy/export';
 
 // Clone-owned (v1.6.0), like org-hooks.ts: which tables a data export holds beyond the template's core ones
 // (addendum §5). Add one entry per org-owned table, selecting only columns that are safe to hand over: never a
@@ -13,16 +15,18 @@ const whole = (name: string, rows: ExportTable['rows']): ExportTable => ({ name,
 export const exportTables: readonly ExportTable[] = [
   ...moduleExportTables,
   whole('Wedding', (tx, orgId) => tx.wedding.findMany({ where: { orgId } })),
-  whole('Task', (tx, orgId) => tx.task.findMany({ where: { orgId }, orderBy: { createdAt: 'asc' } })),
+  // P1-1 (ADR-001): either partner may download the export, so it is built for nobody: an item private right now is
+  // blanked (and what belongs to it); ids, amounts and dates stay (src/lib/knotwork/secrecy/export.ts).
+  whole('Task', exportTasks),
   whole('TaskDependency', (tx, orgId) => tx.taskDependency.findMany({ where: { orgId } })),
-  whole('ScheduleBaseline', (tx, orgId) => tx.scheduleBaseline.findMany({ where: { orgId }, orderBy: { createdAt: 'asc' } })),
-  whole('BudgetCategory', (tx, orgId) => tx.budgetCategory.findMany({ where: { orgId } })),
-  whole('Expense', (tx, orgId) => tx.expense.findMany({ where: { orgId }, orderBy: { createdAt: 'asc' } })),
-  whole('BudgetSnapshot', (tx, orgId) => tx.budgetSnapshot.findMany({ where: { orgId }, orderBy: { takenAt: 'asc' } })),
-  whole('Vendor', (tx, orgId) => tx.vendor.findMany({ where: { orgId }, orderBy: { createdAt: 'asc' } })),
-  whole('VendorPayment', (tx, orgId) => tx.vendorPayment.findMany({ where: { orgId }, orderBy: { createdAt: 'asc' } })),
-  whole('VendorFlag', (tx, orgId) => tx.vendorFlag.findMany({ where: { orgId }, orderBy: { raisedAt: 'asc' } })),
-  whole('VendorBrief', (tx, orgId) => tx.vendorBrief.findMany({ where: { orgId }, orderBy: { generatedAt: 'asc' } })),
+  whole('ScheduleBaseline', exportBaselines),
+  whole('BudgetCategory', exportCategories),
+  whole('Expense', exportExpenses),
+  whole('BudgetSnapshot', exportBudgetSnapshots),
+  whole('Vendor', exportVendors),
+  whole('VendorPayment', exportVendorPayments),
+  whole('VendorFlag', (tx, orgId) => tx.vendorFlag.findMany({ where: { orgId }, orderBy: { raisedAt: 'asc' } })), // only on booked vendors, which are never private
+  whole('VendorBrief', exportVendorBriefs),
   whole('ConsentRequest', (tx, orgId) => tx.consentRequest.findMany({ where: { orgId }, orderBy: { proposedAt: 'asc' } })),
   whole('HelperGrant', (tx, orgId) => tx.helperGrant.findMany({ where: { orgId } })),
   // Phase 2. Household is the one table with secrets: the RSVP token's hash and its sealed copy are never selected.
@@ -42,7 +46,30 @@ export const exportTables: readonly ExportTable[] = [
   whole('PhotoEvent', (tx, orgId) => tx.photoEvent.findMany({ where: { orgId }, omit: { uploadTokenHash: true, uploadTokenSealed: true }, orderBy: { createdAt: 'asc' } })),
   whole('PhotoDevice', (tx, orgId) => tx.photoDevice.findMany({ where: { orgId }, omit: { tokenHash: true }, orderBy: { createdAt: 'asc' } })),
   whole('Photo', (tx, orgId) => tx.photo.findMany({ where: { orgId }, orderBy: { createdAt: 'asc' } })),
-  whole('VendorAttachment', (tx, orgId) => tx.vendorAttachment.findMany({ where: { orgId }, omit: { bytes: true }, orderBy: { createdAt: 'asc' } })),
+  whole('VendorAttachment', exportVendorAttachments),
+  // Phase 4, P1-2: the funding tables, whole (amounts, days of fact, the linked helper's user id; no secret).
+  whole('Funder', (tx, orgId) => tx.funder.findMany({ where: { orgId }, orderBy: { createdAt: 'asc' } })),
+  whole('FunderPledge', (tx, orgId) => tx.funderPledge.findMany({ where: { orgId }, orderBy: { createdAt: 'asc' } })),
+  whole('FunderReceipt', (tx, orgId) => tx.funderReceipt.findMany({ where: { orgId }, orderBy: { createdAt: 'asc' } })),
+  whole('FunderAllocation', (tx, orgId) => tx.funderAllocation.findMany({ where: { orgId }, orderBy: { createdAt: 'asc' } })),
+  // Phase 4, P1-3 and P1-8: the gift log, the store items and households' claims, whole (who, what, days of fact; a
+  // store item's price is the couple's own figure; no amount anyone gave, no secret).
+  whole('GiftLog', (tx, orgId) => tx.giftLog.findMany({ where: { orgId }, orderBy: [{ createdAt: 'asc' }, { id: 'asc' }] })),
+  whole('RegistryLink', (tx, orgId) => tx.registryLink.findMany({ where: { orgId }, orderBy: [{ createdAt: 'asc' }, { id: 'asc' }] })),
+  whole('RegistryClaim', (tx, orgId) => tx.registryClaim.findMany({ where: { orgId }, orderBy: [{ createdAt: 'asc' }, { id: 'asc' }] })),
+  // Phase 4, P1-4: name changes, built for nobody like ADR-001's tables (D-114): one that is private to its partner
+  // keeps its ids, statuses and days of fact and loses which rules it follows and which steps and documents it names.
+  whole('NameChange', exportNameChanges),
+  whole('NameChangeStep', exportNameChangeSteps),
+  whole('NameChangeArtifact', exportNameChangeArtifacts),
+  // P1-6: contingency plans, their runs and checklists, whole (a tree of text, what was done, days of fact; no secret).
+  whole('ContingencyPlan', (tx, orgId) => tx.contingencyPlan.findMany({ where: { orgId }, orderBy: [{ createdAt: 'asc' }, { id: 'asc' }] })),
+  whole('ContingencyRun', (tx, orgId) => tx.contingencyRun.findMany({ where: { orgId }, orderBy: [{ executedAt: 'asc' }, { id: 'asc' }] })),
+  whole('ContingencyItem', (tx, orgId) => tx.contingencyItem.findMany({ where: { orgId }, orderBy: [{ runId: 'asc' }, { position: 'asc' }] })),
+  // P1-5: the seating chart, whole (tables, pair rules between guests, seats; no secret, no token).
+  whole('SeatingTable', (tx, orgId) => tx.seatingTable.findMany({ where: { orgId }, orderBy: [{ name: 'asc' }, { id: 'asc' }] })),
+  whole('SeatingRule', (tx, orgId) => tx.seatingRule.findMany({ where: { orgId }, orderBy: [{ createdAt: 'asc' }, { id: 'asc' }] })),
+  whole('Seat', (tx, orgId) => tx.seat.findMany({ where: { orgId }, orderBy: [{ tableId: 'asc' }, { guestId: 'asc' }] })),
 ];
 
 // An org-owned table left out on purpose, with the reason. INV-34 fails on any model with an orgId column that is in

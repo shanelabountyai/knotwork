@@ -101,9 +101,11 @@ test('the couple sees the gift funded and who gave; a thank-you is owed to each,
   for (const amount of ['$75.50', '$300.00', '$25.50', '$350.00']) expect(page).not.toContain(amount);
 
   await juniper.getByRole('navigation', { name: 'Gifts' }).getByRole('link', { name: 'Thank-yous' }).click();
-  await expect(juniper.getByText('5 of 5 still to send.')).toBeVisible();
+  // Five owed for the two pooled gifts, plus (P1-3, P1-8) the seed's store item bought by the Ashbys and its three
+  // gifts logged by hand, one of them already thanked.
+  await expect(juniper.getByText('8 of 9 still to send.')).toBeVisible();
   await juniper.getByRole('button', { name: 'Mark the thank-you to Dana Kim as sent' }).click();
-  await expect(juniper.getByText('4 of 5 still to send.')).toBeVisible();
+  await expect(juniper.getByText('7 of 9 still to send.')).toBeVisible();
   await expect(juniper.getByRole('listitem', { name: 'Thank-you to Dana Kim for Honeymoon canoe trip' })).toContainText('sent');
 });
 

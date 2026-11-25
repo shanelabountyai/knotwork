@@ -236,3 +236,178 @@ def test_photo_moderation_table_matches_the_oracle():
         s = {"status": state[0], "removedFrom": state[1]}
         down = photo_limits.move(s, first, False)["next"]
         assert down["status"] == "removed" and photo_limits.move(down, "undo", False)["next"] == s
+
+
+# --- funding: the multi-funder family budget (P1-2) --------------------------------------------------------------------
+import funding_oracle
+
+FUNDING = funding_oracle.load()
+
+
+def test_there_are_funding_fixtures():
+    assert len(FUNDING) >= 9
+    codes = {s.get("code") for _, fx in FUNDING for s in fx["expect"]["steps"]}
+    # Every refusal the engine has is exercised by some fixture.
+    assert codes >= {"amount", "duplicate", "unknown", "below-received", "over-pledge", "spent", "wrong-category", "over-received", "over-expense"}
+
+
+@pytest.mark.parametrize("path,fx", FUNDING, ids=[p.stem for p, _ in FUNDING])
+def test_funding_expectations_match_the_oracle(path, fx):
+    assert fx["expect"] == funding_oracle.expected(fx)
+    assert path.read_text() == funding_oracle.dump(fx), "fixture is not in canonical JSON form"
+    # The invariants, whatever the story: integer cents, pledged >= received >= spent >= 0, and a category's mix is the
+    # sum of its pledges.
+    for p in fx["expect"]["pledges"]:
+        assert all(type(p[k]) is int for k in ("pledgedCents", "receivedCents", "spentCents", "outstandingCents", "unspentCents"))
+        assert p["pledgedCents"] >= p["receivedCents"] >= p["spentCents"] >= 0
+        assert p["outstandingCents"] == p["pledgedCents"] - p["receivedCents"]
+        assert p["unspentCents"] == p["receivedCents"] - p["spentCents"]
+    for c in fx["expect"]["categories"]:
+        for k in ("pledgedCents", "receivedCents", "spentCents"):
+            assert c[k] == sum(p[k] for p in c["pledges"])
+
+
+def test_funding_two_funders_by_hand():
+    # A $10,000.00 venue spend: the Vales pay $7,000.00, the Ashbys $3,000.00 (a cent more is refused); the couple pays nothing more.
+    fx = next(f for p, f in FUNDING if p.stem == "05-two-funders-one-spend")
+    assert [s.get("code", "ok") for s in fx["expect"]["steps"]][-2:] == ["over-expense", "ok"]
+    venue = fx["expect"]["categories"][0]
+    assert (venue["pledgedCents"], venue["receivedCents"], venue["spentCents"]) == (1_200_000, 1_200_000, 1_000_000)
+
+
+# --- thanks: the thank-you obligation ledger's aging (P1-3) ------------------------------------------------------------
+import thanks_oracle
+
+THANKS = thanks_oracle.load()
+
+
+def test_there_are_thanks_fixtures():
+    assert len(THANKS) >= 7
+    buckets = {o["bucket"] for _, fx in THANKS for o in fx["expect"]["owed"]}
+    assert buckets == {"fresh", "weeks", "late", "later"}
+    assert {o["source"] for _, fx in THANKS for o in fx["obligations"]} == {"pooled", "claimed", "logged"}
+
+
+@pytest.mark.parametrize("path,fx", THANKS, ids=[p.stem for p, _ in THANKS])
+def test_thanks_expectations_match_the_oracle(path, fx):
+    assert fx["expect"] == thanks_oracle.expected(fx)
+    assert path.read_text() == thanks_oracle.dump(fx), "fixture is not in canonical JSON form"
+    e = fx["expect"]
+    # Whatever the story: every obligation is either owed or thanked, the buckets add up to what is owed, no age is
+    # negative, and nothing in the ledger is an amount of money.
+    assert len(e["owed"]) + len(e["thanked"]) == e["total"] == len(fx["obligations"])
+    assert sum(b["count"] for b in e["buckets"]) == len(e["owed"])
+    assert all(o["ageDays"] >= 0 for o in e["owed"])
+    assert e["overdue"] == sum(1 for o in e["owed"] if o["ageDays"] > 21)
+    assert not any("cents" in k.lower() or "amount" in k.lower() for o in fx["obligations"] for k in o)
+
+
+def test_thanks_the_prd_headline_by_hand():
+    fx = next(f for p, f in THANKS if p.stem == "05-fourteen-unthanked")
+    assert fx["expect"]["headline"] == "14 unthanked > 3 weeks"
+    # The bucket edges: 6 days is under a week, 7 is not; 21 is not "over 3 weeks", 22 is; 42 is "3 to 6", 43 is over 6.
+    edges = next(f for p, f in THANKS if p.stem == "02-bucket-edges")["expect"]["owed"]
+    assert [(o["ageDays"], o["bucket"], o["overdue"]) for o in edges] == [(43, "later", True), (42, "late", True), (22, "late", True), (21, "weeks", False), (7, "weeks", False), (6, "fresh", False), (0, "fresh", False)]
+
+
+# --- namechange: the name-change sequence's order and gating (P1-4) ----------------------------------------------------
+import namechange_oracle
+
+NAME_RULES = namechange_oracle.load_rules()
+NAME_FIXTURES = namechange_oracle.load()
+
+
+def test_the_rules_files_are_in_an_order_that_works():
+    assert set(NAME_RULES) == {"generic", "us-ca", "us-ny", "us-tx"}
+    assert [k for k, r in NAME_RULES.items() if r["fallback"]] == ["generic"]
+    for key, r in NAME_RULES.items():
+        assert r["jurisdiction"] == key
+        assert namechange_oracle.rule_problems(r) == [], key
+        # The PRD's order: federal first, accounts last.
+        assert r["steps"][0]["phase"] == "federal" and r["steps"][-1]["phase"] == "accounts", key
+        # Illustrative content: no money and no claim about how long anything takes.
+        text = json.dumps(r).lower()
+        assert "$" not in text and "fee" not in text.replace("fees or waiting times", ""), key
+        assert "business day" not in text and "weeks" not in text, key
+
+
+def test_the_oracle_catches_a_broken_order():
+    r = json.loads(json.dumps(NAME_RULES["generic"]))
+    r["steps"].insert(0, r["steps"].pop(1))  # the state step before the federal one it waits for
+    problems = namechange_oracle.rule_problems(r)
+    assert any("not earlier" in p for p in problems) and any("phase goes backwards" in p for p in problems)
+
+
+def test_there_are_namechange_fixtures():
+    assert len(NAME_FIXTURES) >= 8
+    codes = {o["code"] for _, fx in NAME_FIXTURES for o in fx["expect"]["outcomes"] if not o["ok"]}
+    assert {"prerequisites", "artifacts", "not-produced", "produced-held", "dependents", "in-use"} <= codes
+    assert {fx["rules"] for _, fx in NAME_FIXTURES} >= {"generic", "us-ca", "us-ny"}
+
+
+@pytest.mark.parametrize("path,fx", NAME_FIXTURES, ids=[p.stem for p, _ in NAME_FIXTURES])
+def test_namechange_expectations_match_the_oracle(path, fx):
+    assert fx["expect"] == namechange_oracle.expected(fx, NAME_RULES)
+    assert path.read_text() == namechange_oracle.dump(fx), "fixture is not in canonical JSON form"
+    # Whatever the story, the gating's three facts hold where it ends.
+    assert fx["expect"]["invariants"] == []
+
+
+def test_namechange_gating_by_hand():
+    # Nothing held, nothing done: the federal step is refused for both documents, and nothing can start.
+    r = NAME_RULES["generic"]
+    assert namechange_oracle.answer(r, {}, set(), "start", "ssa") == {"ok": False, "code": "artifacts", "keys": ["marriage-certificate", "proof-of-identity"]}
+    assert namechange_oracle.answer(r, {}, {"marriage-certificate", "proof-of-identity"}, "start", "dmv") == {"ok": False, "code": "prerequisites", "keys": ["ssa"]}
+
+
+# --- seating: generate, score, repair (P1-5) -----------------------------------------------------------------------------
+from collections import Counter
+
+import seating_oracle
+
+SEATING = seating_oracle.load()
+
+
+def test_there_are_seating_fixtures():
+    assert len(SEATING) >= 10
+    claims = Counter(fx["claim"] for _, fx in SEATING)
+    assert claims["optimal"] >= 6 and claims["infeasible"] >= 3 and claims["unsolved"] >= 1
+    codes = {r["code"] for _, fx in SEATING for r in fx["expect"]["reasons"]}
+    assert {"capacity", "group-too-big", "apart-in-group", "locked-apart"} <= codes
+    assert any(fx["locked"] for _, fx in SEATING)
+
+
+@pytest.mark.parametrize("path,fx", SEATING, ids=[p.stem for p, _ in SEATING])
+def test_seating_expectations_match_the_oracle(path, fx):
+    assert path.read_text() == seating_oracle.dump(fx), "fixture is not in canonical JSON form"
+    e = fx["expect"]
+    best = seating_oracle.brute(fx)
+    if fx["claim"] == "infeasible":
+        # Reported, not half-made: no seats, no score, at least one reason; and truly nothing keeps every hard rule.
+        assert e["status"] == "infeasible" and e["seats"] == {} and e["score"] is None and e["reasons"]
+        assert best["hard"] > 0
+        return
+    # A seating: every seat at a real table, no table over capacity, every lock kept, and the score the engine reports
+    # is the score the oracle computes from the seats alone.
+    assert seating_oracle.problems(fx, e["seats"]) == []
+    s = seating_oracle.score(fx, e["seats"])
+    assert {k: e["score"][k] for k in ("hard", "soft", "total")} == s
+    assert sum(v["count"] for v in e["score"]["violations"] if v["hard"]) == s["hard"]
+    if fx["claim"] == "optimal":
+        assert e["status"] == "ok" and set(e["seats"]) == {g["id"] for g in fx["guests"]}
+        assert s["total"] == best["total"], f"engine {s['total']}, best possible {best['total']}"
+    else:  # unsolved: the search kept no seating that breaks a hard rule quietly, and brute force proves none exists
+        assert e["status"] == "unsolved" and s["hard"] > 0 and best["hard"] > 0
+        assert all(v["hard"] for v in e["score"]["violations"] if v["code"] in ("apart", "together") and v["guests"])
+
+
+def test_seating_score_by_hand():
+    fx = next(f for p, f in SEATING if p.stem == "11-soft-apart-beats-household")
+    # Ben and Cy together: the soft "apart" wish is broken (3), and here Priya and Raj are split (2). Ben and Cy apart:
+    # their household loses one member (2), and nothing else is broken.
+    together = {"ben": "t1", "cy": "t1", "hal": "t2", "io": "t2", "priya": "t1", "raj": "t2"}
+    apart = {"ben": "t1", "cy": "t2", "hal": "t2", "io": "t2", "priya": "t1", "raj": "t1"}
+    assert seating_oracle.score(fx, together) == {"hard": 0, "soft": 3 + 2, "total": 5}
+    assert seating_oracle.score(fx, apart) == {"hard": 0, "soft": 2, "total": 2}
+    # A guest with no seat and a table over capacity are each hard.
+    assert seating_oracle.score(fx, {"ben": "t1", "cy": "t1", "hal": "t1", "io": "t1"})["hard"] == 1 + 2

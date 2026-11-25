@@ -42,6 +42,15 @@ const config: NextConfig = {
         { key: 'Cache-Control', value: 'private, no-store, max-age=0' },
       ],
     },
+    // Knotwork vendor read-only links (D-42, rule 3, INV-07): the same three headers; this token is in the URL too.
+    {
+      source: '/v/:path*',
+      headers: [
+        { key: 'Referrer-Policy', value: 'no-referrer' },
+        { key: 'X-Robots-Tag', value: 'noindex, nofollow' },
+        { key: 'Cache-Control', value: 'private, no-store, max-age=0' },
+      ],
+    },
   ],
 };
 

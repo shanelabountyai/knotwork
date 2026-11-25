@@ -1,0 +1,85 @@
+{
+  "name": "06-release-while-in-use",
+  "note": "A document a step in progress still needs cannot be given up; once that step is done, it can.",
+  "rules": "generic",
+  "weddingDate": "2027-10-09",
+  "ops": [
+    {
+      "op": "hold",
+      "key": "marriage-certificate"
+    },
+    {
+      "op": "hold",
+      "key": "proof-of-identity"
+    },
+    {
+      "op": "start",
+      "key": "ssa"
+    },
+    {
+      "op": "release",
+      "key": "marriage-certificate"
+    },
+    {
+      "op": "finish",
+      "key": "ssa"
+    },
+    {
+      "op": "release",
+      "key": "marriage-certificate"
+    },
+    {
+      "op": "hold",
+      "key": "marriage-certificate"
+    }
+  ],
+  "expect": {
+    "outcomes": [
+      {
+        "ok": true
+      },
+      {
+        "ok": true
+      },
+      {
+        "ok": true
+      },
+      {
+        "ok": false,
+        "code": "in-use",
+        "keys": [
+          "ssa"
+        ]
+      },
+      {
+        "ok": true
+      },
+      {
+        "ok": true
+      },
+      {
+        "ok": true
+      }
+    ],
+    "final": {
+      "steps": {
+        "ssa": "done"
+      },
+      "held": [
+        "marriage-certificate",
+        "proof-of-identity"
+      ]
+    },
+    "invariants": [],
+    "next": [],
+    "from": {
+      "ssa": "2027-10-16",
+      "dmv": "2027-10-23",
+      "vehicle": "2027-10-23",
+      "passport": "2027-10-30",
+      "employer": "2027-10-23",
+      "bank": "2027-10-30",
+      "other-accounts": "2027-11-06"
+    }
+  }
+}

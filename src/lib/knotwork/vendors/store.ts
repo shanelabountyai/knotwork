@@ -11,6 +11,7 @@ import { addDays, dayOfDb, showDay } from '../days';
 import { loadSchedule, syncRsvpTask } from '../schedule/store';
 import { rollups } from '../guests/headcount';
 import { loadGuestState } from '../guests/store';
+import { nobodyLens } from '../secrecy/seal';
 import { renderBrief, type BriefInput, type VendorCategory } from './brief';
 import { flagForScopeChange, hhmm, scopeChanges, type ScopeChange, type VendorScope } from './scope';
 
@@ -69,6 +70,7 @@ export async function briefInput(tx: Tx, ctx: { orgId: string }, vendorId: strin
   const wedding = await requireWedding(tx, ctx);
   const v = await tx.vendor.findFirstOrThrow({ where: { id: vendorId, ...inOrg(ctx) }, include: { payments: true, flags: { where: { ackAt: null }, orderBy: { raisedAt: 'asc' } } } });
   const { rows, schedule } = await loadSchedule(tx, ctx, wedding);
+  const L = await nobodyLens(tx, ctx.orgId); // a brief is shared (and, from D-42, the vendor's own): no private task in it
   const date = weddingDay(wedding);
   // Phase 2: counts from the guest engine, only once there is a guest list. Counts and song titles, never a name.
   const gs = await loadGuestState(tx, ctx);
@@ -82,7 +84,7 @@ export async function briefInput(tx: Tx, ctx: { orgId: string }, vendorId: strin
       contractTotalCents: v.contractTotalCents, contractSignedOn: v.contractSignedOn ? dayOfDb(v.contractSignedOn) : null,
     },
     payments: v.payments.map((p) => ({ label: p.label, amountCents: p.amountCents, due: addDays(date, -p.dueDaysBefore), paidOn: p.paidOn ? dayOfDb(p.paidOn) : null })),
-    tasks: rows.filter((t) => t.vendorId === vendorId && t.kind !== 'payment').map((t) => ({ title: t.title, due: schedule.tasks[t.id]!.due, state: schedule.tasks[t.id]!.state })),
+    tasks: rows.filter((t) => t.vendorId === vendorId && t.kind !== 'payment' && !L?.task(t).hidden).map((t) => ({ title: t.title, due: schedule.tasks[t.id]!.due, state: schedule.tasks[t.id]!.state })),
     openFlags: v.flags.map((f) => ({ reason: f.reason, raisedOn: todayOfDate(f.raisedAt, wedding.timeZone), text: flagText(f.reason, f.detail) })),
     ...(gs.rows.length || doNotPlay.length ? { guests: { attending: gs.count.attending, adults: gs.count.adults, kids: gs.count.kids, infants: gs.count.infants, vendorMeals: gs.count.vendorMeals, catererMeals: gs.count.catererMeals, meals: roll.meals, dietary: roll.dietary, accessibility: roll.accessibility, songs: roll.songs, doNotPlay } } : {}),
   };

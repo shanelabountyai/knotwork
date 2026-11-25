@@ -10,6 +10,10 @@ import { wallFeed } from '@/lib/knotwork/photos/store';
 import { inspect } from '@/lib/knotwork/uploads/inspect';
 import { addDays, dayOfDb, todayIn } from '@/lib/knotwork/days';
 import { loadSchedule } from '@/lib/knotwork/schedule/store';
+import { loadLinks } from '@/lib/knotwork/registry/store';
+import { loadSeating } from '@/lib/knotwork/seating/store';
+import { ledger } from '@/lib/knotwork/thanks/aging';
+import { loadObligations } from '@/lib/knotwork/thanks/store';
 import { COUPLE, seedCouple } from '../../scripts/knotwork/seed-couple';
 import { resetAuthTables } from '../helpers/auth';
 
@@ -25,15 +29,16 @@ beforeAll(async () => {
 });
 
 describe('seed:couple', () => {
-  it('makes exactly one workspace with two partners and one helper, all synthetic demo accounts', async () => {
+  it('makes exactly one workspace with two partners and two helpers, all synthetic demo accounts', async () => {
     expect(await db.org.count()).toBe(1);
     const members = await db.membership.findMany({ where: { orgId }, include: { user: true }, orderBy: { user: { email: 'asc' } } });
     expect(members.map((m) => [m.user.email, m.role, m.user.isDemo])).toEqual([
+      ['hazel@knotwork.demo.test', 'member', true], // Phase 4: a funder (P1-2)
       ['juniper@knotwork.demo.test', 'owner', true],
       ['maple@knotwork.demo.test', 'member', true],
       ['rowan@knotwork.demo.test', 'owner', true],
     ]);
-    expect(await db.user.count()).toBe(3);
+    expect(await db.user.count()).toBe(4);
     for (const m of members) expect(m.user.email.endsWith('.demo.test')).toBe(true); // a reserved test domain, never a real address
     // The accounts sign in only while DEMO_MODE=1 (INV-27's rule, applied to these three).
     expect(await demoSignIn(members[0]!.userId, { DEMO_MODE: undefined })).toBeNull();
@@ -65,10 +70,10 @@ describe('seed:couple', () => {
     expect(big[0]!.request).toMatchObject({ kind: 'spend', status: 'approved' });
   });
 
-  it('the budget adds up: $31,000.00 estimated, $2,150.00 spent', async () => {
+  it('the budget adds up: $31,000.00 estimated, $2,330.00 spent (one spend private to Juniper)', async () => {
     const b = await withOrg({ orgId }, (tx) => loadBudget(tx, { orgId }));
     expect(b.estimateCents).toBe(950_000 + 1_200_000 + 300_000 + 250_000 + 400_000);
-    expect(b.actualCents).toBe(200_000 + 15_000);
+    expect(b.actualCents).toBe(200_000 + 15_000 + 18_000); // Phase 4: the private cufflinks count in the total
     expect(b.lines.map((l) => l.name)).toEqual(['Attire', 'Catering', 'Flowers', 'Music', 'Venue']);
   });
 
@@ -95,6 +100,17 @@ describe('seed:couple', () => {
     expect(await db.giftEntry.count({ where: { orgId } })).toBe(5);
   });
 
+  it('P1-8 and P1-3: two store items, one skillet bought by the Ashbys, and a thank-you ledger reading "2 unthanked > 3 weeks"', async () => {
+    const links = await withOrg({ orgId }, (tx) => loadLinks(tx, { orgId }));
+    expect(links.map((l) => [l.title, l.link?.host, l.claimed, l.quantityWanted, l.claimants])).toEqual([['Cast-iron skillet', 'www.example.com', 1, 2, ['The Ashbys']], ['Linen napkins', 'shop.example.net', 0, 1, []]]);
+    const book = ledger(await withOrg({ orgId }, (tx) => loadObligations(tx, { orgId })), today());
+    expect(book.headline).toBe('2 unthanked > 3 weeks');
+    expect(book.owed.map((o) => [o.source, o.giver, o.ageDays])).toEqual([
+      ['logged', 'Great-aunt Odile', 35], ['logged', 'The Lindqvists', 24], ['pooled', 'Priya Rao', 0], ['claimed', 'The Ashbys', 0], ['pooled', 'The Vales', 0],
+    ]);
+    expect(book.thanked.map((o) => [o.giver, o.what])).toEqual([['Uncle Bram', 'a framed print of the river']]);
+  });
+
   it('the photo wall has one pre-moderated event with three approved photos and one waiting, every stored byte clean', async () => {
     const event = await db.photoEvent.findFirstOrThrow({ where: { orgId } });
     expect(event).toMatchObject({ name: 'Reception', mode: 'pre', uploadsOpen: true, uploadDays: 7, retentionDays: 365 });
@@ -110,9 +126,44 @@ describe('seed:couple', () => {
     expect(await db.vendorAttachment.count({ where: { orgId } })).toBe(0);
   });
 
-  it('no vendor needs re-confirmation at the start, each has a brief, and the helper has one grant', async () => {
+  it('no vendor needs re-confirmation at the start, each has a brief, and each helper has one grant', async () => {
     expect(await db.vendorFlag.count({ where: { orgId } })).toBe(0);
     expect(await db.vendorBrief.count({ where: { orgId } })).toBe(3);
-    expect((await db.helperGrant.findMany({ where: { orgId } })).map((g) => g.scope)).toEqual(['budget_view']);
+    expect((await db.helperGrant.findMany({ where: { orgId }, orderBy: { scope: 'asc' } })).map((g) => g.scope)).toEqual(['budget_view', 'funder']); // Phase 4: Hazel's
+  });
+
+  it('Phase 4: one spend is private to Juniper until the wedding day; two funders, one linked to Hazel', async () => {
+    const secret = await db.expense.findFirstOrThrow({ where: { orgId, privateToId: { not: null } }, include: { category: true } });
+    expect(secret).toMatchObject({ description: 'Engraved cufflinks for Rowan', amountCents: 18_000, revealDays: 0 });
+    expect(secret.privateToId).toBe((await db.user.findUniqueOrThrow({ where: { email: 'juniper@knotwork.demo.test' } })).id);
+    expect(JSON.stringify((await db.auditEvent.findMany({ where: { orgId } })).map((e) => e.data))).not.toContain('cufflinks');
+    const funders = await db.funder.findMany({ where: { orgId }, include: { pledges: { include: { receipts: true, allocations: true, category: true } } }, orderBy: { name: 'asc' } });
+    expect(funders.map((f) => [f.name, f.pledges.map((p) => [p.category.name, p.amountCents, p.receipts.reduce((n, r) => n + r.amountCents, 0), p.allocations.reduce((n, a) => n + a.amountCents, 0)])])).toEqual([
+      ['Aunt Wren Ashby', [['Catering', 150_000, 0, 0]]],
+      ['Hazel & Oren Vale', [['Venue', 500_000, 300_000, 200_000]]],
+    ]);
+    expect(funders[1]!.userId).toBe((await db.user.findUniqueOrThrow({ where: { email: 'hazel@knotwork.demo.test' } })).id);
+  });
+
+  it('Phase 4: a rain plan waits, not put into action; Juniper\'s name change follows the generic rules, private to her', async () => {
+    const plans = await db.contingencyPlan.findMany({ where: { orgId }, include: { run: true } });
+    expect(plans.map((p) => [p.title, p.run])).toEqual([['Rain plan', null]]);
+    const juniper = (await db.user.findUniqueOrThrow({ where: { email: 'juniper@knotwork.demo.test' } })).id;
+    const nc = await db.nameChange.findFirstOrThrow({ where: { orgId }, include: { steps: true, artifacts: true } });
+    expect([nc.userId, nc.jurisdiction, nc.shared, nc.steps.length, nc.artifacts.map((a) => a.artifact)]).toEqual([juniper, 'generic', false, 0, ['proof-of-identity']]);
+    const entries = (await db.auditEvent.findMany({ where: { orgId, action: { startsWith: 'knotwork.namechange.' } } })).map((e) => e.data);
+    expect(entries).toHaveLength(2);
+    for (const d of entries) expect(d).toMatchObject({ label: 'a private item', private: true });
+  });
+
+  it('Phase 4: the five guests who are coming are seated at two tables with no broken rule; the caterer has a working link', async () => {
+    const s = await withOrg({ orgId }, (tx) => loadSeating(tx, { orgId }));
+    expect(s.tables.map((t) => [t.name, t.capacity])).toEqual([['Table 1', 4], ['Table 2', 4]]);
+    expect(Object.keys(s.seats)).toHaveLength(5);
+    expect(s.score.hard).toBe(0);
+    expect(s.rules.map((r) => [r.a.name, r.b.name, r.kind, r.hard])).toEqual([['Io Ashby', 'Wren Lindqvist', 'together', false]]);
+    const caterer = await db.vendor.findFirstOrThrow({ where: { orgId, name: 'Fennel & Fig Catering' } });
+    expect(caterer.linkTokenHash).toMatch(/^[0-9a-f]{64}$/);
+    expect(await db.vendor.count({ where: { orgId, linkTokenHash: { not: null } } })).toBe(1);
   });
 });

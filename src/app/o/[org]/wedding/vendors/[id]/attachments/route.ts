@@ -1,10 +1,11 @@
 import { notFound } from 'next/navigation';
 import { NextResponse } from 'next/server';
-import { inOrg, requireOrg } from '@/core/authz/guards';
+import { requireOrg } from '@/core/authz/guards';
 import { withOrg } from '@/core/db/rls';
 import { isSameOrigin } from '@/core/http';
 import { allows } from '@/lib/knotwork/access';
 import { loadWho } from '@/lib/knotwork/context';
+import { vendorVisible } from '@/lib/knotwork/secrecy/views';
 import { receiveImage } from '@/lib/knotwork/uploads/read';
 import { addAttachment } from '@/lib/knotwork/vendors/attachments';
 
@@ -22,13 +23,13 @@ export async function POST(req: Request, { params }: { params: Promise<{ org: st
   if (!UUID.test(id)) notFound();
   await withOrg(ctx, async (tx) => {
     if (!allows(await loadWho(tx, ctx), 'vendors.edit')) notFound();
-    if (!(await tx.vendor.findFirst({ where: { id, ...inOrg(ctx) }, select: { id: true } }))) notFound();
+    if (!(await vendorVisible(tx, ctx, ctx.userId, id))) notFound(); // missing, another workspace's, or private to the other partner
   });
   const back = (query: string) => new NextResponse(null, { status: 303, headers: { Location: `/o/${ctx.slug}/wedding/vendors/${id}${query}`, 'Cache-Control': 'no-store' } });
   const got = await receiveImage(req, { field: 'file', text: ['label'] });
   if (!got.ok) return back(`?e=${got.code}#attachments`);
   const added = await withOrg(ctx, async (tx) => {
-    if (!(await tx.vendor.findFirst({ where: { id, ...inOrg(ctx) }, select: { id: true } }))) notFound();
+    if (!(await vendorVisible(tx, ctx, ctx.userId, id))) notFound();
     return addAttachment(tx, ctx, id, got.text.label ?? '', got.image);
   });
   return back(added.ok ? '?attached=1#attachments' : `?e=${added.code}#attachments`);

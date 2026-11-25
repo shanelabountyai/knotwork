@@ -1,0 +1,119 @@
+{
+  "name": "07-california-voter",
+  "note": "California's illustrative workflow adds re-registering to vote, which waits for the license and needs it in hand.",
+  "rules": "us-ca",
+  "weddingDate": "2027-10-09",
+  "ops": [
+    {
+      "op": "hold",
+      "key": "marriage-certificate"
+    },
+    {
+      "op": "hold",
+      "key": "proof-of-identity"
+    },
+    {
+      "op": "finish",
+      "key": "ssa"
+    },
+    {
+      "op": "start",
+      "key": "voter"
+    },
+    {
+      "op": "hold",
+      "key": "new-ss-card"
+    },
+    {
+      "op": "finish",
+      "key": "dmv"
+    },
+    {
+      "op": "start",
+      "key": "voter"
+    },
+    {
+      "op": "hold",
+      "key": "new-license"
+    },
+    {
+      "op": "start",
+      "key": "voter"
+    },
+    {
+      "op": "finish",
+      "key": "voter"
+    }
+  ],
+  "expect": {
+    "outcomes": [
+      {
+        "ok": true
+      },
+      {
+        "ok": true
+      },
+      {
+        "ok": true
+      },
+      {
+        "ok": false,
+        "code": "prerequisites",
+        "keys": [
+          "dmv"
+        ]
+      },
+      {
+        "ok": true
+      },
+      {
+        "ok": true
+      },
+      {
+        "ok": false,
+        "code": "artifacts",
+        "keys": [
+          "new-license"
+        ]
+      },
+      {
+        "ok": true
+      },
+      {
+        "ok": true
+      },
+      {
+        "ok": true
+      }
+    ],
+    "final": {
+      "steps": {
+        "dmv": "done",
+        "ssa": "done",
+        "voter": "done"
+      },
+      "held": [
+        "marriage-certificate",
+        "new-license",
+        "new-ss-card",
+        "proof-of-identity"
+      ]
+    },
+    "invariants": [],
+    "next": [
+      "vehicle",
+      "employer",
+      "bank"
+    ],
+    "from": {
+      "ssa": "2027-10-16",
+      "dmv": "2027-10-23",
+      "vehicle": "2027-10-23",
+      "voter": "2027-10-23",
+      "passport": "2027-10-30",
+      "employer": "2027-10-23",
+      "bank": "2027-10-30",
+      "other-accounts": "2027-11-06"
+    }
+  }
+}
