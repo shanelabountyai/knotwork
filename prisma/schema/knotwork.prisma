@@ -442,7 +442,16 @@ model GuestPlan {
   mealOptions     String[]
   /// P1-5: whether the seating chart also seats guests who have not answered yet (attending guests always are).
   seatPending     Boolean  @default(false)
+  /// Phase 5: due reminders also go out on the daily schedule (cron), not only from the button. Off by default.
+  autoReminders   Boolean  @default(false)
   updatedAt       DateTime @updatedAt @db.Timestamptz(6)
+}
+
+/// Phase 5: how a household's reminders are delivered.
+enum ReminderChannel {
+  email
+  sms
+  none
 }
 
 /// The invitation unit.
@@ -471,6 +480,12 @@ model Household {
   /// sha256 of the RSVP link token (INV-07), and a sealed copy so a reminder can carry the same link. Never exported.
   rsvpTokenHash     String?          @unique
   rsvpTokenSealed   String?
+  /// Phase 5: how reminders reach this household. sms only with a phone and an SMS consent date (the database checks).
+  remindVia         ReminderChannel  @default(email)
+  /// A date of fact: the day the household agreed to reminders by text message.
+  smsConsentOn      DateTime?        @db.Date
+  /// A date of fact: when the household stopped reminders from its own link. No reminder goes after it.
+  remindersStoppedAt DateTime?       @db.Timestamptz(6)
   createdAt         DateTime         @default(now()) @db.Timestamptz(6)
   guests            Guest[]
   chaseEvents       ChaseEvent[]
@@ -674,6 +689,20 @@ enum PhotoBlobKind {
   thumb
 }
 
+/// Phase 5 (D-135): which classifier advises the moderator on an event. none: no advice (today's behaviour).
+enum PhotoClassifier {
+  none
+  stub
+}
+
+/// A classifier's advice. ok: nothing to look at. review: shown flagged in the console. hold: under post-moderation,
+/// the photo starts in the waiting queue instead of on the wall. Advice never approves, removes or publishes.
+enum PhotoSuggestion {
+  ok
+  review
+  hold
+}
+
 /// One wall: an upload link (its sha256, and a sealed copy for the QR code), and how it is moderated.
 model PhotoEvent {
   id                String        @id @default(uuid()) @db.Uuid
@@ -689,6 +718,8 @@ model PhotoEvent {
   uploadDays        Int           @default(7)
   /// Photos are purged this many days after the wedding date (derived on read).
   retentionDays     Int           @default(365)
+  /// Phase 5 (D-135): off (none) by default.
+  classifier        PhotoClassifier @default(none)
   createdById       String?       @db.Uuid
   createdAt         DateTime      @default(now()) @db.Timestamptz(6)
   photos            Photo[]
@@ -737,6 +768,10 @@ model Photo {
   createdAt       DateTime     @default(now()) @db.Timestamptz(6)
   /// A date of fact: when the retention purge deleted this photo's bytes.
   purgedAt        DateTime?    @db.Timestamptz(6)
+  /// Phase 5 (D-135): the classifier's advice at ingest (null: none ran), why, and its labels with scores.
+  suggestion       PhotoSuggestion?
+  suggestionReason String       @default("")
+  suggestionLabels Json?
   blobs           PhotoBlob[]
 
   @@index([orgId])

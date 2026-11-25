@@ -58,3 +58,13 @@ export async function processUpload(raw: Uint8Array): Promise<ProcessResult> {
     return { ok: false, code: 'unreadable' };
   }
 }
+
+/**
+ * Grey-level statistics of a processed image's thumbnail, for the photo classifier's local stub (D-135). Here so sharp
+ * stays in the pipeline alone: it reads a rendition this file made (never the upload), and writes nothing.
+ */
+export async function greyStats(image: Processed): Promise<{ mean: number; stdev: number; entropy: number }> {
+  const stats = await sharp(image.renditions.thumb.bytes, { limitInputPixels: MAX_PIXELS, failOn: 'error' }).greyscale().stats();
+  const grey = stats.channels[0]!;
+  return { mean: grey.mean, stdev: grey.stdev, entropy: stats.entropy };
+}

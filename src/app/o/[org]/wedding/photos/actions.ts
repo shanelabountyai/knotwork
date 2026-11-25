@@ -7,6 +7,7 @@ import { withOrg, type Tx } from '@/core/db/rls';
 import { Refused } from '@/core/errors';
 import { loadWho, need, requireWedding } from '@/lib/knotwork/context';
 import { EVENT_DEFAULTS } from '@/lib/knotwork/photos/dates';
+import { CLASSIFIERS } from '@/lib/knotwork/photos/classifier';
 import { ACTIONS, MODES } from '@/lib/knotwork/photos/moderation';
 import { createEvent, moderatePhoto as moderateRow, purgeExpired, replaceLink, setDeviceBlocked, setHidden, setUploadsOpen, updateEvent } from '@/lib/knotwork/photos/store';
 
@@ -25,7 +26,7 @@ const days = (fallback: number) =>
     if (!Number.isInteger(n)) c.addIssue({ code: 'custom', message: 'Days: a whole number.' });
     return n;
   });
-const eventFields = { name: z.string().trim().min(1, 'A name is required.').max(80, 'That name is too long.'), mode: z.enum(MODES).default('post'), uploadDays: days(EVENT_DEFAULTS.uploadDays), retentionDays: days(EVENT_DEFAULTS.retentionDays) };
+const eventFields = { name: z.string().trim().min(1, 'A name is required.').max(80, 'That name is too long.'), mode: z.enum(MODES).default('post'), uploadDays: days(EVENT_DEFAULTS.uploadDays), retentionDays: days(EVENT_DEFAULTS.retentionDays), classifier: z.enum(CLASSIFIERS).default('none') };
 
 const eventIn = async (tx: Tx, ctx: OrgCtx, id: string) => (await tx.photoEvent.findFirst({ where: { id, ...inOrg(ctx) }, select: { id: true } })) ?? notFound();
 const photoIn = async (tx: Tx, ctx: OrgCtx, id: string) => (await tx.photo.findFirst({ where: { id, ...inOrg(ctx) }, select: { id: true, eventId: true } })) ?? notFound();
@@ -43,7 +44,7 @@ export const updatePhotoEvent = orgAction(null, z.object({ id: ref('photoEvent')
   await withOrg(ctx, async (tx) => {
     need(await loadWho(tx, ctx), 'photos.manage');
     await eventIn(tx, ctx, i.id);
-    await updateEvent(tx, ctx, i.id, { name: i.name, mode: i.mode, uploadDays: i.uploadDays, retentionDays: i.retentionDays });
+    await updateEvent(tx, ctx, i.id, { name: i.name, mode: i.mode, uploadDays: i.uploadDays, retentionDays: i.retentionDays, classifier: i.classifier });
   });
   redirect(page(ctx, `/${i.id}`));
 });

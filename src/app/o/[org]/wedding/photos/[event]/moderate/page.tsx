@@ -7,6 +7,7 @@ import { NoWedding, WeddingNav } from '../../../bits';
 import { view } from '../../../view';
 import { moderatePhoto, setPhotoDeviceBlocked, setPhotoHidden } from '../../actions';
 import { PhotoNav, UUID } from '../../nav';
+import { CLASSIFIER_TEXT, SUGGESTION_TEXT } from '@/lib/knotwork/photos/classifier';
 
 export const metadata = { title: 'Moderate photos' };
 export const dynamic = 'force-dynamic';
@@ -20,7 +21,7 @@ export default async function Moderate({ params }: { params: Promise<{ org: stri
   const { event: id } = await params;
   if (!UUID.test(id)) notFound();
   const data = await view(ctx, 'photos.view', async (tx) => {
-    const event = await tx.photoEvent.findFirst({ where: { id, ...inOrg(ctx) }, select: { id: true, name: true, mode: true } });
+    const event = await tx.photoEvent.findFirst({ where: { id, ...inOrg(ctx) }, select: { id: true, name: true, mode: true, classifier: true } });
     return { event, console: event ? await loadConsole(tx, ctx, id) : null };
   });
   if (!data) return <NoWedding slug={ctx.slug} />;
@@ -55,6 +56,7 @@ export default async function Moderate({ params }: { params: Promise<{ org: stri
       <img src={src(p)} alt={p.caption || `Photo from ${p.uploaderName || 'a guest'}`} width={120} loading="lazy" />
       <div>
         <p>{p.uploaderName || 'No name'}{p.caption && <>: {p.caption}</>} <small>(device {p.device}, {p.width}×{p.height})</small></p>
+        {p.suggestion && p.suggestion !== 'ok' && <p aria-label={`Suggestion for ${what(p)}`}><strong>Suggestion: {SUGGESTION_TEXT[p.suggestion]}.</strong> {p.suggestionReason} <small>(advice only; you decide)</small></p>}
         {can && children}
       </div>
     </li>
@@ -65,6 +67,7 @@ export default async function Moderate({ params }: { params: Promise<{ org: stri
       <PhotoNav slug={ctx.slug} event={event} />
       <h1>Moderate: {event.name}</h1>
       <p>{event.mode === 'pre' ? 'Each new photo waits here until someone approves it.' : 'New photos go on the wall at once. Take down what should not be there; a takedown can be undone.'}</p>
+      {event.classifier !== 'none' && <p>Suggestions are on ({CLASSIFIER_TEXT[event.classifier]}). A suggestion is advice: it can hold a new photo here for a decision, and never approves, removes or publishes one.</p>}
 
       <section aria-label="Waiting">
         <h2>Waiting ({c.queue.length})</h2>
