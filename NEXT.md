@@ -54,7 +54,7 @@ secrecy. Synthetic data only. No PR opened yet for `phase-4`.
   template's action harness (`tests/invariants/inv-01-04-22-actions.test.ts`, "passes INV-01/02/03/04/22") ran past its
   fixed 180-second budget, with RLS off and enforced: the server actions grew from 79 (main) to 123, and each check
   truncates every table. An uncommitted copy with no time limit passed every assertion in 229.6 s. The test is
-  template-owned and its budget is not changed (D-131). CI is the judge: the same test took 31 s there on PR #2.
+  template-owned and its budget is not changed (D-131). CI is the judge: the same test took 31 s there on PR #2. **CI at `aca9081`: 149.5 s, passing, 30 s of headroom (D-133).**
 - **You:** review the Phase 4 draft PR; answer what you care about above.
 
 ## ▶ 2026-11-24 (latest): PR #2 and PR #3 merged; Knotwork Phase 3 built (branch `phase-3`, draft PR, not merged, not deployed)
