@@ -411,3 +411,36 @@ def test_seating_score_by_hand():
     assert seating_oracle.score(fx, apart) == {"hard": 0, "soft": 2, "total": 2}
     # A guest with no seat and a table over capacity are each hard.
     assert seating_oracle.score(fx, {"ben": "t1", "cy": "t1", "hal": "t1", "io": "t1"})["hard"] == 1 + 2
+
+
+# --- lifeadmin: anniversaries and recurring household tasks (Phase 5, life-admin mode) -------------------------------
+import recurrence_oracle
+
+LIFE = recurrence_oracle.load()
+
+
+def test_there_are_lifeadmin_fixtures():
+    assert len(LIFE) >= 9
+    states = {t["state"] for _, fx in LIFE for t in fx["expect"]["tasks"]}
+    assert states == {"overdue", "today", "soon", "later"}
+    units = {t["rule"]["unit"] for _, fx in LIFE for t in fx["tasks"]}
+    assert units == {"day", "week", "month", "anniversary"}
+
+
+@pytest.mark.parametrize("path,fx", LIFE, ids=[p.stem for p, _ in LIFE])
+def test_lifeadmin_expectations_match_the_oracle(path, fx):
+    assert fx["expect"] == recurrence_oracle.expected(fx)
+    assert path.read_text() == recurrence_oracle.dump(fx), "fixture is not in canonical JSON form"
+    # Rule 1 extended: a task's input is a rule and days it was done; nothing in it is a due date.
+    assert all(set(t) == {"id", "rule", "done"} for t in fx["tasks"])
+
+
+def test_lifeadmin_the_edges_by_hand():
+    months = next(f for p, f in LIFE if p.stem == "01-month-ends")["expect"]["months"]
+    assert months[:2] == ["2027-02-28", "2028-02-29"]  # Jan 31 + 1 month, in a common and a leap year
+    leap = next(f for p, f in LIFE if p.stem == "02-leap-day-wedding")["expect"]["anniversary"]
+    assert (leap["label"], leap["day"]) == ("1st anniversary", "2029-02-28")
+    assert next(f for p, f in LIFE if p.stem == "03-leap-day-in-a-leap-year")["expect"]["anniversary"]["day"] == "2032-02-29"
+    # Across both daylight-saving changes, today is the day on the wall clock in Chicago.
+    assert next(f for p, f in LIFE if p.stem == "04-daylight-saving-spring")["expect"]["today"] == "2027-03-15"
+    assert next(f for p, f in LIFE if p.stem == "05-daylight-saving-autumn")["expect"]["today"] == "2027-11-07"

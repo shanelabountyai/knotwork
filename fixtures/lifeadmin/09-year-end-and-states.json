@@ -1,0 +1,118 @@
+{
+  "name": "09-year-end-and-states",
+  "note": "Across a year end, and each state: overdue, due today, soon (within 7 days) and later.",
+  "weddingDate": "2026-12-30",
+  "timeZone": "America/Chicago",
+  "at": "2028-01-02T18:00:00Z",
+  "tasks": [
+    {
+      "id": "two-weeks",
+      "rule": {
+        "unit": "week",
+        "every": 2
+      },
+      "done": [
+        "2027-12-25"
+      ]
+    },
+    {
+      "id": "overdue",
+      "rule": {
+        "unit": "day",
+        "every": 30
+      },
+      "done": [
+        "2027-11-20"
+      ]
+    },
+    {
+      "id": "today",
+      "rule": {
+        "unit": "day",
+        "every": 7
+      },
+      "done": [
+        "2027-12-26"
+      ]
+    },
+    {
+      "id": "later",
+      "rule": {
+        "unit": "month",
+        "every": 2
+      },
+      "done": [
+        "2027-12-30"
+      ]
+    },
+    {
+      "id": "dinner",
+      "rule": {
+        "unit": "anniversary",
+        "every": 1
+      },
+      "done": [
+        "2027-12-30"
+      ]
+    }
+  ],
+  "months": [],
+  "expect": {
+    "today": "2028-01-02",
+    "anniversary": {
+      "k": 2,
+      "day": "2028-12-30",
+      "inDays": 363,
+      "today": false,
+      "label": "2nd anniversary"
+    },
+    "tasks": [
+      {
+        "id": "two-weeks",
+        "rule": "every 2 weeks",
+        "due": "2028-01-08",
+        "never": false,
+        "lastDone": "2027-12-25",
+        "state": "soon",
+        "overdueDays": -6
+      },
+      {
+        "id": "overdue",
+        "rule": "every 30 days",
+        "due": "2027-12-20",
+        "never": false,
+        "lastDone": "2027-11-20",
+        "state": "overdue",
+        "overdueDays": 13
+      },
+      {
+        "id": "today",
+        "rule": "every 7 days",
+        "due": "2028-01-02",
+        "never": false,
+        "lastDone": "2027-12-26",
+        "state": "today",
+        "overdueDays": 0
+      },
+      {
+        "id": "later",
+        "rule": "every 2 months",
+        "due": "2028-02-29",
+        "never": false,
+        "lastDone": "2027-12-30",
+        "state": "later",
+        "overdueDays": -58
+      },
+      {
+        "id": "dinner",
+        "rule": "every year, on the anniversary",
+        "due": "2028-12-30",
+        "never": false,
+        "lastDone": "2027-12-30",
+        "state": "later",
+        "overdueDays": -363
+      }
+    ],
+    "months": []
+  }
+}

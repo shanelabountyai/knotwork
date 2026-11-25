@@ -1,0 +1,42 @@
+{
+  "name": "03-leap-day-in-a-leap-year",
+  "note": "The same Feb 29 wedding four years on: the 4th anniversary is Feb 29 again, and today is that day.",
+  "weddingDate": "2028-02-29",
+  "timeZone": "America/Chicago",
+  "at": "2032-02-29T18:00:00Z",
+  "tasks": [
+    {
+      "id": "dinner",
+      "rule": {
+        "unit": "anniversary",
+        "every": 1
+      },
+      "done": [
+        "2031-02-28"
+      ]
+    }
+  ],
+  "months": [],
+  "expect": {
+    "today": "2032-02-29",
+    "anniversary": {
+      "k": 4,
+      "day": "2032-02-29",
+      "inDays": 0,
+      "today": true,
+      "label": "4th anniversary"
+    },
+    "tasks": [
+      {
+        "id": "dinner",
+        "rule": "every year, on the anniversary",
+        "due": "2032-02-29",
+        "never": false,
+        "lastDone": "2031-02-28",
+        "state": "today",
+        "overdueDays": 0
+      }
+    ],
+    "months": []
+  }
+}

@@ -1,0 +1,80 @@
+{
+  "name": "04-daylight-saving-spring",
+  "note": "At 05:30 UTC on Mar 15, 2027 it is already 00:30 on the 15th in Chicago (clocks went forward on the 14th; at the winter offset it would still be the 14th). A weekly task done on the 8th is due today, not tomorrow.",
+  "weddingDate": "2026-10-10",
+  "timeZone": "America/Chicago",
+  "at": "2027-03-15T05:30:00Z",
+  "tasks": [
+    {
+      "id": "bins",
+      "rule": {
+        "unit": "week",
+        "every": 1
+      },
+      "done": [
+        "2027-03-08"
+      ]
+    },
+    {
+      "id": "plants",
+      "rule": {
+        "unit": "day",
+        "every": 3
+      },
+      "done": [
+        "2027-03-12"
+      ]
+    },
+    {
+      "id": "filter",
+      "rule": {
+        "unit": "day",
+        "every": 1
+      },
+      "done": [
+        "2027-03-13"
+      ]
+    }
+  ],
+  "months": [],
+  "expect": {
+    "today": "2027-03-15",
+    "anniversary": {
+      "k": 1,
+      "day": "2027-10-10",
+      "inDays": 209,
+      "today": false,
+      "label": "1st anniversary"
+    },
+    "tasks": [
+      {
+        "id": "bins",
+        "rule": "every week",
+        "due": "2027-03-15",
+        "never": false,
+        "lastDone": "2027-03-08",
+        "state": "today",
+        "overdueDays": 0
+      },
+      {
+        "id": "plants",
+        "rule": "every 3 days",
+        "due": "2027-03-15",
+        "never": false,
+        "lastDone": "2027-03-12",
+        "state": "today",
+        "overdueDays": 0
+      },
+      {
+        "id": "filter",
+        "rule": "every day",
+        "due": "2027-03-14",
+        "never": false,
+        "lastDone": "2027-03-13",
+        "state": "overdue",
+        "overdueDays": 1
+      }
+    ],
+    "months": []
+  }
+}

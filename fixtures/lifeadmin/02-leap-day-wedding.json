@@ -1,0 +1,81 @@
+{
+  "name": "02-leap-day-wedding",
+  "note": "A wedding on Feb 29 is remembered on Feb 28 in other years and on Feb 29 in leap years; the anniversary task follows it.",
+  "weddingDate": "2028-02-29",
+  "timeZone": "America/Chicago",
+  "at": "2029-02-20T18:00:00Z",
+  "tasks": [
+    {
+      "id": "dinner",
+      "rule": {
+        "unit": "anniversary",
+        "every": 1
+      },
+      "done": []
+    },
+    {
+      "id": "dinner-done-2029",
+      "rule": {
+        "unit": "anniversary",
+        "every": 1
+      },
+      "done": [
+        "2029-02-18"
+      ]
+    }
+  ],
+  "months": [
+    {
+      "from": "2028-02-29",
+      "n": 12
+    },
+    {
+      "from": "2028-02-29",
+      "n": 24
+    },
+    {
+      "from": "2028-02-29",
+      "n": 36
+    },
+    {
+      "from": "2028-02-29",
+      "n": 48
+    }
+  ],
+  "expect": {
+    "today": "2029-02-20",
+    "anniversary": {
+      "k": 1,
+      "day": "2029-02-28",
+      "inDays": 8,
+      "today": false,
+      "label": "1st anniversary"
+    },
+    "tasks": [
+      {
+        "id": "dinner",
+        "rule": "every year, on the anniversary",
+        "due": "2029-02-28",
+        "never": true,
+        "lastDone": null,
+        "state": "later",
+        "overdueDays": -8
+      },
+      {
+        "id": "dinner-done-2029",
+        "rule": "every year, on the anniversary",
+        "due": "2030-02-28",
+        "never": false,
+        "lastDone": "2029-02-18",
+        "state": "later",
+        "overdueDays": -373
+      }
+    ],
+    "months": [
+      "2029-02-28",
+      "2030-02-28",
+      "2031-02-28",
+      "2032-02-29"
+    ]
+  }
+}

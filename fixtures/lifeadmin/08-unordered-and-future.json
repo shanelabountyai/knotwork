@@ -1,0 +1,65 @@
+{
+  "name": "08-unordered-and-future",
+  "note": "The log may come in any order with repeats; a day after today is not a fact yet and is ignored.",
+  "weddingDate": "2026-05-01",
+  "timeZone": "America/New_York",
+  "at": "2027-04-15T16:00:00Z",
+  "tasks": [
+    {
+      "id": "mop",
+      "rule": {
+        "unit": "week",
+        "every": 2
+      },
+      "done": [
+        "2027-03-20",
+        "2027-04-10",
+        "2027-01-01",
+        "2027-04-10",
+        "2027-05-01"
+      ]
+    },
+    {
+      "id": "future-only",
+      "rule": {
+        "unit": "day",
+        "every": 10
+      },
+      "done": [
+        "2027-04-20"
+      ]
+    }
+  ],
+  "months": [],
+  "expect": {
+    "today": "2027-04-15",
+    "anniversary": {
+      "k": 1,
+      "day": "2027-05-01",
+      "inDays": 16,
+      "today": false,
+      "label": "1st anniversary"
+    },
+    "tasks": [
+      {
+        "id": "mop",
+        "rule": "every 2 weeks",
+        "due": "2027-04-24",
+        "never": false,
+        "lastDone": "2027-04-10",
+        "state": "later",
+        "overdueDays": -9
+      },
+      {
+        "id": "future-only",
+        "rule": "every 10 days",
+        "due": "2027-04-15",
+        "never": true,
+        "lastDone": null,
+        "state": "today",
+        "overdueDays": 0
+      }
+    ],
+    "months": []
+  }
+}

@@ -1,0 +1,80 @@
+{
+  "name": "05-daylight-saving-autumn",
+  "note": "At 05:30 UTC on Nov 8, 2027 it is still 23:30 on the 7th in Chicago (clocks went back on the 7th; at the summer offset it would already be the 8th). A daily task done on the 6th is due today.",
+  "weddingDate": "2026-10-10",
+  "timeZone": "America/Chicago",
+  "at": "2027-11-08T05:30:00Z",
+  "tasks": [
+    {
+      "id": "feed-the-cat",
+      "rule": {
+        "unit": "day",
+        "every": 1
+      },
+      "done": [
+        "2027-11-06"
+      ]
+    },
+    {
+      "id": "bins",
+      "rule": {
+        "unit": "week",
+        "every": 1
+      },
+      "done": [
+        "2027-11-01"
+      ]
+    },
+    {
+      "id": "rent",
+      "rule": {
+        "unit": "month",
+        "every": 1
+      },
+      "done": [
+        "2027-10-08"
+      ]
+    }
+  ],
+  "months": [],
+  "expect": {
+    "today": "2027-11-07",
+    "anniversary": {
+      "k": 2,
+      "day": "2028-10-10",
+      "inDays": 338,
+      "today": false,
+      "label": "2nd anniversary"
+    },
+    "tasks": [
+      {
+        "id": "feed-the-cat",
+        "rule": "every day",
+        "due": "2027-11-07",
+        "never": false,
+        "lastDone": "2027-11-06",
+        "state": "today",
+        "overdueDays": 0
+      },
+      {
+        "id": "bins",
+        "rule": "every week",
+        "due": "2027-11-08",
+        "never": false,
+        "lastDone": "2027-11-01",
+        "state": "soon",
+        "overdueDays": -1
+      },
+      {
+        "id": "rent",
+        "rule": "every month",
+        "due": "2027-11-08",
+        "never": false,
+        "lastDone": "2027-10-08",
+        "state": "soon",
+        "overdueDays": -1
+      }
+    ],
+    "months": []
+  }
+}
