@@ -107,19 +107,36 @@ export async function stopFromLink(token: string, ip: string): Promise<'stopped'
  * (GuestPlan.autoReminders). The same `sendDueReminders` as the button, so the cadence and its idempotence are one.
  * A workspace that cannot send (its saved links can no longer be read) is counted and skipped; the others go on.
  */
-export async function sendRemindersEverywhere(): Promise<{ orgs: number; reminded: number; skipped: number }> {
+export async function sendRemindersEverywhere(): Promise<{ orgs: number; reminded: number; skipped: number; failed: number }> {
   // Cross-org (cross-org.ts): a cron run has no org; it lists the ones that asked for scheduled reminders.
   const plans = await asSystem((sys) => sys.guestPlan.findMany({ where: { autoReminders: true }, select: { orgId: true }, orderBy: { orgId: 'asc' } }));
+  return remindEach(
+    plans.map((p) => p.orgId),
+    (orgId) => withOrg({ orgId }, async (tx) => ((await tx.wedding.findUnique({ where: { orgId }, select: { id: true } })) ? sendDueReminders(tx, { orgId, userId: null }) : 0)),
+  );
+}
+
+/**
+ * D-153: one workspace never stops the others, or the template's own cron jobs that run after this one (the outbox
+ * drain, the SSO sweeps). A refusal (its saved links cannot be read) is `skipped`; any other error is `failed` and
+ * logged; both roll back that workspace's transaction only, and the loop goes on.
+ */
+export async function remindEach(orgIds: readonly string[], remindOne: (orgId: string) => Promise<number>): Promise<{ orgs: number; reminded: number; skipped: number; failed: number }> {
   let reminded = 0;
   let skipped = 0;
-  for (const { orgId } of plans) {
+  let failed = 0;
+  for (const orgId of orgIds) {
     try {
-      reminded += await withOrg({ orgId }, async (tx) => ((await tx.wedding.findUnique({ where: { orgId }, select: { id: true } })) ? sendDueReminders(tx, { orgId, userId: null }) : 0));
+      reminded += await remindOne(orgId);
     } catch (e) {
-      if (!(e instanceof Refused)) throw e;
-      skipped++;
-      log('knotwork.reminders.skipped', { orgId });
+      if (e instanceof Refused) {
+        skipped++;
+        log('knotwork.reminders.skipped', { orgId });
+      } else {
+        failed++;
+        log('knotwork.reminders.failed', { orgId, error: e instanceof Error ? e.name : 'unknown' });
+      }
     }
   }
-  return { orgs: plans.length, reminded, skipped };
+  return { orgs: orgIds.length, reminded, skipped, failed };
 }

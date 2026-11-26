@@ -1,6 +1,26 @@
 # NEXT
 
-## ▶ 2026-11-25 (latest): Knotwork Phase 5 built (branch `phase-5`, draft PR #6, two slices, not merged, not deployed)
+## ▶ 2026-11-26 (latest): independent pre-merge review of PR #6, three must-fixes fixed (D-153; not merged, not deployed)
+Unattended run (Thanksgiving; no questions asked). Two review passes: one by this session, one by four fresh agents
+given only the diff, the PR text and the PRD's future-considerations section. Verdict: **merge after must-fixes**. The
+review with every should-fix and nit is on PR #6.
+
+- **Fixed (D-153), each with a test:** (1) changing an SMS household's phone to another valid number kept the old
+  consent date; now refused until the channel is changed first (`updateHousehold`, `delivery-db`). (2) One workspace's
+  non-`Refused` error in the scheduled reminders stopped the loop and, since it runs first in `cronJobs`, the template's
+  outbox drain and SSO sweeps; now `remindEach` counts it as `failed`, logs its name only, and goes on (`delivery-db`).
+  (3) `lifeadmin-db`'s archive refusal for the budget ran only `if (category)` and never ran; now unconditional.
+  CLAUDE.md rule 2 names `set_mode`.
+- **Gate here (cloud sandbox):** `npm ci` fails at `postinstall` (`prisma generate` cannot download the schema engine,
+  D-04); `npm ci --ignore-scripts` then `prisma generate` with a stub engine binary worked. lint clean; typecheck clean;
+  build OK (CI's placeholder env values); vitest database-free files (structure, pure-helpers, delivery-pure,
+  lifeadmin-pure, classifier-pure) 171 passed; pytest 132 passed. **Not run here:** the database-backed vitest files and
+  Playwright (a local Postgres could not be started in this run), and `foundation:drift` (the clone has no `v1.7.0`
+  template tag). CI is the gate for those; see the closing comment on PR #6 for the result on the new head.
+- **You:** read the review on #6; the should-fixes are yours to take or leave (the biggest: texts skipped by quiet hours
+  never go out under a 06:00 UTC cron; the mode trigger accepts an older approved request again; the stop page's copy).
+
+## ▶ 2026-11-25: Knotwork Phase 5 built (branch `phase-5`, draft PR #6, two slices, not merged, not deployed)
 Shane asked in chat on 2026-11-25: "Build all the future considerations" (PR #5 merged; `phase-5` from `main` at
 `f684765`). Plan: `docs/knotwork/PHASE-5-PLAN.md`. Two slices, one after the other (D-136). Decisions D-134 to D-151.
 Synthetic data only; no live email, SMS, payments or model calls; no env var or secret added.

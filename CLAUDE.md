@@ -11,7 +11,8 @@ where they differ. Current phase plan: `docs/knotwork/PHASE-5-PLAN.md`. Session 
    a due-date column (`tests/knotwork/structure.test.ts` scans the schema). A date of fact (paid on, completed on,
    signed on) is not a deadline and may be stored.
 2. **Designated actions only through the consent module.** Booking a vendor, signing a contract, spending over the
-   threshold, changing the wedding date, changing the consent settings (and, from Phase 2, removing a guest) happen
+   threshold, changing the wedding date, changing the consent settings (and, from Phase 2, removing a guest; from Phase 5,
+   switching into life-admin mode and back, `set_mode`, D-143) happen
    only inside `executeApproved` in `src/lib/knotwork/consent/execute.ts`, after a second owner approves. No action
    file writes those fields itself (`tests/knotwork/structure.test.ts` scans for it; the database also checks it).
    One exception, by owner decision (D-33): while a workspace has one partner and has never had two, that partner's

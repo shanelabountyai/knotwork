@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { addExpense, addTask, addVendor, approveRequest, createWedding, declineRequest, proposeBooking, proposeSettings, setTaskStatus, updateTask } from '@/app/o/[org]/wedding/actions';
+import { addCategory, addExpense, addTask, addVendor, approveRequest, createWedding, declineRequest, proposeBooking, proposeSettings, setTaskStatus, updateTask } from '@/app/o/[org]/wedding/actions';
 import { createContingencyPlan } from '@/app/o/[org]/wedding/contingency/actions';
 import { logReceivedGift } from '@/app/o/[org]/wedding/gifts/actions';
 import { importGuests, releaseWave, saveGuestPlan, sendReminders, showRsvpLink } from '@/app/o/[org]/wedding/guests/actions';
@@ -146,7 +146,8 @@ describe('the archive: the plan is read-only in life-admin mode, and what carrie
     const barn = await db.vendor.findFirstOrThrow({ where: { orgId: c.orgId, name: 'Cedar Hollow Barn' } });
     const band = await db.vendor.findFirstOrThrow({ where: { orgId: c.orgId, name: 'Tin Roof Strings' } });
     const own = await db.task.findFirstOrThrow({ where: { orgId: c.orgId, title: 'Return the arch' } });
-    const category = await db.budgetCategory.findFirst({ where: { orgId: c.orgId } });
+    await ok(addCategory(c.slug, { name: 'Venue', estimate: '9,000' })); // D-153: so the budget refusal below always runs
+    const category = await db.budgetCategory.findFirstOrThrow({ where: { orgId: c.orgId, name: 'Venue' } });
     await afterTheWedding();
     await ok(proposeBooking(c.slug, { id: barn.id })); // asked before the switch, approved after: refused then
     const booking = await pending('book_vendor');
@@ -160,7 +161,7 @@ describe('the archive: the plan is read-only in life-admin mode, and what carrie
     await refused(updateTask(c.slug, { id: own.id, title: 'x', leadDays: 1, bufferDays: 1, assigneeId: '', dependsOn: [] }), MODE);
     await refused(setTaskStatus(c.slug, { id: own.id, status: 'done' }), MODE); // even one's own task
     await refused(addVendor(c.slug, { name: 'x', category: 'dj', contactName: '', email: '', phone: '' }), MODE);
-    if (category) await refused(addExpense(c.slug, { categoryId: category.id, vendorId: '', description: 'x', amount: '1', paidOn: '' }), MODE);
+    await refused(addExpense(c.slug, { categoryId: category.id, vendorId: '', description: 'x', amount: '1', paidOn: '' }), MODE);
     await refused(saveGuestPlan(c.slug, { cap: '8', venueMin: '', venueMax: '', perHead: '0', kidsMeal: '0', vendorMeal: '0', lockoutDays: '42', minBatchSeats: '1', mealOptions: '' }), MODE);
     await refused(createContingencyPlan(c.slug, { title: 'Rain', starter: 'rain', tree: '' }), MODE);
     await refused(proposeBooking(c.slug, { id: band.id }), MODE); // a designated change to the plan cannot even be asked for

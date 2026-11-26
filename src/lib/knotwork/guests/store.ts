@@ -96,6 +96,8 @@ export async function updateHousehold(tx: Tx, ctx: Ctx, id: string, input: House
   if (input.name !== h.name && (await tx.household.findFirst({ where: { ...inOrg(ctx), name: input.name }, select: { id: true } }))) throw new Refused(`There is already a household called ${input.name}.`);
   if (h.state !== 'queued' && input.list !== h.list) throw new Refused('This household has already left the queue; its list can no longer change.');
   if (h.remindVia === 'sms' && !E164.test(input.phone)) throw new Refused(`${h.name} get reminders by text message, so the phone number has to stay in international form (like +15551234567). Choose another way to remind them first.`);
+  // D-153: the day they agreed to texts was recorded for this number, so it does not carry over to another one.
+  if (h.remindVia === 'sms' && input.phone !== h.phone) throw new Refused(`${h.name} agreed to text reminders at their current number. Choose another way to remind them first, then record the day they agree to texts at the new number.`);
   const after = await tx.household.update({ where: { id }, data: input });
   await assertWithinCap(tx, ctx, 'That change');
   // PRD P0-3: "per-household overrides logged" — the diff carries plusOneOverride and its note when they change.

@@ -9,7 +9,8 @@ import { env } from '@/core/env';
 import { drainOutbox } from '@/modules/notifications/outbox';
 import { parseAction } from '@/lib/knotwork/changelog-diff';
 import { addDays, todayIn } from '@/lib/knotwork/days';
-import { readRsvp, readStop, RSVP_LIMIT, sendRemindersEverywhere, stopFromLink } from '@/lib/knotwork/guests/public';
+import { Refused } from '@/core/errors';
+import { readRsvp, readStop, remindEach, RSVP_LIMIT, sendRemindersEverywhere, stopFromLink } from '@/lib/knotwork/guests/public';
 import { loadChase, rsvpDeadline } from '@/lib/knotwork/guests/store';
 import { addMember, makeOrg } from '../helpers/org';
 import { as, db, goToDay, log, makeWedding, ok, outcome, refused, snapshot, type Couple } from './db';
@@ -78,6 +79,11 @@ describe('a channel per household, with consent', () => {
     // The phone cannot be cleared or garbled while texts are the channel.
     expect((await setPhone('Priya Rao', '')).error).toMatch(/get reminders by text message/);
     expect((await setPhone('Priya Rao', '555 0100')).error).toMatch(/international form/);
+    // D-153: the consent was given at this number; another valid number does not inherit it.
+    const consentedAt = (await household('Priya Rao')).phone;
+    expect((await setPhone('Priya Rao', '+15559990000')).error).toMatch(/agreed to text reminders at their current number/);
+    expect(await household('Priya Rao')).toMatchObject({ phone: consentedAt, remindVia: 'sms' });
+    expect((await setPhone('Priya Rao', consentedAt)).error).toBeUndefined(); // saving the same number is still fine
     // Back to email: the consent date is cleared with it.
     await ok(setReminderChannel(c.slug, { id: priya.id, channel: 'email', smsConsentOn: '' }));
     expect(await household('Priya Rao')).toMatchObject({ remindVia: 'email', smsConsentOn: null });
@@ -193,6 +199,18 @@ describe('the opt-out link: the household\'s own RSVP token, at once', () => {
 });
 
 describe('reminders on a schedule (cron) as well as the button', () => {
+  it('D-153: one workspace that errors neither stops the others nor throws out of the cron run', async () => {
+    const seen: string[] = [];
+    const out = await remindEach(['a', 'b', 'c', 'd'], async (orgId) => {
+      seen.push(orgId);
+      if (orgId === 'b') throw new Error('boom');
+      if (orgId === 'c') throw new Refused('saved links cannot be read');
+      return 2;
+    });
+    expect(seen).toEqual(['a', 'b', 'c', 'd']);
+    expect(out).toEqual({ orgs: 4, reminded: 4, skipped: 1, failed: 1 });
+  });
+
   it('only where the couple turned it on; the same cadence; never one step twice, whichever runs first', async () => {
     await toStep14();
     expect(await sendRemindersEverywhere()).toMatchObject({ reminded: 0 }); // off by default
