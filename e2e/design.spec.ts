@@ -49,7 +49,7 @@ test('Approvals shows the keys: one turned by the proposer, the second waiting',
   const juniper = await signIn(browser, 'juniper@knotwork.demo.test');
   await juniper.goto(`${ORG}/wedding/date?to=2027-12-03`);
   await juniper.getByRole('button', { name: 'Propose this move' }).click();
-  await juniper.goto(`${ORG}/wedding/approvals`);
+  await expect(juniper).toHaveURL(new RegExp(`${ORG}/wedding/approvals$`)); // the proposal redirects here once it is stored
   await expect(juniper.getByRole('article', { name: /^Your request: Move the wedding/ })).toContainText("Your key is turned; your partner's is the second");
   const rowan = await signIn(browser, 'rowan@knotwork.demo.test', { viewport: { width: 390, height: 844 } });
   await rowan.goto(`${ORG}/wedding/approvals`);
