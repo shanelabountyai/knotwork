@@ -37,7 +37,7 @@ export default async function Archive({ params }: { params: Promise<{ org: strin
   const base = `/o/${ctx.slug}/wedding`;
   return (
     <main>
-      <WeddingNav slug={ctx.slug} life={life} />
+      <WeddingNav who={v.who} slug={ctx.slug} life={life} />
       <h1>Archive</h1>
       {life ? (
         <p role="note">Life-admin mode{v.wedding.modeChangedAt ? ` since ${showDay(todayIn(v.wedding.timeZone, v.wedding.modeChangedAt))}` : ''}. The wedding plan below is kept as it was, <strong>read-only</strong>: nothing in it can be changed until you switch back to planning mode. Secrets stay secret here too.</p>

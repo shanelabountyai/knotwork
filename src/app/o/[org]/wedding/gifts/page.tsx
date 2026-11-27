@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { TableWrap } from '@/app/ui/kw';
 import { requireOrg } from '@/core/authz/guards';
 import { ActionForm } from '@/core/ui/action-form';
 import { allows } from '@/lib/knotwork/access';
@@ -26,11 +27,12 @@ export default async function Gifts({ params }: { params: Promise<{ org: string 
   const open = items.filter((i) => i.state === 'open');
   return (
     <main>
-      <WeddingNav slug={ctx.slug} life={v.wedding.mode === 'life'} />
+      <WeddingNav who={v.who} slug={ctx.slug} life={v.wedding.mode === 'life'} />
       <GiftNav slug={ctx.slug} />
       <h1>Gifts</h1>
       <p>Guests give through the link on their own invitation. You see how far each gift has come and who gave toward it. What each household gave stays with that household.</p>
       {items.length === 0 && <p>No gifts yet.</p>}
+      <TableWrap label="Registry">
       <table aria-label="Registry">
         <thead><tr><th scope="col">Gift</th><th scope="col">Target</th><th scope="col">Given so far</th><th scope="col">Status</th><th scope="col">Who gave</th></tr></thead>
         <tbody>
@@ -45,10 +47,12 @@ export default async function Gifts({ params }: { params: Promise<{ org: string 
           ))}
         </tbody>
       </table>
+      </TableWrap>
 
       <h2>From a store</h2>
       <p>Things guests buy from a store themselves. Guests see each one beside the gifts above, follow the link to the store, and mark it as bought so nobody buys the same one twice. Nothing is fetched from the store.</p>
       {links.length === 0 ? <p>No store items yet.</p> : (
+        <TableWrap label="Store items">
         <table aria-label="Store items">
           <thead><tr><th scope="col">Item</th><th scope="col">Store</th><th scope="col">Price</th><th scope="col">Bought</th><th scope="col">Who bought</th></tr></thead>
           <tbody>
@@ -63,6 +67,7 @@ export default async function Gifts({ params }: { params: Promise<{ org: string 
             ))}
           </tbody>
         </table>
+        </TableWrap>
       )}
 
       {canEdit && (

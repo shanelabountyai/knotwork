@@ -6,6 +6,7 @@ import { showDay } from '@/lib/knotwork/days';
 import type { lifeDashboard } from '@/lib/knotwork/lifeadmin/store';
 import type { documentsView } from '@/lib/knotwork/secrecy/views';
 import { showAge } from '@/lib/knotwork/thanks/aging';
+import { dueKind, Status } from '@/app/ui/kw';
 import { WeddingNav } from '../bits';
 import { nameOf, type View } from '../view';
 
@@ -20,9 +21,14 @@ export function LifeHome({ slug, v, life, docs, waiting }: { slug: string; v: Vi
   const { anniversary: a, household, thanks, nameChange, albums } = life;
   return (
     <main>
-      <WeddingNav slug={slug} counts={{ approvals: waiting, flags: 0 }} life />
-      <h1>{v.wedding.title}</h1>
-      <p aria-label="Married">Married {showDay(v.date)}. The wedding plan is kept in the <Link href={`${base}/archive`}>Archive</Link>, read-only.</p>
+      <WeddingNav who={v.who} slug={slug} counts={{ approvals: waiting, flags: 0 }} life />
+      <header className="kw-hero">
+        <div>
+          <span className="kw-eyebrow">Life-admin mode</span>
+          <h1 className="display">{v.wedding.title}</h1>
+          <p aria-label="Married" className="kw-when">Married {showDay(v.date)}. The wedding plan is kept in the <Link href={`${base}/archive`}>Archive</Link>, read-only.</p>
+        </div>
+      </header>
 
       <section aria-label="Next anniversary">
         <h2>Next anniversary</h2>
@@ -33,9 +39,9 @@ export function LifeHome({ slug, v, life, docs, waiting }: { slug: string; v: Vi
         <section aria-label="Household tasks">
           <h2><Link href={`${base}/life`}>Household tasks</Link></h2>
           {household.length === 0 ? <p>None yet. <Link href={`${base}/life`}>Add the things that come round again</Link>: the filter, the smoke alarms, the anniversary dinner.</p> : (
-            <ul>
+            <ul className="kw-plain kw-rows">
               {household.slice(0, 8).map((t) => (
-                <li key={t.id}>{t.title}: {DUE_TEXT[t.state]}{t.never ? ' (never done)' : ''}, {showDay(t.due)}{t.state === 'overdue' ? `, ${days(t.overdueDays)} late` : ''} <small>({t.ruleText})</small></li>
+                <li key={t.id}>{t.title}: <Status k={dueKind(t.state)}>{DUE_TEXT[t.state]}</Status>{t.never ? ' (never done)' : ''}, {showDay(t.due)}{t.state === 'overdue' ? `, ${days(t.overdueDays)} late` : ''} <small>({t.ruleText})</small></li>
               ))}
             </ul>
           )}

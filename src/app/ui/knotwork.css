@@ -150,7 +150,7 @@ code { background: var(--sf-2); border-radius: 6px; padding: 1px 6px; }
 pre { background: var(--sf-2); border: 1px solid var(--ln); border-radius: var(--r-1); padding: var(--s-4); overflow-x: auto; white-space: pre-wrap; line-height: 1.5; }
 
 /* A section or article inside main is a card; a card inside a card is a quiet well. */
-main > section, main > article, main > form, .kw-grid > section, .kw-grid > article, .kw-col > section, main > details, .card {
+main > section, main > article, main > form, .kw-grid > section, .kw-grid > article, .kw-col > section, .kw-tables > section, main > details, .card {
   background: var(--sf); border: 1px solid var(--ln); border-radius: var(--r-2); box-shadow: var(--sh-1);
   padding: var(--s-5); display: flex; flex-direction: column; gap: var(--s-3); min-width: 0;
 }
@@ -225,6 +225,12 @@ hr { border: 0; border-top: 1px solid var(--ln); margin: var(--s-2) 0; width: 10
 img { max-width: 100%; height: auto; }
 footer { color: var(--mu); font-size: var(--t-sm); }
 
+/* Household tasks and similar lists whose items are cards. */
+.kw-cards { display: flex; flex-direction: column; gap: var(--s-3); }
+.kw-cards > li { margin: 0; background: var(--sf); border: 1px solid var(--ln); border-radius: var(--r-2); box-shadow: var(--sh-1); padding: var(--s-4); display: flex; flex-direction: column; gap: var(--s-2); }
+progress { width: 100%; height: 12px; accent-color: var(--ac); }
+#content:focus { outline: none; }
+
 /* ============ 5. shell ============ */
 .skip { position: absolute; left: var(--s-4); top: -100px; z-index: 50; background: var(--ac); color: var(--acf); padding: var(--s-2) var(--s-4); border-radius: var(--r-1); font-weight: 650; }
 .skip:focus { top: var(--s-2); }
@@ -249,9 +255,9 @@ footer { color: var(--mu); font-size: var(--t-sm); }
 
 /* Tab rows: the wedding's nav, then a section's own nav. One row on a phone that scrolls inside itself. */
 nav.kw-tabs, nav.kw-subtabs { margin: calc(-1 * var(--s-2)) 0 0; }
-.kw-tabs ul, .kw-subtabs ul { list-style: none; margin: 0; padding: 0 0 2px; display: flex; gap: var(--s-1); overflow-x: auto; scrollbar-width: thin; }
+.kw-tabs ul, .kw-subtabs ul { position: relative; list-style: none; margin: 0; padding: 0 0 2px; display: flex; gap: var(--s-1); overflow-x: auto; scrollbar-width: thin; }
 .kw-tabs li, .kw-subtabs li { margin: 0; flex: none; }
-.kw-tabs a, .kw-subtabs a { display: inline-flex; align-items: center; gap: 6px; min-height: var(--tap); padding: 0 14px; border-radius: var(--r-pill); color: var(--ink); text-decoration: none; font-size: 15px; font-weight: 550; white-space: nowrap; border: 1px solid transparent; }
+.kw-tabs a, .kw-subtabs a { position: relative; display: inline-flex; align-items: center; gap: 6px; min-height: var(--tap); padding: 0 14px; border-radius: var(--r-pill); color: var(--ink); text-decoration: none; font-size: 15px; font-weight: 550; white-space: nowrap; border: 1px solid transparent; }
 .kw-tabs a:hover, .kw-subtabs a:hover { background: var(--sf-2); }
 .kw-tabs a[aria-current='page'], .kw-subtabs a[aria-current='page'] { background: var(--ac-tint); color: var(--ink); border-color: var(--ac); font-weight: 700; }
 .kw-subtabs a { font-size: var(--t-sm); min-height: var(--tap); }
@@ -327,12 +333,18 @@ section .table-wrap { box-shadow: none; background: var(--sf); }
 /* The move preview: summary figures first, lists after. */
 section[aria-label='Move preview'] > ul[aria-label='Preview summary'] { list-style: none; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr)); gap: var(--s-2); }
 section[aria-label='Move preview'] > ul[aria-label='Preview summary'] > li { margin: 0; background: var(--sf); border: 1px solid var(--ln); border-radius: var(--r-1); padding: var(--s-3); font-weight: 550; }
+section[aria-label='Move preview'] > ul[aria-label='Preview summary'] > li[data-k] { background: var(--k-bg); color: var(--k-fg); border-color: var(--k-dot); border-left-width: 4px; }
+section[aria-label='Move preview'] > ul[aria-label='Preview summary'] > li[data-k='late']::before { content: '▲ '; content: '▲ ' / ''; }
 
-/* Guest-facing: one column, big targets, the wedding's name as the heading. */
+/* Guest-facing: one column, big targets, the wedding's name as the heading. The RSVP form is not a card: each
+   person in it is. */
+main.guest > form:has(> fieldset:not([disabled])) { background: none; border: 0; box-shadow: none; padding: 0; }
+.kw-file { width: 100%; min-height: 88px; padding: 28px var(--s-3); border: 2px dashed var(--ln-strong); background: var(--sf-2); }
+p.kw-row > .button { align-self: auto; }
 main.guest form > fieldset, main.guest form { gap: var(--s-4); }
 main.guest input:not([type='checkbox']):not([type='radio']), main.guest select { width: 100%; }
 main.guest form > button, main.guest form > fieldset > button { width: 100%; min-height: 52px; font-size: var(--t-base); align-self: stretch; }
-main.guest form fieldset { background: var(--sf); border: 1px solid var(--ln); border-radius: var(--r-2); padding: var(--s-4); display: flex; flex-direction: column; gap: var(--s-2); }
+main.guest form fieldset { background: var(--sf); border: 1px solid var(--ln); border-radius: var(--r-2); padding: var(--s-4); display: flex; flex-direction: column; gap: var(--s-2); align-items: stretch; }
 main.guest form fieldset fieldset { background: var(--sf-2); border-radius: var(--r-1); padding: var(--s-2) var(--s-3); }
 main.guest form fieldset > legend { font-size: 17px; }
 .kw-guest-head { display: flex; flex-direction: column; gap: var(--s-2); text-align: center; align-items: center; padding: var(--s-4) 0 var(--s-2); }

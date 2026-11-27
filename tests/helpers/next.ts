@@ -28,4 +28,7 @@ vi.mock('next/navigation', () => ({
   notFound: () => {
     throw new NavSignal('notFound');
   },
+  // Knotwork's NavLink (src/app/ui/nav-link.tsx) asks for the path to mark the current tab; outside a request there is
+  // none, as with Next's own usePathname outside the App Router.
+  usePathname: () => null,
 }));

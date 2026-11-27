@@ -31,7 +31,7 @@ export default async function PhotoEventPage({ params }: { params: Promise<{ org
   const qr = link ? await qrDataUrl(link) : null;
   return (
     <main>
-      <WeddingNav slug={ctx.slug} life={v.wedding.mode === 'life'} />
+      <WeddingNav who={v.who} slug={ctx.slug} life={v.wedding.mode === 'life'} />
       <PhotoNav slug={ctx.slug} event={e} />
       <h1>{e.name}</h1>
       <p aria-label="Event status">

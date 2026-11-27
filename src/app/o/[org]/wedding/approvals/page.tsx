@@ -6,6 +6,7 @@ import { expireDue } from '@/lib/knotwork/consent/store';
 import { usd } from '@/lib/knotwork/money';
 import { movePreview } from '@/lib/knotwork/secrecy/views';
 import { approveRequest, declineRequest, proposeSettings, withdrawRequest } from '../actions';
+import { Keys, requestKind, Status, TableWrap } from '@/app/ui/kw';
 import { MovePreviewView, NoWedding, WeddingNav } from '../bits';
 import { nameOf, view } from '../view';
 
@@ -37,9 +38,9 @@ export default async function Approvals({ params }: { params: Promise<{ org: str
 
   return (
     <main>
-      <WeddingNav slug={ctx.slug} life={v.wedding.mode === 'life'} counts={{ approvals: forMe.length, flags: 0 }} />
+      <WeddingNav who={v.who} slug={ctx.slug} life={v.wedding.mode === 'life'} counts={{ approvals: forMe.length, flags: 0 }} />
       <h1>Approvals</h1>
-      <p>Booking a vendor, signing a contract, a spend over {usd(w.spendThresholdCents)}, moving the date and changing these rules each need both of you.</p>
+      <p className="kw-lede">Booking a vendor, signing a contract, a spend over {usd(w.spendThresholdCents)}, moving the date and changing these rules each need both of you.</p>
       {v.partners.length < 2 && (
         <p role="status">
           {w.pairedAt
@@ -54,20 +55,23 @@ export default async function Approvals({ params }: { params: Promise<{ org: str
         {forMe.map((r) => {
           const p = previews.get(r.id);
           return (
-            <article key={r.id} aria-label={`Request: ${r.summary}`}>
+            <article key={r.id} aria-label={`Request: ${r.summary}`} className="kw-request">
               <h3>{r.summary}</h3>
-              <p>{KIND_LABEL[r.kind]} · proposed by {nameOf(v, r.proposerId)} · expires {when(r.expiresAt)}</p>
+              <p className="kw-meta"><Status k="wait">waiting for you</Status> <span>{KIND_LABEL[r.kind]} · proposed by {nameOf(v, r.proposerId)} · expires {when(r.expiresAt)}</span></p>
+              <Keys on={1}>{nameOf(v, r.proposerId)}&apos;s key is turned; yours is the second</Keys>
               {p && <MovePreviewView preview={p.preview} plan={p.plan} from={p.from} to={PAYLOAD.change_date.parse(r.payload).to} />}
-              <ActionForm action={bind(approveRequest)}>
-                <input type="hidden" name="id" value={r.id} />
-                {p && <input type="hidden" name="fingerprint" value={p.preview.fingerprint} />}
-                <button type="submit">Approve</button>
-              </ActionForm>
-              <ActionForm action={bind(declineRequest)}>
-                <input type="hidden" name="id" value={r.id} />
-                <label>Reason <input name="reason" maxLength={500} /></label>
-                <button type="submit">Decline</button>
-              </ActionForm>
+              <div className="kw-actions">
+                <ActionForm action={bind(approveRequest)}>
+                  <input type="hidden" name="id" value={r.id} />
+                  {p && <input type="hidden" name="fingerprint" value={p.preview.fingerprint} />}
+                  <button type="submit">Approve</button>
+                </ActionForm>
+                <ActionForm action={bind(declineRequest)}>
+                  <input type="hidden" name="id" value={r.id} />
+                  <label>Reason <input name="reason" maxLength={500} /></label>
+                  <button type="submit" className="secondary">Decline</button>
+                </ActionForm>
+              </div>
             </article>
           );
         })}
@@ -77,12 +81,13 @@ export default async function Approvals({ params }: { params: Promise<{ org: str
         <h2>Waiting for your partner</h2>
         {mine.length === 0 && <p>You have nothing waiting.</p>}
         {mine.map((r) => (
-          <article key={r.id} aria-label={`Your request: ${r.summary}`}>
+          <article key={r.id} aria-label={`Your request: ${r.summary}`} className="kw-request">
             <h3>{r.summary}</h3>
-            <p>{KIND_LABEL[r.kind]} · expires {when(r.expiresAt)}. It has not happened yet.</p>
+            <p className="kw-meta"><Status k="wait">waiting for your partner</Status> <span>{KIND_LABEL[r.kind]} · expires {when(r.expiresAt)}. It has not happened yet.</span></p>
+            <Keys on={1}>Your key is turned; your partner&apos;s is the second</Keys>
             <ActionForm action={bind(withdrawRequest)}>
               <input type="hidden" name="id" value={r.id} />
-              <button type="submit">Withdraw</button>
+              <button type="submit" className="secondary">Withdraw</button>
             </ActionForm>
           </article>
         ))}
@@ -90,17 +95,20 @@ export default async function Approvals({ params }: { params: Promise<{ org: str
 
       <section aria-label="Decided">
         <h2>Decided</h2>
+        <TableWrap label="Decided requests">
         <table aria-label="Decided requests">
           <thead><tr><th scope="col">Request</th><th scope="col">Outcome</th><th scope="col">Proposed by</th><th scope="col">Decided by</th><th scope="col">When</th></tr></thead>
           <tbody>
             {decided.map((r) => (
               <tr key={r.id}>
-                <th scope="row">{r.summary}</th><td>{r.status}{r.solo && ' (solo)'}{r.declineReason && `: ${r.declineReason}`}</td><td>{nameOf(v, r.proposerId)}</td>
+                <th scope="row">{r.summary}</th><td><Status k={requestKind(r.status)}>{r.status}</Status>{r.solo && <> <Keys on={1} solo>(solo)</Keys></>}{r.declineReason && `: ${r.declineReason}`}</td><td>{nameOf(v, r.proposerId)}</td>
                 <td>{r.deciderId ? nameOf(v, r.deciderId) : r.solo ? 'nobody: solo' : ''}</td><td>{r.decidedAt ? when(r.decidedAt) : ''}</td>
               </tr>
             ))}
           </tbody>
         </table>
+        </TableWrap>
+        {decided.length === 0 && <p>Nothing decided yet.</p>}
       </section>
 
       <section aria-label="Approval rules">
@@ -110,7 +118,7 @@ export default async function Approvals({ params }: { params: Promise<{ org: str
           <label>Spend threshold <input name="spendThreshold" required defaultValue={(w.spendThresholdCents / 100).toFixed(2)} /></label>
           <label>Days until a request expires <input name="consentExpiryDays" inputMode="numeric" required defaultValue={w.consentExpiryDays} /></label>
           <label>RSVP chase buffer in days <input name="chaseBufferDays" inputMode="numeric" required defaultValue={w.chaseBufferDays} /></label>
-          <button type="submit">Propose new rules</button>
+          <button type="submit" className="secondary">Propose new rules</button>
         </ActionForm>
       </section>
     </main>

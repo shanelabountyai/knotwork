@@ -1,16 +1,20 @@
-import Link from 'next/link';
+import { NavLink } from '@/app/ui/nav-link';
 
 export function PhotoNav({ slug, event }: { slug: string; event?: { id: string; name: string } }) {
   const base = `/o/${slug}/wedding/photos`;
   return (
-    <nav aria-label="Photos">
-      <Link href={base}>Photo events</Link>
-      {event && (
-        <>
-          {' '}· <Link href={`${base}/${event.id}`}>{event.name}</Link> · <Link href={`${base}/${event.id}/moderate`}>Moderate</Link> · <Link href={`${base}/${event.id}/album`}>Album</Link> ·{' '}
-          <Link href={`${base}/${event.id}/wall`}>Wall</Link>
-        </>
-      )}
+    <nav aria-label="Photos" className="kw-subtabs">
+      <ul>
+        <li><NavLink href={base} exact>Photo events</NavLink></li>
+        {event && (
+          <>
+            <li><NavLink href={`${base}/${event.id}`} exact>{event.name}</NavLink></li>
+            <li><NavLink href={`${base}/${event.id}/moderate`}>Moderate</NavLink></li>
+            <li><NavLink href={`${base}/${event.id}/album`}>Album</NavLink></li>
+            <li><NavLink href={`${base}/${event.id}/wall`}>Wall</NavLink></li>
+          </>
+        )}
+      </ul>
     </nav>
   );
 }

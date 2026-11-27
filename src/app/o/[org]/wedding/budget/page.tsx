@@ -5,6 +5,7 @@ import { allows, isPartner } from '@/lib/knotwork/access';
 import { dayOfDb, showDay } from '@/lib/knotwork/days';
 import { usd } from '@/lib/knotwork/money';
 import { budgetView } from '@/lib/knotwork/secrecy/views';
+import { Status, TableWrap } from '@/app/ui/kw';
 import { addCategory, addExpense, takeBudgetSnapshot, updateCategory } from '../actions';
 import { HiddenText, MineNote, NoWedding, PrivacySelect, privacyValue, WeddingNav } from '../bits';
 import { setCategoryPrivacy, setExpensePrivacy } from '../privacy/actions';
@@ -27,8 +28,9 @@ export default async function Budget({ params }: { params: Promise<{ org: string
   const t = b.totals;
   return (
     <main>
-      <WeddingNav slug={ctx.slug} mode={v.wedding.mode} />
+      <WeddingNav who={v.who} slug={ctx.slug} mode={v.wedding.mode} />
       <h1>Budget</h1>
+      <TableWrap label="Budget">
       <table aria-label="Budget">
         <thead><tr><th scope="col">Category</th><th scope="col">Estimate</th><th scope="col">Actual</th><th scope="col">Remaining</th><th scope="col">Funded by</th>{canEdit && <th scope="col">Change estimate</th>}</tr></thead>
         <tbody>
@@ -37,20 +39,20 @@ export default async function Budget({ params }: { params: Promise<{ org: string
             const l = x.row;
             return (
               <tr key={l.id} aria-label={`Category ${l.name}`}>
-                <th scope="row">{l.name}<MineNote mine={x.mine} /></th><td>{usd(l.estimateCents)}</td><td>{usd(l.actualCents)}</td><td>{l.over ? `over by ${usd(-l.remainingCents)}` : usd(l.remainingCents)}</td>
+                <th scope="row">{l.name}<MineNote mine={x.mine} /></th><td>{usd(l.estimateCents)}</td><td>{usd(l.actualCents)}</td><td>{l.over ? <Status k="late">over by {usd(-l.remainingCents)}</Status> : usd(l.remainingCents)}</td>
                 <td>{l.funding.length === 0 ? '' : l.funding.map((f) => `${f.funder}: ${usd(f.line.pledgedCents)} pledged, ${usd(f.line.receivedCents)} received, ${usd(f.line.spentCents)} spent`).join('; ')}</td>
                 {canEdit && (
                   <td>
                     <ActionForm action={bind(updateCategory)}>
                       <input type="hidden" name="id" value={l.id} /><input type="hidden" name="name" value={l.name} />
                       <input name="estimate" defaultValue={(l.estimateCents / 100).toFixed(2)} aria-label={`Estimate for ${l.name}`} size={10} />
-                      <button type="submit">Save</button>
+                      <button type="submit" className="secondary">Save</button>
                     </ActionForm>
                     {partner && (
                       <ActionForm action={bind(setCategoryPrivacy)}>
                         <input type="hidden" name="id" value={l.id} />
                         <PrivacySelect label={`Who sees ${l.name}`} defaultValue={privacyValue(l, x.mine)} />
-                        <button type="submit">Save privacy</button>
+                        <button type="submit" className="secondary">Save privacy</button>
                       </ActionForm>
                     )}
                   </td>
@@ -63,6 +65,7 @@ export default async function Budget({ params }: { params: Promise<{ org: string
           <tr aria-label="Budget total"><th scope="row">Total</th><td>{usd(t.estimateCents)}</td><td>{usd(t.actualCents)}</td><td>{t.over ? `over by ${usd(-t.remainingCents)}` : usd(t.remainingCents)}</td><td><Link href={`/o/${ctx.slug}/wedding/funding`}>Funding</Link></td>{canEdit && <td />}</tr>
         </tfoot>
       </table>
+      </TableWrap>
       {hiddenLines > 0 && <p role="note">The totals include {hiddenLines} private {hiddenLines === 1 ? 'line' : 'lines'}, shown here without a name or an amount until they are revealed.</p>}
 
       {canEdit && (
@@ -97,6 +100,7 @@ export default async function Budget({ params }: { params: Promise<{ org: string
       </ul>
 
       <h2>Spends</h2>
+      <TableWrap label="Spends">
       <table aria-label="Spends">
         <thead><tr><th scope="col">Paid on</th><th scope="col">What</th><th scope="col">Category</th><th scope="col">Vendor</th><th scope="col">Amount</th><th scope="col">Approved by both</th></tr></thead>
         <tbody>
@@ -112,16 +116,18 @@ export default async function Budget({ params }: { params: Promise<{ org: string
                     <ActionForm action={bind(setExpensePrivacy)}>
                       <input type="hidden" name="id" value={e.id} />
                       <PrivacySelect label={`Who sees ${e.description}`} defaultValue={privacyValue(e, x.mine)} />
-                      <button type="submit">Save privacy</button>
+                      <button type="submit" className="secondary">Save privacy</button>
                     </ActionForm>
                   )}
                 </th>
-                <td>{e.category.name}</td><td>{e.vendor?.name ?? ''}</td><td>{usd(e.amountCents)}</td><td>{e.requestId ? 'yes' : ''}</td>
+                <td>{e.category.name}</td><td>{e.vendor?.name ?? ''}</td><td>{usd(e.amountCents)}</td><td>{e.requestId ? <Status k="ok">yes</Status> : ''}</td>
               </tr>
             );
           })}
         </tbody>
       </table>
+      </TableWrap>
+      {b.expenses.length === 0 && <p>No spends recorded yet.</p>}
     </main>
   );
 }

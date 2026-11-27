@@ -1,3 +1,4 @@
+import { TableWrap } from '@/app/ui/kw';
 import { inOrg, requireOrg } from '@/core/authz/guards';
 import { ActionForm } from '@/core/ui/action-form';
 import { allows } from '@/lib/knotwork/access';
@@ -31,7 +32,7 @@ export default async function Waves({ params }: { params: Promise<{ org: string 
 
   return (
     <main>
-      <WeddingNav slug={ctx.slug} mode={v.wedding.mode} />
+      <WeddingNav who={v.who} slug={ctx.slug} mode={v.wedding.mode} />
       <GuestNav slug={ctx.slug} />
       <h1>Invitations and cap</h1>
       <ul aria-label="Cap">
@@ -73,10 +74,12 @@ export default async function Waves({ params }: { params: Promise<{ org: string 
       )}
 
       <h2>Releases so far</h2>
+      <TableWrap label="Waves">
       <table aria-label="Waves">
         <thead><tr><th scope="col">Wave</th><th scope="col">List</th><th scope="col">Households</th><th scope="col">Seats</th><th scope="col">Released</th></tr></thead>
         <tbody>{waves.map((w) => <tr key={w.id}><th scope="row">{w.number}</th><td>{w.list}</td><td>{w.householdCount}</td><td>{w.seatCount}</td><td>{w.releasedAt.toISOString().slice(0, 10)}</td></tr>)}</tbody>
       </table>
+      </TableWrap>
 
       {canEdit && (
         <section aria-label="Guest plan">

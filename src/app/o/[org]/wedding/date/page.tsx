@@ -6,6 +6,7 @@ import { isRealDay, showDay } from '@/lib/knotwork/days';
 import { movePreview } from '@/lib/knotwork/secrecy/views';
 import { proposeDateMove } from '../actions';
 import { MovePreviewView, NoWedding, WeddingNav } from '../bits';
+import { Keys } from '@/app/ui/kw';
 import { view } from '../view';
 
 export const metadata = { title: 'Move the date' };
@@ -23,11 +24,11 @@ export default async function MoveDate({ params, searchParams }: { params: Promi
   const { v, move, waiting } = data;
   return (
     <main>
-      <WeddingNav slug={ctx.slug} mode={v.wedding.mode} />
+      <WeddingNav who={v.who} slug={ctx.slug} mode={v.wedding.mode} />
       <h1>Move the date</h1>
-      <p>The wedding is on <strong>{showDay(v.date)}</strong>. Pick a new date to see what it does to the plan. Nothing changes until your partner approves.</p>
+      <p className="kw-lede">The wedding is on <strong>{showDay(v.date)}</strong>. Pick a new date to see what it does to the plan. Nothing changes until your partner approves.</p>
       {waiting && <p role="status">Already waiting for your partner: {waiting.summary}.</p>}
-      <form method="get">
+      <form method="get" aria-label="Pick a new date">
         <label>New date <input name="to" type="date" required defaultValue={isRealDay(to) ? to : ''} /></label>
         <button type="submit">Preview</button>
       </form>
@@ -37,12 +38,17 @@ export default async function MoveDate({ params, searchParams }: { params: Promi
         <>
           <h2>Preview</h2>
           <MovePreviewView preview={move.preview} plan={move.plan} from={move.from} to={to} />
-          <ActionForm action={proposeDateMove.bind(null, ctx.slug)}>
-            <input type="hidden" name="to" value={to} />
-            <input type="hidden" name="fingerprint" value={move.preview.fingerprint} />
-            <button type="submit">Propose this move</button>
-          </ActionForm>
-          <p>Moving the date also flags every booked vendor for re-confirmation.</p>
+          <div className="card">
+            <ActionForm action={proposeDateMove.bind(null, ctx.slug)}>
+              <input type="hidden" name="to" value={to} />
+              <input type="hidden" name="fingerprint" value={move.preview.fingerprint} />
+              <button type="submit">Propose this move</button>
+            </ActionForm>
+            {v.partners.length < 2 && !v.wedding.pairedAt
+              ? <Keys on={1} solo>You are the only partner so far, so the move happens as soon as you propose it, marked solo.</Keys>
+              : <Keys on={0}>Proposing turns your key; the move happens when your partner turns theirs.</Keys>}
+            <p>Moving the date also flags every booked vendor for re-confirmation.</p>
+          </div>
           <p><Link href={`/o/${ctx.slug}/wedding/date/insurance?to=${to}`}>Before you decide: contracts, payments and insurance questions for this move</Link> (general information, not insurance or legal advice).</p>
         </>
       )}

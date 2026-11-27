@@ -23,7 +23,7 @@ export default async function NameChange({ params }: { params: Promise<{ org: st
   const bind = <A extends unknown[], R>(fn: (slug: string, ...a: A) => R) => fn.bind(null, ctx.slug);
   return (
     <main>
-      <WeddingNav slug={ctx.slug} life={v.wedding.mode === 'life'} />
+      <WeddingNav who={v.who} slug={ctx.slug} life={v.wedding.mode === 'life'} />
       <h1>Name change</h1>
       <p role="note"><strong>Illustrative only, not legal advice.</strong> These steps are an example of a typical order, not the rules of any office. Knotwork knows nothing about current forms, fees or waiting times; check each office&apos;s own instructions.</p>
 

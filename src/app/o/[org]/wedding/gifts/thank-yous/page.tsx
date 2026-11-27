@@ -1,3 +1,4 @@
+import { TableWrap } from '@/app/ui/kw';
 import { requireOrg } from '@/core/authz/guards';
 import { ActionForm } from '@/core/ui/action-form';
 import { allows } from '@/lib/knotwork/access';
@@ -32,18 +33,20 @@ export default async function ThankYous({ params }: { params: Promise<{ org: str
   const ack = { pooled: acknowledgeThankYou, claimed: acknowledgeClaim, logged: acknowledgeReceivedGift } as const;
   return (
     <main>
-      <WeddingNav slug={ctx.slug} life={v.wedding.mode === 'life'} />
+      <WeddingNav who={v.who} slug={ctx.slug} life={v.wedding.mode === 'life'} />
       <GiftNav slug={ctx.slug} />
       <h1>Thank-yous</h1>
       <p><strong aria-label="Overdue thank-yous">{book.headline}</strong></p>
       <p>{book.total === 0 ? 'Nothing yet: a thank-you is owed for each gift you log here, each store item a household marks as bought, and each household that gave toward a gift once that gift is funded.' : `${book.owed.length} of ${book.total} still to send.`}</p>
 
+      <TableWrap label="How long thank-yous have been owed">
       <table aria-label="How long thank-yous have been owed">
         <thead><tr><th scope="col">Owed for</th><th scope="col">Still to send</th></tr></thead>
         <tbody>
           {book.buckets.map((b) => <tr key={b.key}><th scope="row">{b.label}</th><td>{b.count}</td></tr>)}
         </tbody>
       </table>
+      </TableWrap>
       <p><small>Counted from the day each gift arrived ({BUCKETS.length} buckets; &quot;&gt; 3 weeks&quot; is more than {OVERDUE_AFTER_DAYS} days).</small></p>
 
       <h2>Still to send, oldest first</h2>

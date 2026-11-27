@@ -5,6 +5,7 @@ import { SEATING_LIMITS } from '@/lib/knotwork/seating/engine';
 import { loadSeating, problemsText, SEED_MAX, TABLE_NAME_MAX } from '@/lib/knotwork/seating/store';
 import { NoWedding, WeddingNav } from '../../bits';
 import { view } from '../../view';
+import { Status } from '@/app/ui/kw';
 import { GuestNav } from '../nav';
 import { addSeatingRule, addSeatingTable, clearUnlockedSeats, generateSeatingChart, lockSeat, moveSeatedGuest, removeSeatingRule, removeSeatingTable, seatPendingGuests, updateSeatingTable } from './actions';
 
@@ -39,27 +40,27 @@ export default async function Seating({ params, searchParams }: { params: Promis
           {s.tables.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
         </select>
       </label>{' '}
-      <button type="submit" aria-label={`Move ${name}`}>Move</button>
+      <button type="submit" className="secondary" aria-label={`Move ${name}`}>Move</button>
     </ActionForm>
   );
 
   return (
     <main>
-      <WeddingNav slug={ctx.slug} mode={v.wedding.mode} />
+      <WeddingNav who={v.who} slug={ctx.slug} mode={v.wedding.mode} />
       <GuestNav slug={ctx.slug} />
       <h1>Seating</h1>
-      <p aria-label="Seating summary">
+      <p aria-label="Seating summary" className="kw-lede">
         {Object.keys(s.seats).length} of {s.guests.length} guests seated at {s.tables.length} {s.tables.length === 1 ? 'table' : 'tables'} ({seatsTotal} seats).{' '}
         {s.seatPending ? 'Guests who have not answered are seated too.' : `Guests who are coming are seated; ${s.waiting} who have not answered are not.`}
       </p>
       <section aria-label="Score">
         <h2>Score: {s.score.total === 0 ? '0 (nothing to improve)' : s.score.hard ? `${s.score.hard} ${s.score.hard === 1 ? 'problem' : 'problems'} with "must" rules, ${s.score.soft} preference points` : `${s.score.soft} preference points`}</h2>
         <p><small>Lower is better. A broken &quot;must&quot; rule or a guest with no seat is a problem; a broken &quot;would like&quot; costs 3 points, and each household member sitting away from the rest of the household costs 2.</small></p>
-        {problems.length > 0 && <ul aria-label="Seating problems">{problems.map((p, n) => <li key={n}>{n < hardCount ? <strong>{p}</strong> : p}</li>)}</ul>}
+        {problems.length > 0 && <ul aria-label="Seating problems" className="kw-plain kw-rows">{problems.map((p, n) => <li key={n}>{n < hardCount ? <><Status k="late">problem</Status> <strong>{p}</strong></> : <><Status k="wait">preference</Status> {p}</>}</li>)}</ul>}
       </section>
 
       {canEdit && (
-        <section aria-label="Generate">
+        <section aria-label="Generate" className="kw-generate">
           <h2>Generate</h2>
           <ActionForm action={bind(generateSeatingChart)}>
             <label>Arrangement number <input name="seed" inputMode="numeric" defaultValue={arrangement} maxLength={6} size={6} /></label>{' '}
@@ -67,36 +68,37 @@ export default async function Seating({ params, searchParams }: { params: Promis
           </ActionForm>
           <ActionForm action={bind(generateSeatingChart)}>
             <input type="hidden" name="seed" value={arrangement >= SEED_MAX ? 1 : arrangement + 1} />
-            <button type="submit">Try another arrangement</button>
+            <button type="submit" className="secondary">Try another arrangement</button>
           </ActionForm>
           <p><small>Locked seats stay where they are; everyone else is seated again. The same arrangement number on the same chart always gives the same seating.</small></p>
           <ActionForm action={bind(seatPendingGuests)}>
             <input type="hidden" name="on" value={s.seatPending ? '' : 'on'} />
-            <button type="submit">{s.seatPending ? 'Seat only guests who are coming' : 'Also seat guests who have not answered'}</button>
+            <button type="submit" className="secondary">{s.seatPending ? 'Seat only guests who are coming' : 'Also seat guests who have not answered'}</button>
           </ActionForm>
-          {Object.values(s.seats).some((x) => !x.locked) && <ActionForm action={bind(clearUnlockedSeats)}><button type="submit">Clear unlocked seats</button></ActionForm>}
+          {Object.values(s.seats).some((x) => !x.locked) && <ActionForm action={bind(clearUnlockedSeats)}><button type="submit" className="secondary">Clear unlocked seats</button></ActionForm>}
         </section>
       )}
 
       <h2>Tables</h2>
       {s.tables.length === 0 && <p>No tables yet.</p>}
+      <div className="kw-tables">
       {s.tables.map((t) => {
         const here = at(t.id);
         return (
           <section key={t.id} aria-label={`Table ${t.name}`}>
             <h3>{t.name} <small>({here.length} of {t.capacity})</small></h3>
-            <ul>
+            <ul className="kw-plain kw-rows">
               {here.length === 0 && <li>Nobody yet.</li>}
               {here.map((g) => (
                 <li key={g.id}>
-                  {g.name} <small>({g.householdName}{g.rsvp === 'pending' ? ', not answered' : ''})</small>{s.seats[g.id]!.locked && <strong> locked</strong>}
+                  {g.name} <small>({g.householdName}{g.rsvp === 'pending' ? ', not answered' : ''})</small>{s.seats[g.id]!.locked && <> <Status k="info">locked</Status></>}
                   {canEdit && (
                     <>
                       <MoveForm guestId={g.id} name={g.name} current={t.id} />
                       <ActionForm action={bind(lockSeat)}>
                         <input type="hidden" name="guestId" value={g.id} />
                         <input type="hidden" name="locked" value={s.seats[g.id]!.locked ? '' : 'on'} />
-                        <button type="submit" aria-label={`${s.seats[g.id]!.locked ? 'Unlock' : 'Lock'} ${g.name}`}>{s.seats[g.id]!.locked ? 'Unlock' : 'Lock'}</button>
+                        <button type="submit" className="ghost" aria-label={`${s.seats[g.id]!.locked ? 'Unlock' : 'Lock'} ${g.name}`}>{s.seats[g.id]!.locked ? 'Unlock' : 'Lock'}</button>
                       </ActionForm>
                     </>
                   )}
@@ -114,18 +116,19 @@ export default async function Seating({ params, searchParams }: { params: Promis
                 </ActionForm>
                 <ActionForm action={bind(removeSeatingTable)}>
                   <input type="hidden" name="id" value={t.id} />
-                  <button type="submit">Remove {t.name}</button>
+                  <button type="submit" className="secondary">Remove {t.name}</button>
                 </ActionForm>
               </details>
             )}
           </section>
         );
       })}
+      </div>
 
       <section aria-label="Not seated">
         <h2>Not seated</h2>
         {unseated.length === 0 ? <p>Everyone is seated.</p> : (
-          <ul>
+          <ul className="kw-plain kw-rows">
             {unseated.map((g) => (
               <li key={g.id}>{g.name} <small>({g.householdName}{g.rsvp === 'pending' ? ', not answered' : ''})</small>{canEdit && s.tables.length > 0 && <MoveForm guestId={g.id} name={g.name} current={null} />}</li>
             ))}
@@ -148,11 +151,11 @@ export default async function Seating({ params, searchParams }: { params: Promis
       <section aria-label="Rules">
         <h2>Who sits apart, who sits together</h2>
         {s.rules.length === 0 ? <p>No rules yet. Households are kept together where they fit.</p> : (
-          <ul aria-label="Seating rules">
+          <ul aria-label="Seating rules" className="kw-plain kw-rows">
             {s.rules.map((r) => (
               <li key={r.id}>
                 {r.a.name} and {r.b.name} {r.hard ? 'must' : 'would like to'} sit {r.kind}{!r.active && <small> (waits: one of them is not being seated)</small>}
-                {canEdit && <ActionForm action={bind(removeSeatingRule)}><input type="hidden" name="id" value={r.id} /><button type="submit" aria-label={`Remove the rule for ${r.a.name} and ${r.b.name}`}>Remove</button></ActionForm>}
+                {canEdit && <ActionForm action={bind(removeSeatingRule)}><input type="hidden" name="id" value={r.id} /><button type="submit" className="ghost" aria-label={`Remove the rule for ${r.a.name} and ${r.b.name}`}>Remove</button></ActionForm>}
               </li>
             ))}
           </ul>
