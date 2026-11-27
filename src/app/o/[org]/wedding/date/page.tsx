@@ -28,7 +28,7 @@ export default async function MoveDate({ params, searchParams }: { params: Promi
       <h1>Move the date</h1>
       <p className="kw-lede">The wedding is on <strong>{showDay(v.date)}</strong>. Pick a new date to see what it does to the plan. Nothing changes until your partner approves.</p>
       {waiting && <p role="status">Already waiting for your partner: {waiting.summary}.</p>}
-      <form method="get" aria-label="Pick a new date">
+      <form method="get">
         <label>New date <input name="to" type="date" required defaultValue={isRealDay(to) ? to : ''} /></label>
         <button type="submit">Preview</button>
       </form>

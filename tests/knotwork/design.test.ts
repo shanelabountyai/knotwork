@@ -13,20 +13,20 @@ const tabs = (markup: string) => [...markup.matchAll(/<a [^>]*>([^<]+)/g)].map((
 
 describe('the status pill and the keys say it in words', () => {
   it('a pill is the word with its family; the glyph is not in the text (CSS draws it)', () => {
-    const out = html(createElement(Status, { k: 'late' }, 'late'));
+    const out = html(Status({ k: 'late', children: 'late' }));
     expect(out).toBe('<span class="st" data-k="late">late</span>');
     expect(out).not.toMatch(/role=/); // not a live region: the pages' own notices stay the only role="status"
   });
   it('the keys draw two rings hidden from screen readers, and the words carry the state', () => {
-    const one = html(createElement(Keys, { on: 1 }, 'one key turned'));
+    const one = html(Keys({ on: 1, children: 'one key turned' }));
     expect(one).toContain('aria-hidden="true"');
     expect(one.match(/<i class="on"><\/i>/g)).toHaveLength(1);
     expect(one).toContain('one key turned');
-    const solo = html(createElement(Keys, { on: 1, solo: true }, '(solo)'));
+    const solo = html(Keys({ on: 1, solo: true, children: '(solo)' }));
     expect(solo).toContain('keys-rings solo');
   });
   it('a wide table sits in a named region a keyboard can reach, named apart from the table', () => {
-    const out = html(createElement(TableWrap, { label: 'Schedule' }, createElement('table', { 'aria-label': 'Schedule' })));
+    const out = html(TableWrap({ label: 'Schedule', children: createElement('table', { 'aria-label': 'Schedule' }) }));
     expect(out).toContain('role="region" aria-label="Table: Schedule" tabindex="0"');
   });
   it('the guest head shows only the title it is handed, as the one h1', () => {
