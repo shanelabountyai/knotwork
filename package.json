@@ -33,6 +33,7 @@
     "foundation:check-modules": "tsx scripts/foundation-check-modules.ts",
     "fixtures:check": "tsx scripts/knotwork/gen-fixtures.ts",
     "oracles": "python3 -m pytest tools -q",
+    "design:contrast": "python3 -I tools/contrast.py",
     "seed:couple": "dotenv -e .env.local -- tsx scripts/knotwork/seed-couple.ts",
     "seed:couple:test": "dotenv -e .env.test -e .env.local -- tsx scripts/knotwork/seed-couple.ts"
   },
