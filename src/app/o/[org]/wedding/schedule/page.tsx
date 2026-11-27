@@ -35,6 +35,7 @@ export default async function Schedule({ params, searchParams }: { params: Promi
         Wedding: <strong>{showDay(v.date)}</strong>. Today: {showDay(v.today)}.
         {partner && <> <Link href={`/o/${ctx.slug}/wedding/date`}>Move the date</Link></>}
       </p>
+      <div className="kw-grid">
       <section aria-label="Critical path">
         <h2>Critical path</h2>
         {s.criticalPath.length ? (
@@ -46,6 +47,17 @@ export default async function Schedule({ params, searchParams }: { params: Promi
           <p>Every task is finished.</p>
         )}
       </section>
+        {partner && (
+          <div className="card">
+            <h2>Move the date</h2>
+            <p>Pick a new date to see what it does to the plan first. Nothing changes until your partner approves.</p>
+            <form method="get" action={`/o/${ctx.slug}/wedding/date`}>
+              <label>New date <input name="to" type="date" required /></label>
+              <button type="submit" className="secondary">Preview the move</button>
+            </form>
+          </div>
+        )}
+      </div>
 
       <TableWrap label="Schedule">
       <table aria-label="Schedule">

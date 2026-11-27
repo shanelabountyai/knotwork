@@ -3,6 +3,7 @@ import { headers } from 'next/headers';
 import { notFound } from 'next/navigation';
 import { clientIp } from '@/core/http';
 import { GIFT_DONE, GIFT_PROBLEM, isGiftDone, isGiftProblem } from '@/lib/knotwork/gifts/projection';
+import { GuestHead } from '@/app/ui/kw';
 import { readGifts } from '@/lib/knotwork/gifts/public';
 import { LINK_REL, LINK_TARGET } from '@/lib/knotwork/registry/links';
 
@@ -28,7 +29,7 @@ export default async function Gifts({ params, searchParams }: { params: Promise<
   const done = typeof q.done === 'string' && isGiftDone(q.done) ? GIFT_DONE[q.done] : null;
   return (
     <main className="guest">
-      <h1 className="display">{view.weddingTitle}: gifts</h1>
+      <GuestHead title={`${view.weddingTitle}: gifts`} />
       <p>Dear {view.householdName}, these are gifts several people can give toward together. Give any part; if a gift needs less than you offer, the rest comes straight back to you.</p>
       <p>No payment is taken on this page: a contribution is recorded, not charged.</p>
       {done && !problem && <p role="status" tabIndex={-1} autoFocus>{done}</p>}

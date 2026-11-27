@@ -10,6 +10,10 @@ export function Wall({ title, eventName, feedUrl, backUrl, initial, qr }: { titl
   const [current, setCurrent] = useState<string | null>(first);
   const feedRef = useRef(initial);
   const shown = useRef<string[]>(first ? [first] : []);
+  // WCAG 2.2.2: the slides move on their own, so the screen can pause them. A photo taken down still comes off at once.
+  const [paused, setPaused] = useState(false);
+  const pausedRef = useRef(false);
+  const togglePause = () => { pausedRef.current = !pausedRef.current; setPaused(pausedRef.current); };
 
   const advance = useCallback(() => {
     const ids = feedRef.current.map((p) => p.id);
@@ -31,13 +35,13 @@ export function Wall({ title, eventName, feedUrl, backUrl, initial, qr }: { titl
         feedRef.current = next;
         setFeed(next);
         // Something new goes up at once, and a photo that was taken down comes off at once.
-        if (fresh || gone) advance();
+        if (gone || (fresh && !pausedRef.current)) advance();
       } catch {
         // the network blinked: keep showing what we have and ask again next time
       }
     };
     const polling = setInterval(poll, WALL_POLL_MS);
-    const sliding = setInterval(advance, WALL_SLIDE_MS);
+    const sliding = setInterval(() => { if (!pausedRef.current) advance(); }, WALL_SLIDE_MS);
     return () => {
       stopped = true;
       clearInterval(polling);
@@ -62,7 +66,7 @@ export function Wall({ title, eventName, feedUrl, backUrl, initial, qr }: { titl
         <p role="status">No photos yet. {qr ? 'Scan the code to add the first.' : ''}</p>
       )}
       <header>
-        {title} · {eventName} · <span aria-label="Photos on the wall">{feed.length}</span> {feed.length === 1 ? 'photo' : 'photos'} · <a href={backUrl}>Leave the wall</a>
+        {title} · {eventName} · <span aria-label="Photos on the wall">{feed.length}</span> {feed.length === 1 ? 'photo' : 'photos'} · <a href={backUrl}>Leave the wall</a> <button type="button" onClick={togglePause}>{paused ? 'Play' : 'Pause'}</button>
       </header>
       {qr && (
         <aside aria-label="Add your photo">

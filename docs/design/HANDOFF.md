@@ -82,3 +82,20 @@ pages show the engines' real values; nothing from an artboard ships.
 - Dark mode: the tokens remap in `knotwork.css`; the artboards show the light scheme only.
 - Empty, refused and error states: they keep the pages' own sentences (`role="alert"` with ▲, `role="status"` with ✓),
   styled by the element rules.
+
+## Built against the artboards (2026-11-26)
+
+Where the build differs from an artboard, and why:
+
+- **Home**: "Move the date" is a link in the date line (it stays a partner-only link, as before); the tiles are the
+  `At a glance` list itself, not a titled card; the keys explainer is rows, not a well.
+- **Plan**: the cascade preview keeps its sentences ("0 late after the move") as tiles, coloured `late` with ▲ when the
+  number is not zero, rather than big figures: the e2e story reads those sentences. On the date page the keys show
+  none turned before proposing (the artboard showed one).
+- **Money**: figures from the budget's own totals (spent of estimated, left or over, categories over); the vendors'
+  flag count is on the vendors page, not here (the budget page does not load flags).
+- **Guests**: the headcount stays a list of sentences and the chase panel stays on its own tab (`/guests/chase`), which
+  is where its data is loaded.
+- **Dashboard**: the headings keep their wording ("Tasks: N% on track"), which the dashboard tests assert; see PRD DUX-8.
+- **Every wedding tab row** hides tabs that would be a 404 to the viewer (D-162); counts show where the page loads them
+  (PRD DUX-4).

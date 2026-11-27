@@ -53,6 +53,7 @@ export default async function Seating({ params, searchParams }: { params: Promis
         {Object.keys(s.seats).length} of {s.guests.length} guests seated at {s.tables.length} {s.tables.length === 1 ? 'table' : 'tables'} ({seatsTotal} seats).{' '}
         {s.seatPending ? 'Guests who have not answered are seated too.' : `Guests who are coming are seated; ${s.waiting} who have not answered are not.`}
       </p>
+      <div className="kw-grid">
       <section aria-label="Score">
         <h2>Score: {s.score.total === 0 ? '0 (nothing to improve)' : s.score.hard ? `${s.score.hard} ${s.score.hard === 1 ? 'problem' : 'problems'} with "must" rules, ${s.score.soft} preference points` : `${s.score.soft} preference points`}</h2>
         <p><small>Lower is better. A broken &quot;must&quot; rule or a guest with no seat is a problem; a broken &quot;would like&quot; costs 3 points, and each household member sitting away from the rest of the household costs 2.</small></p>
@@ -78,6 +79,7 @@ export default async function Seating({ params, searchParams }: { params: Promis
           {Object.values(s.seats).some((x) => !x.locked) && <ActionForm action={bind(clearUnlockedSeats)}><button type="submit" className="secondary">Clear unlocked seats</button></ActionForm>}
         </section>
       )}
+      </div>
 
       <h2>Tables</h2>
       {s.tables.length === 0 && <p>No tables yet.</p>}

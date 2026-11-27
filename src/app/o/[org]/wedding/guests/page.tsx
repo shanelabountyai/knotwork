@@ -38,7 +38,7 @@ export default async function Guests({ params }: { params: Promise<{ org: string
           <li>{s.count.responded} of {s.count.invited} invited have answered ({s.count.responseRatePct}%)</li>
           <li>{s.cap.held} of {s.plan.cap} seats held, {s.cap.available} free</li>
           <li>Cost so far: {usd(s.costCents)} ({s.count.catererMeals} meals: {s.count.adults} adult, {s.count.kids} kids, {s.count.vendorMeals} vendor)</li>
-          <li>Venue: {VENUE[venueStatus(s.count.attending, s.plan.venueMin, s.plan.venueMax)]}{s.plan.venueMin !== null && ` (minimum ${s.plan.venueMin})`}{s.plan.venueMax !== null && ` (maximum ${s.plan.venueMax})`}</li>
+          <li>Venue: <Status k={({ unset: 'off', 'below-min': 'wait', ok: 'ok', 'over-max': 'late' } as const)[venueStatus(s.count.attending, s.plan.venueMin, s.plan.venueMax)]}>{VENUE[venueStatus(s.count.attending, s.plan.venueMin, s.plan.venueMax)]}</Status>{s.plan.venueMin !== null && ` (minimum ${s.plan.venueMin})`}{s.plan.venueMax !== null && ` (maximum ${s.plan.venueMax})`}</li>
         </ul>
         <h3>What changed</h3>
         <ul aria-label="Headcount changes" className="kw-plain kw-rows">
@@ -73,7 +73,7 @@ export default async function Guests({ params }: { params: Promise<{ org: string
         <>
           <h2>Add a household</h2>
           <ActionForm action={addHousehold.bind(null, ctx.slug)}>
-            <label>Household name <input name="name" required maxLength={120} placeholder="The Lindqvists" /></label>
+            <label>Household name <input name="name" required maxLength={120} placeholder="e.g. the Rivera family" /></label>
             <label>Email <input name="email" type="email" maxLength={200} /></label>
             <label>Phone <input name="phone" maxLength={40} /></label>
             <label>Address <input name="address1" maxLength={200} /></label>

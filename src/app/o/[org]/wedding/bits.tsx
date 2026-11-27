@@ -50,6 +50,10 @@ export function WeddingNav({ slug, counts, life, mode, who }: { slug: string; co
   );
 }
 
+/** The designated actions in one sentence, the same on the home page and on Approvals (CLAUDE.md rule 2). */
+export const designatedSentence = (threshold: string) =>
+  `Booking a vendor, signing a contract, a spend over ${threshold}, moving the date, removing a guest, switching to life-admin mode and back, and changing these rules each need both of you.`;
+
 // ---- P1-1 secrecy (ADR-001) ---------------------------------------------------------------------------------------
 
 /** The "private to me until …" choice on a form. Partners only (the action refuses a helper anyway). */
@@ -68,7 +72,7 @@ const revealsOn = (d: Day | null) => (d ? `reveals ${showDay(d)}` : 'until revea
 /** A masked line: what kind of thing, whose, and when it shows. Nothing else of it exists on the page. */
 export const HiddenText = ({ h, owner }: { h: Hidden; owner: string }) => <span aria-label={h.label} className="kw-hidden"><Status k="priv">{h.label}</Status> <small>({owner}&apos;s, {revealsOn(h.revealsOn)})</small></span>;
 /** On the owner's own private item. */
-export const MineNote = ({ mine }: { mine: { revealsOn: Day | null } | null }) => (mine ? <small> (private to you, {revealsOn(mine.revealsOn)})</small> : null);
+export const MineNote = ({ mine }: { mine: { revealsOn: Day | null } | null }) => (mine ? <> <Status k="priv">private to you, {revealsOn(mine.revealsOn)}</Status></> : null);
 export const privacyValue = (row: { privateToId: string | null; revealDays: number | null }, mine: unknown) => (mine ? (row.revealDays === null ? 'never' : String(row.revealDays)) : '');
 
 export const NoWedding = ({ slug }: { slug: string }) => (

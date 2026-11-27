@@ -14,7 +14,8 @@ export default async function OrgLayout({ children, params }: { children: React.
   return (
     <>
       <a className="skip" href="#content">Skip to content</a>
-      <nav className="kw-top" aria-label="Workspace">
+      <header className="kw-top">
+      <nav aria-label="Workspace">
         <div className="kw-top-in">
           <Link className="kw-brand" href={base}><Mark />Knotwork</Link>
           <strong className="kw-org">{org.name}</strong>
@@ -31,6 +32,7 @@ export default async function OrgLayout({ children, params }: { children: React.
           </div>
         </div>
       </nav>
+      </header>
       <div id="content" tabIndex={-1}>{children}</div>
     </>
   );

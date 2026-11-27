@@ -216,6 +216,12 @@ tbody tr:last-child > * { border-bottom: 0; }
 td form, th form { margin-top: var(--s-2); }
 td form > fieldset, th form > fieldset { flex-direction: row; flex-wrap: wrap; align-items: flex-end; }
 th small { font-weight: 400; }
+/* Money and dates never break inside a figure (review D1/U1). Words in a cell still wrap at spaces. */
+td, th { overflow-wrap: break-word; }
+td:not(:has(form)) { min-width: 4.5em; }
+td.num, th.num, .st { white-space: nowrap; }
+/* A row header that is a link is a 44 px target (review A3). */
+th[scope='row'] > a:first-child { display: inline-flex; align-items: center; min-height: var(--tap); }
 /* A table with no wrapper (template pages): it scrolls on its own on a phone. */
 main > table { display: block; overflow-x: auto; background: var(--sf); border: 1px solid var(--ln); border-radius: var(--r-2); }
 
@@ -232,7 +238,7 @@ progress { width: 100%; height: 12px; accent-color: var(--ac); }
 #content:focus { outline: none; }
 
 /* ============ 5. shell ============ */
-.skip { position: absolute; left: var(--s-4); top: -100px; z-index: 50; background: var(--ac); color: var(--acf); padding: var(--s-2) var(--s-4); border-radius: var(--r-1); font-weight: 650; }
+.skip { min-height: var(--tap); display: inline-flex; align-items: center; position: absolute; left: var(--s-4); top: -100px; z-index: 50; background: var(--ac); color: var(--acf); padding: var(--s-2) var(--s-4); border-radius: var(--r-1); font-weight: 650; }
 .skip:focus { top: var(--s-2); }
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
 
@@ -283,10 +289,10 @@ nav.kw-tabs, nav.kw-subtabs { margin: calc(-1 * var(--s-2)) 0 0; }
 .keys-rings.solo i:last-child { border-style: dashed; }
 
 /* Figures: one big number with its rule under it. */
-.kw-figs { display: grid; grid-template-columns: repeat(auto-fit, minmax(10.5rem, 1fr)); gap: var(--s-3); list-style: none; padding: 0; margin: 0; }
+.kw-figs { display: grid; grid-template-columns: repeat(auto-fit, minmax(9.5rem, 1fr)); gap: var(--s-3); list-style: none; padding: 0; margin: 0; }
 .kw-figs > li { margin: 0; background: var(--sf); border: 1px solid var(--ln); border-radius: var(--r-1); padding: var(--s-3) var(--s-4); display: flex; flex-direction: column; gap: 2px; }
 section .kw-figs > li { background: var(--sf-2); }
-.kw-figs b { font-size: var(--t-lg); font-weight: 700; line-height: 1.15; font-variant-numeric: tabular-nums; }
+.kw-figs b { white-space: nowrap; overflow-wrap: normal; font-size: var(--t-lg); font-weight: 700; line-height: 1.15; font-variant-numeric: tabular-nums; }
 .kw-figs span { font-size: var(--t-sm); color: var(--mu); }
 
 /* At a glance: a list whose items are tiles (the home page). */
@@ -327,6 +333,9 @@ section .table-wrap { box-shadow: none; background: var(--sf); }
 
 /* Approvals: a request card with its keys. */
 .kw-request { border-left: 4px solid var(--ac); }
+.kw-col > section.kw-stack { background: none; border: 0; box-shadow: none; padding: 0; }
+.kw-stack > article { background: var(--sf); border: 1px solid var(--ln); border-left: 4px solid var(--ac); border-radius: var(--r-2); box-shadow: var(--sh-1); padding: var(--s-5); display: flex; flex-direction: column; gap: var(--s-3); }
+@media (max-width: 719px) { .kw-request .kw-actions, .kw-request .kw-actions > form { width: 100%; } .kw-request .kw-actions button, .kw-request .kw-actions input:not([type='hidden']) { width: 100%; } }
 .kw-request .kw-actions { display: flex; flex-wrap: wrap; gap: var(--s-3); align-items: flex-end; }
 .kw-request .kw-actions > form { flex: 0 1 auto; }
 
@@ -348,7 +357,7 @@ main.guest form fieldset { background: var(--sf); border: 1px solid var(--ln); b
 main.guest form fieldset fieldset { background: var(--sf-2); border-radius: var(--r-1); padding: var(--s-2) var(--s-3); }
 main.guest form fieldset > legend { font-size: 17px; }
 .kw-guest-head { display: flex; flex-direction: column; gap: var(--s-2); text-align: center; align-items: center; padding: var(--s-4) 0 var(--s-2); }
-.kw-guest-head .kw-mark { margin-bottom: var(--s-1); }
+.kw-guest-head .kw-mark { margin-bottom: var(--s-1); transform: scale(1.4); transform-origin: center; }
 .kw-guest-foot { text-align: center; font-size: var(--t-sm); color: var(--mu); }
 
 /* Photo moderation and album: cards with a picture. */
@@ -369,12 +378,21 @@ main.guest form fieldset > legend { font-size: 17px; }
 .kw-wall figcaption { position: absolute; left: 2rem; bottom: 2rem; max-width: 60%; background: rgba(0, 0, 0, 0.72); padding: 0.6rem 1rem; border-radius: 0.6rem; font-size: 1.6rem; }
 .kw-wall > [role='status'] { position: absolute; inset: 0; display: grid; place-items: center; font-size: 2rem; background: none; border: 0; color: #fff; }
 .kw-wall > [role='status']::before { content: none; }
-.kw-wall > header { position: absolute; left: 2rem; top: 1.2rem; font-size: 1.2rem; color: #e6e6e6; }
-.kw-wall > header a { color: #e6e6e6; }
+.kw-wall > header { position: absolute; left: 1.5rem; top: 1rem; font-size: 1.2rem; color: #fff; background: rgba(0, 0, 0, 0.72); padding: 0.4rem 0.9rem; border-radius: 0.6rem; display: flex; flex-wrap: wrap; align-items: center; gap: 0.25rem 0.6rem; }
+.kw-wall > header a { color: #fff; }
+.kw-wall > header button { min-height: 36px; padding: 0 14px; background: #fff; color: #000; border-color: #fff; }
 .kw-wall > aside { position: absolute; right: 1.5rem; bottom: 1.5rem; background: #fff; color: #000; padding: 0.6rem; border-radius: 0.6rem; text-align: center; }
 .kw-wall > aside small { color: #000; }
 .kw-wall > aside img { display: block; }
 
+@media (forced-colors: active) {
+  .keys-rings i { border-color: CanvasText; }
+  .keys-rings i.on { background: CanvasText; forced-color-adjust: none; }
+  .st { border-color: CanvasText; }
+}
+/* Pages with no workspace bar (sign-in, onboarding, account) read as one narrow column, like the guest pages. */
+body:not(:has(.kw-top)) > main:not(.brief):not(.guest):not(.kw-wall) { max-width: 40rem; }
+.kw-side-note { border-style: dashed; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; scroll-behavior: auto !important; }
 }

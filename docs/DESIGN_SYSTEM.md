@@ -112,6 +112,8 @@ Page width `--container` 72rem; guest-facing pages `--narrow` 34rem; the vendor 
 | `TableWrap` | `ui/kw.tsx` | a table that scrolls sideways inside a named, focusable region |
 | `GuestHead` | `ui/kw.tsx` | the guest-facing header: the mark and the couple's name (`h1.display`) |
 | `stateKind`, `rsvpKind`, … | `ui/kw.tsx` | word → family maps for the engines' own words |
+| `designatedSentence` | `o/[org]/wedding/bits.tsx` | the designated actions in one sentence (home and Approvals) |
+| Not found | `app/not-found.tsx` | one page for every 404, fixed words, no data (rule 3) |
 
 ## Changing it
 

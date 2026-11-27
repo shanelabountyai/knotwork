@@ -90,6 +90,31 @@ Each has a default in force so the build could proceed; the default is a row in 
 10. **Default task template.** The lead times in `src/lib/knotwork/schedule/template.ts` are illustrative defaults,
     not sourced figures (D-20). Do you want them reviewed by the wedding-planner persona before anyone sees them?
 
+### Design, UX and accessibility requirements (design pass, 2026-11-26) — for Shane
+
+Found by the three independent reviews of the design pass (branch `design/impl`; decisions D-154 to D-169). Each
+would change what the product does or shows, so none is built; each is a default question for Shane.
+
+- **DUX-1 After the wedding day.** Before the switch to life-admin mode, a past wedding's home page and dashboard still
+  count every open task as late and the chain as "N days short", and offer "Move the date" (seen as Sage & Wren). Proposal:
+  once the day has passed, show what was done and what is still open without lateness, and drop the move link.
+- **DUX-2 Where sign-in lands.** Every persona lands on the template's "Your orgs / Create an org" page, and a helper is
+  listed as "(member)". Proposal: a person with one workspace goes straight to it, and the words are Partner and Helper.
+  `/onboarding` is template-owned (upstream change or a `FOUNDATION_PATCHES.md` entry).
+- **DUX-3 Template settings in a couple's top bar.** Audit log, Security, SSO, API keys and Export or delete sit beside
+  Home and Wedding. Proposal: one "Settings" entry, or hide SSO and API keys from a consumer workspace.
+- **DUX-4 Counts on every tab row.** The Approvals and Vendor flags badges show only where the page already loads
+  those counts (5 of 36 pages). Proposal: load both counts for the nav on every wedding page (one read each).
+- **DUX-5 Times as people read them.** Request expiry, decided times and budget snapshots show `2026-12-04 00:45 UTC`.
+  Proposal: show them in the wedding's time zone in the app's date style ("Fri, Dec 4, 2026, 6:45 PM").
+- **DUX-6 Greeting and plurals.** "Dear The Lindqvists" on the RSVP and gift pages and in thank-you drafts, and "1
+  children" in headcounts and the caterer's brief. Proposal: greet by the household name as entered without "Dear The",
+  and pluralise counts. These strings are asserted by tests and sent in reminders, so they change with their tests.
+- **DUX-7 The wall and reduced motion.** The wall now has Pause/Play (D-166). Proposal: under
+  `prefers-reduced-motion`, start paused or slow the slides.
+- **DUX-8 Percentages on the dashboard.** "Tasks: 92% on track" is a bare percentage, against the design rule that a
+  figure carries its rule. Proposal: "N of M on track" (the dashboard tests assert the current form).
+
 ---
 
 **Sample business:** "Knotwork," a consumer wedding-planning app for one couple + their circle

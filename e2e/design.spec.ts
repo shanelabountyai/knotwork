@@ -60,3 +60,23 @@ test('Approvals shows the keys: one turned by the proposer, the second waiting',
   await juniper.getByRole('article', { name: /^Your request: Move the wedding/ }).getByRole('button', { name: 'Withdraw' }).click();
   await expect(juniper.getByRole('article', { name: /^Your request: Move the wedding/ })).toHaveCount(0);
 });
+
+test('review fixes: the current tab is in view on a phone, the wall pauses, and a dead link says so without data', async ({ browser }) => {
+  const phone = await signIn(browser, 'juniper@knotwork.demo.test', { viewport: { width: 390, height: 844 } });
+  await phone.goto(`${ORG}/wedding/approvals`);
+  const tab = phone.getByRole('navigation', { name: 'Wedding' }).getByRole('link', { name: 'Approvals' });
+  await expect(tab).toHaveAttribute('aria-current', 'page');
+  await expect(tab).toBeInViewport();
+
+  await phone.goto(`${ORG}/wedding/photos`);
+  await phone.getByRole('link', { name: 'Reception' }).first().click();
+  await phone.getByRole('navigation', { name: 'Photos' }).getByRole('link', { name: 'Wall' }).click();
+  await phone.getByRole('button', { name: 'Pause' }).click();
+  await expect(phone.getByRole('button', { name: 'Play' })).toBeVisible();
+
+  const stranger = await (await browser.newContext()).newPage();
+  const res = await stranger.goto(`/r/${'x'.repeat(43)}`);
+  expect(res!.status()).toBe(404);
+  await expect(stranger.getByRole('heading', { level: 1 })).toHaveText('This page isn’t here');
+  expect(await stranger.locator('main').innerText()).not.toContain('Juniper');
+});

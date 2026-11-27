@@ -5,7 +5,7 @@ import { allows, isPartner } from '@/lib/knotwork/access';
 import { dayOfDb, showDay } from '@/lib/knotwork/days';
 import { usd } from '@/lib/knotwork/money';
 import { budgetView } from '@/lib/knotwork/secrecy/views';
-import { Status, TableWrap } from '@/app/ui/kw';
+import { Figs, Keys, Status, TableWrap } from '@/app/ui/kw';
 import { addCategory, addExpense, takeBudgetSnapshot, updateCategory } from '../actions';
 import { HiddenText, MineNote, NoWedding, PrivacySelect, privacyValue, WeddingNav } from '../bits';
 import { setCategoryPrivacy, setExpensePrivacy } from '../privacy/actions';
@@ -30,6 +30,11 @@ export default async function Budget({ params }: { params: Promise<{ org: string
     <main>
       <WeddingNav who={v.who} slug={ctx.slug} mode={v.wedding.mode} />
       <h1>Budget</h1>
+      <Figs label="Budget figures" items={[
+        { value: usd(t.actualCents), rule: `spent of ${usd(t.estimateCents)} estimated` },
+        { value: t.over ? usd(-t.remainingCents) : usd(t.remainingCents), rule: t.over ? 'over the estimate' : 'left' },
+        { value: b.lines.filter((x) => !x.hidden && x.row.over).length, rule: 'categories over their estimate' },
+      ]} />
       <TableWrap label="Budget">
       <table aria-label="Budget">
         <thead><tr><th scope="col">Category</th><th scope="col">Estimate</th><th scope="col">Actual</th><th scope="col">Remaining</th><th scope="col">Funded by</th>{canEdit && <th scope="col">Change estimate</th>}</tr></thead>
@@ -62,14 +67,15 @@ export default async function Budget({ params }: { params: Promise<{ org: string
           })}
         </tbody>
         <tfoot>
-          <tr aria-label="Budget total"><th scope="row">Total</th><td>{usd(t.estimateCents)}</td><td>{usd(t.actualCents)}</td><td>{t.over ? `over by ${usd(-t.remainingCents)}` : usd(t.remainingCents)}</td><td><Link href={`/o/${ctx.slug}/wedding/funding`}>Funding</Link></td>{canEdit && <td />}</tr>
+          <tr aria-label="Budget total"><th scope="row">Total</th><td>{usd(t.estimateCents)}</td><td>{usd(t.actualCents)}</td><td>{t.over ? <Status k="late">over by {usd(-t.remainingCents)}</Status> : usd(t.remainingCents)}</td><td><Link href={`/o/${ctx.slug}/wedding/funding`}>Funding</Link></td>{canEdit && <td />}</tr>
         </tfoot>
       </table>
       </TableWrap>
       {hiddenLines > 0 && <p role="note">The totals include {hiddenLines} private {hiddenLines === 1 ? 'line' : 'lines'}, shown here without a name or an amount until they are revealed.</p>}
 
       {canEdit && (
-        <>
+        <div className="kw-grid">
+          <div className="card">
           <h2>Add a category</h2>
           <ActionForm action={bind(addCategory)}>
             <label>Name <input name="name" required maxLength={60} /></label>
@@ -77,6 +83,8 @@ export default async function Budget({ params }: { params: Promise<{ org: string
             {partner && <PrivacySelect />}
             <button type="submit">Add category</button>
           </ActionForm>
+          </div>
+          <div className="card">
           <h2>Record a spend</h2>
           <p>A spend over {usd(v.wedding.spendThresholdCents)} is not recorded here: it goes to your partner for approval first, so it cannot be private, and proposing it reveals a private category or vendor it names.</p>
           <ActionForm action={bind(addExpense)}>
@@ -88,12 +96,16 @@ export default async function Budget({ params }: { params: Promise<{ org: string
             {partner && <PrivacySelect />}
             <button type="submit">Record spend</button>
           </ActionForm>
+          <Keys on={0}>A spend over {usd(v.wedding.spendThresholdCents)} takes both keys: it goes to Approvals first.</Keys>
+          </div>
+          <div className="card">
           <h2>Snapshots</h2>
           <ActionForm action={bind(takeBudgetSnapshot)}>
             <label>Note <input name="note" maxLength={200} /></label>
             <button type="submit">Take a snapshot</button>
           </ActionForm>
-        </>
+          </div>
+        </div>
       )}
       <ul aria-label="Snapshots">
         {b.snapshots.map((s) => <li key={s.id}>{s.takenAt.toISOString().slice(0, 16).replace('T', ' ')} UTC: estimate {usd(s.totals.estimateCents)}, actual {usd(s.totals.actualCents)}{s.note && ` (${s.note})`}</li>)}

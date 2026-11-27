@@ -81,7 +81,9 @@ export default async function VendorPage({ params, searchParams }: { params: Pro
       {partner && (
         <section aria-label="Needs both partners">
           <h2>Needs both of you</h2>
-          <Keys on={0}>Booking and signing take both keys: proposing turns yours; it happens when your partner approves (or at once, marked solo, while you are the only partner).</Keys>
+          {v.partners.length < 2 && !v.wedding.pairedAt
+            ? <Keys on={1} solo>You are the only partner so far: booking and signing happen as soon as you propose them, marked solo.</Keys>
+            : <Keys on={0}>Booking and signing take both keys: proposing turns yours; it happens when your partner approves.</Keys>}
           {x.status === 'considering' && (
             <ActionForm action={bind(proposeBooking)}>
               <input type="hidden" name="id" value={x.id} />
@@ -190,7 +192,8 @@ export default async function VendorPage({ params, searchParams }: { params: Pro
           )}
           <ActionForm action={bind(newVendorLink)}>
             <input type="hidden" name="id" value={x.id} />
-            <button type="submit">{link.exists ? 'Replace the vendor link' : 'Make a vendor link'}</button>
+            <button type="submit" className={link.exists ? 'secondary' : undefined}>{link.exists ? 'Replace the vendor link' : 'Make a vendor link'}</button>
+            {link.exists && <small>Replacing it stops the link the vendor has now.</small>}
           </ActionForm>
           {link.exists && (
             <ActionForm action={bind(endVendorReadLink)}>
