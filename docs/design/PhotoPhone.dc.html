@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Knotwork — Photo wall: add a photo on a phone (guest-facing)</title>
+</head>
+<body style="margin:0;background:oklch(0.9 0.01 350);">
+<!-- /p/[token] at 390 px: what a guest sees after scanning the QR in the wall’s corner. Rule 3: the wedding’s title and the event’s name, nothing else. The green notice is the state after an upload (its sentence comes from PHOTO_DONE). The wall itself (/photos/[event]/wall) stays the projector-safe dark screen. -->
+<x-dc>
+<helmet>
+<style>
+body{margin:0}
+a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,[tabindex]:focus-visible{outline:3px solid oklch(0.45 0.14 345);outline-offset:2px;border-radius:6px}
+</style>
+</helmet>
+<div style="width:390px;min-height:1000px;box-sizing:border-box;background:oklch(0.975 0.007 350);color:oklch(0.24 0.02 350);font:16px/1.55 system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;overflow-wrap:anywhere;-webkit-font-smoothing:antialiased;"><main id="content" style="max-width:34rem;margin:0 auto;padding:20px 16px 56px;display:flex;flex-direction:column;gap:20px;box-sizing:border-box;"><header style="display:flex;flex-direction:column;align-items:center;text-align:center;gap:8px;padding:16px 0 8px;"><span aria-hidden="true" style="position:relative;display:inline-block;width:42.0px;height:28.0px;flex:none;"><span style="position:absolute;top:2.8px;left:2.8px;width:22.4px;height:22.4px;border-radius:50%;border:3.5px solid oklch(0.45 0.14 345);box-sizing:border-box;"></span><span style="position:absolute;top:2.8px;left:15.399999999999999px;width:22.4px;height:22.4px;border-radius:50%;border:3.5px solid oklch(0.45 0.14 345);box-sizing:border-box;"></span></span><h1 style="margin:0;font:italic 600 31px/1.15 ui-serif, 'Iowan Old Style', Georgia, serif;">{{coupleName}}</h1><p style="margin:0;color:oklch(0.47 0.02 350);font-size:17px;">Add a photo to <strong style="color:oklch(0.24 0.02 350);">{{eventName}}</strong>.</p></header><p role="status" style="margin:0;padding:12px 14px;border-radius:10px;background:oklch(0.955 0.045 150);color:oklch(0.4 0.11 150);border:1px solid oklch(0.56 0.13 150);"><span aria-hidden="true">✓ </span>Added. It shows on the wall once the couple has looked at it. Add another if you like.</p><form style="display:flex;flex-direction:column;gap:16px;margin:0;background:oklch(0.995 0.004 350);border:1px solid oklch(0.86 0.014 350);border-radius:16px;padding:16px;"><label style="display:flex;flex-direction:column;gap:4px;font-weight:550;max-width:100%;">Photo (take one, or choose one from your gallery)<input type="file" style="font:inherit;border:2px dashed oklch(0.58 0.02 350);border-radius:10px;min-height:88px;padding:28px 12px;width:100%;box-sizing:border-box;background:oklch(0.95 0.01 350);"></label><label style="display:flex;flex-direction:column;gap:4px;font-weight:550;max-width:100%;">Your name (optional)<input type="text" value="" style="font:inherit;color:oklch(0.24 0.02 350);background:oklch(0.995 0.004 350);border:1px solid oklch(0.58 0.02 350);border-radius:10px;min-height:44px;padding:0 12px;width:100%;max-width:100%;box-sizing:border-box;"></label><label style="display:flex;flex-direction:column;gap:4px;font-weight:550;max-width:100%;">Caption (optional)<input type="text" value="" style="font:inherit;color:oklch(0.24 0.02 350);background:oklch(0.995 0.004 350);border:1px solid oklch(0.58 0.02 350);border-radius:10px;min-height:44px;padding:0 12px;width:100%;max-width:100%;box-sizing:border-box;"></label><button type="button" style="font:650 14px/1.2 system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;min-height:44px;padding:0 20px;border-radius:999px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:8px;text-decoration:none;width:100%;min-height:52px;font-size:16px;background:oklch(0.45 0.14 345);color:oklch(0.995 0.004 350);border:1px solid oklch(0.45 0.14 345);">Add photo</button></form><p style="margin:0;font-size:14px;color:oklch(0.47 0.02 350);text-align:center;">JPEG, PNG or WebP, up to 10 MB. Where and when the photo was taken, and anything else stored inside the file, is removed before it is kept.</p></main></div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":1000}}'>
+class Component extends DCLogic {
+  renderVals() {
+    // Sample data. Names are the synthetic seed couple (scripts/knotwork/seed-couple.ts); every figure is a [placeholder].
+    return {
+      "coupleName": "Juniper &amp; Rowan",
+      "me": "Juniper",
+      "partner": "Rowan",
+      "weddingDate": "[wedding date]",
+      "today": "[today]",
+      "eventName": "Reception"
+};
+  }
+}
+</script>
+<script>
+/* Self-contained preview. In a Design canvas the runtime fills the {{holes}}; opened as a plain file, this does. */
+(function () {
+  if (window.DCRuntime) return;
+  var src = document.querySelector('script[data-dc-script]').textContent;
+  var Component = new Function('DCLogic', src + '\nreturn Component;')(function () {});
+  var vals = new Component().renderVals();
+  var root = document.querySelector('x-dc');
+  root.innerHTML = root.innerHTML.replace(/\{\{\s*(\w+)\s*\}\}/g, function (m, k) { return k in vals ? String(vals[k]) : m; });
+})();
+</script>
+</body>
+</html>
