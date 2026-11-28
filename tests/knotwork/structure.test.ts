@@ -173,6 +173,23 @@ describe('rule 2: designated actions only through the consent module', () => {
     for (const col of ['dateRequestId', 'settingsRequestId', 'modeRequestId']) expect(sql).toContain(`IF NEW."${col}" = ANY(used) THEN`);
     expect(sql).toContain('the list of used requests is kept by the database');
   });
+  it('the D-172 findings (D-190 to D-197): five more triggers in their own migration, each after the guard it completes', () => {
+    const sql = read('prisma/migrations/20261128000010_knotwork_guard_d172/migration.sql');
+    for (const t of [
+      '"Vendor_request_once" BEFORE INSERT OR UPDATE ON "Vendor"',
+      '"Expense_request_once" BEFORE INSERT OR DELETE ON "Expense"',
+      '"Wedding_request_payload" BEFORE INSERT OR UPDATE ON "Wedding"',
+      '"Wedding_delete_guard" BEFORE DELETE ON "Wedding"',
+      '"ConsentRequest_partner_guard" BEFORE UPDATE ON "ConsentRequest"',
+    ]) expect(sql).toContain(`CREATE TRIGGER ${t}`);
+    // Postgres fires a table's BEFORE triggers in name order: each new one sorts after the guard whose refusals must come first.
+    for (const [first, then] of [['Vendor_guard', 'Vendor_request_once'], ['Expense_guard', 'Expense_request_once'], ['Wedding_guard', 'Wedding_request_payload'], ['Wedding_request_once', 'Wedding_request_payload'], ['ConsentRequest_guard', 'ConsentRequest_partner_guard']] as const) expect(first < then, `${first} before ${then}`).toBe(true);
+    for (const col of ['bookedRequestId', 'contractRequestId']) expect(sql).toContain(`IF NEW."${col}" = ANY(used) THEN`);
+    // No applied migration is replaced: the new file creates functions and never redefines an old one.
+    expect(sql).not.toMatch(/CREATE OR REPLACE|DROP (TRIGGER|FUNCTION)|ALTER FUNCTION/);
+    // Nothing in src/ deletes a wedding or an expense (the workspace's own cascade is the only way they go).
+    expect(filesWith(/\.(wedding|expense|budgetCategory)\.delete(Many)?\(/)).toEqual([]);
+  });
   it('the archive (D-144): every write to the plan asks need() or allows() for one of the archived capabilities', () => {
     const access = read('src/lib/knotwork/access.ts');
     expect(access).toMatch(/export const ARCHIVED_CAPS: readonly Capability\[\] = \['schedule\.edit', 'budget\.edit', 'vendors\.edit', 'guests\.edit', 'contingency\.edit'\];/);
