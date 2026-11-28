@@ -1,5 +1,26 @@
 # NEXT
 
+## ▶ 2026-11-28 (latest): every guard function's `search_path` pinned (branch `fix/guard-search-path`, draft PR, not merged, not deployed)
+Unattended run on Shane's instruction. No questions asked. Cut from `main` at `4db2ec7` (PR #9 merged). PR #10,
+`plan/per-person-db-roles` and every `design/*` branch were not touched. Decision D-199 (PR #10's plan calls it D-208).
+
+- **The hole, reproduced on Knotwork's own schema:** no guard function set `search_path`, so a temporary table named
+  `"ConsentRequest"`, `"Membership"`, `"Wedding"` or `"Org"`, made by the app's own login, answered the guard instead of
+  the real one. Six attacks went through as a role that owns nothing (date, approval rules, wedding delete, a spend over
+  the threshold, a helper approving).
+- **The fix (D-199):** one migration, `20261128000020_knotwork_guard_search_path`. `ALTER FUNCTION ... SET search_path =
+  pg_catalog, public, pg_temp` on every function in `public`, read from `pg_proc` (37: 34 Knotwork, 3 template, one of
+  them `SECURITY DEFINER`). `pg_temp` must be named, last: left out, Postgres searches it first and the hole stays.
+  No function body changed; no applied migration edited; no app code changed.
+- **Tests:** `tests/knotwork/guard-search-path.test.ts` (7: one structure test over `pg_proc`, six attacks). All 7 fail
+  with the ALTER reverted. Nothing deleted, skipped or weakened.
+- **Rule from now on:** create every function with `SET search_path = pg_catalog, public, pg_temp`. The structure test
+  fails otherwise.
+- **Independent review, gate and CI:** in the PR body, per check.
+- **You:** review and merge the draft PR (it adds a migration, so the merge loop will not). The template
+  (saas-foundation) has the same gap on its three functions; this clone now pins them, the template does not yet. PR #10's
+  step 0 is this change; its later steps are still yours to decide.
+
 ## ▶ 2026-11-28 (latest): the D-172 guard findings (branch `fix/d172-guards`, draft PR, not merged, not deployed)
 Unattended run; Shane approved it in chat (2026-11-28 00:33 CT). No questions asked. Cut from `main` at `bba4823`; PR #7
 was merged into `main` during the run (`1c4e4c0`), and that `main` was merged into this branch (no conflict, no rebase). PR #7,
