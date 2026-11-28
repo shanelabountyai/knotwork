@@ -10,6 +10,8 @@
 //   remove_guest     Guest.removedAt                   (Guest_guard)
 //   set_mode         Wedding.mode, planning ⇄ life     (Wedding_mode_guard; Phase 5, D-143)
 //   (date, rules and mode: Wedding_request_once also refuses a request the wedding has used before; D-170)
+//   (D-190 to D-197: Vendor_request_once and Expense_request_once do the same for bookings, contracts and spends;
+//    Wedding_request_payload checks the new date and rules against the request; a wedding is not deleted on its own)
 //
 // tests/knotwork/structure.test.ts scans src/ for any other writer.
 import { z } from 'zod';

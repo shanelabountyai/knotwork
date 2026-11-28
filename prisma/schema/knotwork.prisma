@@ -258,6 +258,9 @@ model Vendor {
   contractSignedOn   DateTime?       @db.Date
   contractRequestId  String?         @db.Uuid
   contractRequest    ConsentRequest? @relation("vendorContract", fields: [contractRequestId], references: [id], onDelete: NoAction)
+  /// D-191: every request this vendor was booked or its contract signed with. Kept by the database (trigger
+  /// Vendor_request_once), never written by the app: booking or signing with one of these again is refused.
+  usedRequestIds     String[]        @db.Uuid
   /// Scope (D-16): a change to any of these four on a booked vendor raises a re-confirmation flag.
   deliverables       String          @default("")
   /// Minutes after midnight on the wedding day.
