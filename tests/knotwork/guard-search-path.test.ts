@@ -16,13 +16,20 @@ import { as, db, makeWedding, ok, type Couple } from './db';
 // grants scripts/db-setup.ts gives the app role, and nothing else. It cannot disable a trigger. Each attack is one
 // transaction (a temporary table lives in one session), and the statement it must not get away with is refused by the
 // same role when there is no temporary table: the two halves of every test below.
-const ROLE = 'knotwork_search_path_probe';
+let ROLE = ''; // per database (set in beforeAll): roles are shared by every database on the server, and two runs must not share one
 const PIN = 'search_path=pg_catalog, public, pg_temp';
 const today = () => todayIn('America/Chicago', now());
 let c: Couple;
 let date: string;
 
 type Run = (q: string) => Promise<unknown>;
+/** The shadow is really there: a temporary table of that name with `n` rows matching `where`. Without this, an empty copy (RLS hiding the row, say) would be refused with the same sentence and prove nothing. */
+async function expectShadow(run: Run, table: string, where: string, n = 1) {
+  const r = (await run(`SELECT count(*)::int AS n FROM pg_temp."${table}" WHERE ${where}`)) as { rows: { n: number }[] };
+  expect(r.rows[0]!.n, `the temporary "${table}" the attack relies on`).toBe(n);
+  const first = (await run(`SELECT relnamespace = pg_my_temp_schema() AS temp FROM pg_class WHERE oid = '"${table}"'::regclass`)) as { rows: { temp: boolean }[] };
+  expect(first.rows[0]!.temp, 'to the caller, the bare name is the temporary table').toBe(true);
+}
 /**
  * Runs `steps` as the app-shaped role, in one transaction with the workspace set as `withOrg` sets it, on a connection
  * of its own. A new connection matters: a session that has already run a guard may keep its plan, which names the
@@ -50,6 +57,7 @@ const pendingRequest = (kind: string, payload: object) =>
   db.consentRequest.create({ data: { orgId: c.orgId, kind: kind as never, payload, summary: 'proposed by Juniper alone', proposerId: c.a, expiresAt: new Date(now().getTime() + 86_400_000) } });
 
 beforeAll(async () => {
+  ROLE = `knotwork_search_path_probe_${(await db.$queryRaw<{ d: string }[]>`SELECT current_database() AS d`)[0]!.d}`.replace(/[^a-z0-9_]/gi, '_').slice(0, 63);
   await db.$executeRawUnsafe(`DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = '${ROLE}') THEN CREATE ROLE "${ROLE}" NOLOGIN NOBYPASSRLS NOSUPERUSER; END IF; END $$`);
   await db.$executeRawUnsafe(`GRANT "${ROLE}" TO CURRENT_USER`);
   await db.$executeRawUnsafe(`GRANT USAGE ON SCHEMA public TO "${ROLE}"`);
@@ -81,7 +89,7 @@ describe('structure: every function in public pins its search_path, with pg_temp
     expect(knotwork.length).toBeGreaterThanOrEqual(34);
     expect(fns.map((f) => f.fn)).toEqual(expect.arrayContaining(['knotwork_require_approved(uuid,uuid,"ConsentKind",text)', 'knotwork_wedding_guard()', 'knotwork_request_partner_guard()', 'org_event_assign_seq()']));
     const unpinned = fns.filter((f) => (f.config ?? []).filter((s) => s.startsWith('search_path=')).join() !== PIN).map((f) => `${f.fn}: ${JSON.stringify(f.config)}`);
-    expect(unpinned, 'create the function with: SET search_path = pg_catalog, public, pg_temp').toEqual([]);
+    expect(unpinned, 'create the function with: SET search_path = pg_catalog, public, pg_temp (the list, not one quoted string)').toEqual([]);
     // SECURITY DEFINER runs as the owner, so an unpinned one is the worst kind: none may be missed.
     expect(fns.filter((f) => f.definer).map((f) => f.fn)).toEqual(['org_event_assign_seq()']);
     // And nothing fires a function this query cannot see (a trigger function in another schema).
@@ -98,6 +106,7 @@ describe('a temporary "ConsentRequest" does not approve anything (knotwork_requi
   const shadow = async (run: Run, id: string) => {
     await run(`CREATE TEMP TABLE "ConsentRequest" ON COMMIT DROP AS SELECT * FROM public."ConsentRequest" WHERE "id" = '${id}'`);
     await run(`UPDATE pg_temp."ConsentRequest" SET "status" = 'approved', "payload" = '{"to":"${stolen()}"}'`);
+    await expectShadow(run, 'ConsentRequest', `"id" = '${id}' AND "status" = 'approved'`);
   };
   const move = (run: Run, id: string) => run(`UPDATE public."Wedding" SET "date" = '${stolen()}', "dateRequestId" = '${id}' WHERE "orgId" = '${c.orgId}'`);
 
@@ -125,6 +134,7 @@ describe('a temporary "ConsentRequest" does not approve anything (knotwork_requi
     await expect(asAppLogin(async (run) => {
       await run(`CREATE TEMP TABLE "ConsentRequest" ON COMMIT DROP AS SELECT * FROM public."ConsentRequest" WHERE "id" = '${r.id}'`);
       await run(`UPDATE pg_temp."ConsentRequest" SET "status" = 'approved', "payload" = jsonb_build_object('spendThresholdCents', 2000000000, 'consentExpiryDays', ${before!.consentExpiryDays}, 'chaseBufferDays', ${before!.chaseBufferDays})`);
+      await expectShadow(run, 'ConsentRequest', `"id" = '${r.id}' AND "status" = 'approved'`);
       await loosen(run);
     })).rejects.toThrow(/changing the approval rules needs an approved change_settings request/);
     expect((await wedding())!.spendThresholdCents).toBe(before!.spendThresholdCents);
@@ -135,7 +145,7 @@ describe('a temporary "Org", "Wedding" or "Membership" changes no guard\'s answe
   it('"Org" (Wedding_delete_guard): the wedding is not deleted on its own', async () => {
     const drop = (run: Run) => run(`DELETE FROM public."Wedding" WHERE "orgId" = '${c.orgId}'`);
     await expect(asAppLogin(drop)).rejects.toThrow(/a wedding is never deleted on its own/);
-    await expect(asAppLogin(async (run) => { await run(`CREATE TEMP TABLE "Org" ("id" uuid) ON COMMIT DROP`); await drop(run); })).rejects.toThrow(/a wedding is never deleted on its own/);
+    await expect(asAppLogin(async (run) => { await run(`CREATE TEMP TABLE "Org" ("id" uuid) ON COMMIT DROP`); await expectShadow(run, 'Org', 'true', 0); await drop(run); })).rejects.toThrow(/a wedding is never deleted on its own/);
     expect(await wedding()).not.toBeNull();
   });
 
@@ -149,6 +159,7 @@ describe('a temporary "Org", "Wedding" or "Membership" changes no guard\'s answe
     await expect(asAppLogin(async (run) => {
       await run(`CREATE TEMP TABLE "Wedding" ON COMMIT DROP AS SELECT * FROM public."Wedding" WHERE "orgId" = '${c.orgId}'`);
       await run(`UPDATE pg_temp."Wedding" SET "spendThresholdCents" = 2147483647`);
+      await expectShadow(run, 'Wedding', `"orgId" = '${c.orgId}' AND "spendThresholdCents" > ${amount}`);
       await spend(run);
     })).rejects.toThrow(/a spend over the threshold needs an approved spend request/);
     expect(await db.expense.count({ where: { orgId: c.orgId } })).toBe(0);
@@ -161,6 +172,7 @@ describe('a temporary "Org", "Wedding" or "Membership" changes no guard\'s answe
     await expect(asAppLogin(async (run) => {
       await run(`CREATE TEMP TABLE "Membership" ON COMMIT DROP AS SELECT * FROM public."Membership" WHERE "orgId" = '${c.orgId}'`);
       await run(`UPDATE pg_temp."Membership" SET "role" = 'owner'`);
+      await expectShadow(run, 'Membership', `"userId" = '${c.helper}' AND "role" = 'owner'`);
       await approve(run);
     })).rejects.toThrow(/only a partner of this workspace can approve a request/);
     expect((await db.consentRequest.findUniqueOrThrow({ where: { id: r.id } })).status).toBe('pending');

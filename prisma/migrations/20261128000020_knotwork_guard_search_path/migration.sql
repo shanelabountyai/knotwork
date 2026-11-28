@@ -9,8 +9,9 @@
 --
 -- THE FIX. ALTER FUNCTION ... SET search_path = pg_catalog, public, pg_temp. pg_temp is named, and named last, on
 -- purpose: when pg_temp is not in the list, Postgres still searches it, FIRST. `pg_catalog, public` alone leaves the
--- hole open (tried: the same attacks go through). Named last, a temporary table is found only when no real one has
--- the name. The temporary schema is never searched for functions or operators, so nothing else can be shadowed.
+-- hole open (tried: the same attacks go through). Named last, a temporary table, view, sequence or type is found only
+-- when no real one in pg_catalog or public has the name; and the temporary schema is never searched for functions or
+-- operators at all.
 --
 -- WHICH FUNCTIONS. Not a list kept by hand: every function in this schema that no extension owns, read from pg_proc
 -- when the migration runs. On the day it was written that was 37: the 34 knotwork_* functions (33 trigger functions
@@ -21,7 +22,8 @@
 --
 -- AFTER THIS. Every new function is created with `SET search_path = pg_catalog, public, pg_temp`. CREATE OR REPLACE
 -- without that clause drops the pin. The structure test in guard-search-path.test.ts reads pg_proc and fails on
--- either. To undo: ALTER FUNCTION ... RESET search_path (and SET search_path = public on org_event_assign_seq).
+-- either. If a template upgrade re-creates one of its three functions without the clause, the remedy is a new Knotwork
+-- migration that runs this same DO loop again (the template's migration is not edited). To undo: ALTER FUNCTION ... RESET search_path (and SET search_path = public on org_event_assign_seq).
 DO $$
 DECLARE
   f regprocedure;
