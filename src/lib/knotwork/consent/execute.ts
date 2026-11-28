@@ -9,6 +9,7 @@
 //   change_settings  the three wedding settings        (Wedding_guard)
 //   remove_guest     Guest.removedAt                   (Guest_guard)
 //   set_mode         Wedding.mode, planning ⇄ life     (Wedding_mode_guard; Phase 5, D-143)
+//   (date, rules and mode: Wedding_request_once also refuses a request the wedding has used before; D-170)
 //
 // tests/knotwork/structure.test.ts scans src/ for any other writer.
 import { z } from 'zod';
