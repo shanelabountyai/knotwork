@@ -1,0 +1,160 @@
+{
+  "name": "01-month-ends",
+  "note": "Every N months from a month's end lands on the shorter month's last day (Jan 31 + 1 month is Feb 28, or Feb 29 in a leap year), and each step starts from the day it was really done, not the 31st it began on.",
+  "weddingDate": "2026-10-31",
+  "timeZone": "America/Chicago",
+  "at": "2028-02-10T18:00:00Z",
+  "tasks": [
+    {
+      "id": "jan31-monthly",
+      "rule": {
+        "unit": "month",
+        "every": 1
+      },
+      "done": [
+        "2028-01-31"
+      ]
+    },
+    {
+      "id": "nov30-quarterly",
+      "rule": {
+        "unit": "month",
+        "every": 3
+      },
+      "done": [
+        "2027-11-30"
+      ]
+    },
+    {
+      "id": "aug31-six-months",
+      "rule": {
+        "unit": "month",
+        "every": 6
+      },
+      "done": [
+        "2027-08-31"
+      ]
+    },
+    {
+      "id": "feb29-yearly-by-months",
+      "rule": {
+        "unit": "month",
+        "every": 12
+      },
+      "done": [
+        "2027-02-28"
+      ]
+    },
+    {
+      "id": "mar31-thirteen",
+      "rule": {
+        "unit": "month",
+        "every": 13
+      },
+      "done": [
+        "2027-01-31"
+      ]
+    }
+  ],
+  "months": [
+    {
+      "from": "2027-01-31",
+      "n": 1
+    },
+    {
+      "from": "2028-01-31",
+      "n": 1
+    },
+    {
+      "from": "2028-03-31",
+      "n": -1
+    },
+    {
+      "from": "2027-05-31",
+      "n": 1
+    },
+    {
+      "from": "2027-12-31",
+      "n": 2
+    },
+    {
+      "from": "2028-02-29",
+      "n": 12
+    },
+    {
+      "from": "2028-02-29",
+      "n": 48
+    },
+    {
+      "from": "2027-10-15",
+      "n": 24
+    }
+  ],
+  "expect": {
+    "today": "2028-02-10",
+    "anniversary": {
+      "k": 2,
+      "day": "2028-10-31",
+      "inDays": 264,
+      "today": false,
+      "label": "2nd anniversary"
+    },
+    "tasks": [
+      {
+        "id": "jan31-monthly",
+        "rule": "every month",
+        "due": "2028-02-29",
+        "never": false,
+        "lastDone": "2028-01-31",
+        "state": "later",
+        "overdueDays": -19
+      },
+      {
+        "id": "nov30-quarterly",
+        "rule": "every 3 months",
+        "due": "2028-02-29",
+        "never": false,
+        "lastDone": "2027-11-30",
+        "state": "later",
+        "overdueDays": -19
+      },
+      {
+        "id": "aug31-six-months",
+        "rule": "every 6 months",
+        "due": "2028-02-29",
+        "never": false,
+        "lastDone": "2027-08-31",
+        "state": "later",
+        "overdueDays": -19
+      },
+      {
+        "id": "feb29-yearly-by-months",
+        "rule": "every 12 months",
+        "due": "2028-02-28",
+        "never": false,
+        "lastDone": "2027-02-28",
+        "state": "later",
+        "overdueDays": -18
+      },
+      {
+        "id": "mar31-thirteen",
+        "rule": "every 13 months",
+        "due": "2028-02-29",
+        "never": false,
+        "lastDone": "2027-01-31",
+        "state": "later",
+        "overdueDays": -19
+      }
+    ],
+    "months": [
+      "2027-02-28",
+      "2028-02-29",
+      "2028-02-29",
+      "2027-06-30",
+      "2028-02-29",
+      "2029-02-28",
+      "2032-02-29",
+      "2029-10-15"
+    ]
+  }
+}

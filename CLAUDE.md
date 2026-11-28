@@ -2,7 +2,7 @@
 
 Wedding planning for one couple and their circle, on saas-foundation v1.7.0. **Synthetic data only; not deployed.**
 Spec: `docs/prds/prd-knotwork-wedding.md` (v1.1). Decisions: `docs/knotwork/decisions.md`, which outranks the PRD
-where they differ. Current phase plan: `docs/knotwork/PHASE-4-PLAN.md`. Session state: `NEXT.md`. Write-up: `WRITEUP.md`.
+where they differ. Current phase plan: `docs/knotwork/PHASE-5-PLAN.md`. Session state: `NEXT.md`. Write-up: `WRITEUP.md`.
 
 ## The four build rules (PRD "Build Notes")
 
@@ -11,14 +11,15 @@ where they differ. Current phase plan: `docs/knotwork/PHASE-4-PLAN.md`. Session 
    a due-date column (`tests/knotwork/structure.test.ts` scans the schema). A date of fact (paid on, completed on,
    signed on) is not a deadline and may be stored.
 2. **Designated actions only through the consent module.** Booking a vendor, signing a contract, spending over the
-   threshold, changing the wedding date, changing the consent settings (and, from Phase 2, removing a guest) happen
+   threshold, changing the wedding date, changing the consent settings (and, from Phase 2, removing a guest; from Phase 5,
+   switching into life-admin mode and back, `set_mode`, D-143) happen
    only inside `executeApproved` in `src/lib/knotwork/consent/execute.ts`, after a second owner approves. No action
    file writes those fields itself (`tests/knotwork/structure.test.ts` scans for it; the database also checks it).
    One exception, by owner decision (D-33): while a workspace has one partner and has never had two, that partner's
    requests are approved at once, marked `solo`, through the same `executeApproved`.
 3. **Guest-facing surfaces never leak wave data.** The public surfaces are a closed list: `/r/[token]` (page,
-   `respond`, `gifts`, `gifts/contribute`, `gifts/claim`), `/p/[token]` (page, `upload`) and, for one vendor,
-   `/v/[token]` (page; D-42). Each returns only what its projection builds: `src/lib/knotwork/guests/projection.ts`,
+   `respond`, `gifts`, `gifts/contribute`, `gifts/claim`, and the reminder opt-out `stop`, `stop/confirm`),
+   `/p/[token]` (page, `upload`) and, for one vendor, `/v/[token]` (page; D-42). Each returns only what its projection builds: `src/lib/knotwork/guests/projection.ts`,
    `gifts/projection.ts`, `photos/projection.ts`, `vendors/projection.ts`. None has a list, wave, priority, invite
    date, creation time or state in it; the photo page shows the wedding title and the event name and nothing else; the
    vendor page shows the wedding title, the vendor's name and its own role-filtered brief (counts, never guests'

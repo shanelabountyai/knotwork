@@ -26,6 +26,7 @@ const VERB_TEXT: Record<string, string> = {
   hidden: 'made private', revealed: 'revealed', linked: 'linked', unlinked: 'unlinked',
   shared: 'shared', unshared: 'made private', executed: 'put into action', ticked: 'ticked off', unticked: 'unticked',
   locked: 'locked', unlocked: 'unlocked', relinked: 'replaced the link of',
+  optedout: 'stopped reminders (from their own link) for',
 };
 
 /** 'knotwork.vendor.updated' → { entity: 'vendor', verb: 'updated', text: 'changed' }; null for an action that is not ours. */

@@ -27,7 +27,7 @@ export default async function Budget({ params }: { params: Promise<{ org: string
   const t = b.totals;
   return (
     <main>
-      <WeddingNav slug={ctx.slug} />
+      <WeddingNav slug={ctx.slug} mode={v.wedding.mode} />
       <h1>Budget</h1>
       <table aria-label="Budget">
         <thead><tr><th scope="col">Category</th><th scope="col">Estimate</th><th scope="col">Actual</th><th scope="col">Remaining</th><th scope="col">Funded by</th>{canEdit && <th scope="col">Change estimate</th>}</tr></thead>

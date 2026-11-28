@@ -5,8 +5,24 @@ import type { MovePreview, PlanTask } from '@/lib/knotwork/schedule/engine';
 import { PRIVACY_CHOICES } from '@/lib/knotwork/secrecy/compartment';
 import type { Hidden } from '@/lib/knotwork/secrecy/lens';
 
-export function WeddingNav({ slug, counts }: { slug: string; counts?: { approvals: number; flags: number } }) {
+/**
+ * `mode`: the wedding's (Phase 5). In life-admin mode the nav is the couple's, and a page of the plan says it is the
+ * archive, read-only (D-144). `life`: the page is one of life-admin mode's own (the home page, household tasks).
+ */
+export function WeddingNav({ slug, counts, life, mode }: { slug: string; counts?: { approvals: number; flags: number }; life?: boolean; mode?: 'planning' | 'life' }) {
   const base = `/o/${slug}/wedding`;
+  if (life || mode === 'life') {
+    return (
+      <>
+      <nav aria-label="Wedding">
+        <Link href={`/o/${slug}`}>Home</Link> · <Link href={`${base}/life`}>Household</Link> · <Link href={`${base}/gifts/thank-yous`}>Thank-yous</Link> · <Link href={`${base}/photos`}>Photos</Link> ·{' '}
+        <Link href={`${base}/name-change`}>Name change</Link> · <Link href={`${base}/archive`}>Archive</Link> · <Link href={`${base}/approvals`}>Approvals{counts?.approvals ? ` (${counts.approvals})` : ''}</Link> ·{' '}
+        <Link href={`${base}/activity`}>Activity</Link> · <Link href={`${base}/helpers`}>Helpers</Link>
+      </nav>
+      {!life && <p role="note" aria-label="Archive">From the <Link href={`${base}/archive`}>Archive</Link>: the wedding plan is read-only in life-admin mode.</p>}
+      </>
+    );
+  }
   return (
     <nav aria-label="Wedding">
       <Link href={`/o/${slug}`}>Overview</Link> · <Link href={`${base}/dashboard`}>Dashboard</Link> · <Link href={`${base}/schedule`}>Schedule</Link> · <Link href={`${base}/budget`}>Budget</Link> · <Link href={`${base}/funding`}>Funding</Link> ·{' '}

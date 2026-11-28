@@ -4,9 +4,14 @@ import { ActionForm } from '@/core/ui/action-form';
 import { allows, isPartner } from '@/lib/knotwork/access';
 import { diffDays, showDay } from '@/lib/knotwork/days';
 import { loadGuestState } from '@/lib/knotwork/guests/store';
-import { overviewView } from '@/lib/knotwork/secrecy/views';
 import { flagText } from '@/lib/knotwork/vendors/store';
+import { hasPending } from '@/lib/knotwork/consent/store';
+import { lifeModeOpen } from '@/lib/knotwork/context';
+import { lifeDashboard, waitingFor } from '@/lib/knotwork/lifeadmin/store';
+import { documentsView, overviewView } from '@/lib/knotwork/secrecy/views';
 import { createWedding } from './wedding/actions';
+import { proposeMode } from './wedding/life/actions';
+import { LifeHome } from './wedding/life/home';
 import { WeddingNav } from './wedding/bits';
 import { view } from './wedding/view';
 
@@ -19,9 +24,17 @@ export default async function OrgHome({ params }: { params: Promise<{ org: strin
   const ctx = await requireOrg((await params).org);
   const data = await view(ctx, 'schedule.view', async (tx, v) => {
     // One at a time: these share the transaction's single connection.
+    if (v.wedding.mode === 'life') {
+      // Phase 5: life-admin mode. The couple's dashboard; the plan is in the archive.
+      const life = await lifeDashboard(tx, ctx, v);
+      const docs = allows(v.who, 'vendors.view') ? await documentsView(tx, ctx, v) : null;
+      const waiting = isPartner(ctx.role) ? await waitingFor(tx, ctx) : 0;
+      return { life: { life, docs, waiting }, o: null, guests: null, pendingSwitch: false };
+    }
     const o = await overviewView(tx, ctx, v, allows(v.who, 'vendors.view'));
     const guests = allows(v.who, 'guests.view') ? await loadGuestState(tx, ctx) : null;
-    return { o, guests };
+    const pendingSwitch = lifeModeOpen(v.wedding) && (await hasPending(tx, ctx, 'set_mode'));
+    return { life: null, o, guests, pendingSwitch };
   });
 
   if (!data) {
@@ -46,8 +59,9 @@ export default async function OrgHome({ params }: { params: Promise<{ org: strin
     );
   }
 
-  const { v, o, guests } = data;
-  const { waiting, flags, late, impossible } = o;
+  const { v, life, o, guests, pendingSwitch } = data;
+  if (life) return <LifeHome slug={ctx.slug} v={v} life={life.life} docs={life.docs} waiting={life.waiting} />;
+  const { waiting, flags, late, impossible } = o!;
   const daysToGo = diffDays(v.date, v.today);
   const partner = isPartner(ctx.role);
   return (
@@ -60,12 +74,24 @@ export default async function OrgHome({ params }: { params: Promise<{ org: strin
       </p>
       <p><Link href={`/o/${ctx.slug}/wedding/dashboard`}><strong>Progress dashboard</strong></Link>: tasks on track, what is overdue, headcount, budget and more, in one place.</p>
       <ul aria-label="At a glance">
-        <li><Link href={`/o/${ctx.slug}/wedding/schedule`}>{o.open} open tasks</Link>: {late} late, {impossible} impossible</li>
+        <li><Link href={`/o/${ctx.slug}/wedding/schedule`}>{o!.open} open tasks</Link>: {late} late, {impossible} impossible</li>
         {partner && <li><Link href={`/o/${ctx.slug}/wedding/approvals`}>{waiting} waiting for your approval</Link></li>}
         {allows(v.who, 'vendors.view') && <li><Link href={`/o/${ctx.slug}/wedding/flags`}>{flags.length} vendors need re-confirmation</Link></li>}
         {guests && guests.rows.length > 0 && <li><Link href={`/o/${ctx.slug}/wedding/guests`}>{guests.count.attending} guests attending</Link>, {guests.count.pending} not answered; {guests.cap.held} of {guests.plan.cap} seats held</li>}
-        {o.marginDays !== null && <li>{o.marginDays >= 0 ? `${o.marginDays} days of margin on the longest chain of tasks` : `${-o.marginDays} days short on the longest chain of tasks`}</li>}
+        {o!.marginDays !== null && <li>{o!.marginDays >= 0 ? `${o!.marginDays} days of margin on the longest chain of tasks` : `${-o!.marginDays} days short on the longest chain of tasks`}</li>}
       </ul>
+      {partner && lifeModeOpen(v.wedding) && (
+        <section aria-label="Life-admin mode">
+          <h2>After the wedding</h2>
+          <p>The wedding day has passed. You can switch the workspace into <strong>life-admin mode</strong>: a home page for the two of you (anniversaries, household tasks, the name change, thank-yous still owed, your documents and photos), with the wedding plan kept as a read-only archive. Switching takes both of you, and so does switching back.</p>
+          {pendingSwitch ? <p><Link href={`/o/${ctx.slug}/wedding/approvals`}>A switch is waiting for approval.</Link></p> : (
+            <ActionForm action={proposeMode.bind(null, ctx.slug)}>
+              <input type="hidden" name="to" value="life" />
+              <button type="submit">Switch to life-admin mode</button>
+            </ActionForm>
+          )}
+        </section>
+      )}
       {flags.length > 0 && (
         <section aria-label="Needs re-confirmation">
           <h2>Needs re-confirmation</h2>

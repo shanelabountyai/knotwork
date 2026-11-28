@@ -70,6 +70,9 @@ export const exportTables: readonly ExportTable[] = [
   whole('SeatingTable', (tx, orgId) => tx.seatingTable.findMany({ where: { orgId }, orderBy: [{ name: 'asc' }, { id: 'asc' }] })),
   whole('SeatingRule', (tx, orgId) => tx.seatingRule.findMany({ where: { orgId }, orderBy: [{ createdAt: 'asc' }, { id: 'asc' }] })),
   whole('Seat', (tx, orgId) => tx.seat.findMany({ where: { orgId }, orderBy: [{ tableId: 'asc' }, { guestId: 'asc' }] })),
+  // Phase 5, life-admin mode: household tasks (a rule, no date) and the days they were done (dates of fact). No secret.
+  whole('RecurringTask', (tx, orgId) => tx.recurringTask.findMany({ where: { orgId }, orderBy: [{ createdAt: 'asc' }, { id: 'asc' }] })),
+  whole('RecurringDone', (tx, orgId) => tx.recurringDone.findMany({ where: { orgId }, orderBy: [{ taskId: 'asc' }, { doneOn: 'asc' }] })),
 ];
 
 // An org-owned table left out on purpose, with the reason. INV-34 fails on any model with an orgId column that is in

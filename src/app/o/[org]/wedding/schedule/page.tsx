@@ -28,7 +28,7 @@ export default async function Schedule({ params, searchParams }: { params: Promi
 
   return (
     <main>
-      <WeddingNav slug={ctx.slug} />
+      <WeddingNav slug={ctx.slug} mode={v.wedding.mode} />
       <h1>Schedule</h1>
       <p>
         Wedding: <strong>{showDay(v.date)}</strong>. Today: {showDay(v.today)}.

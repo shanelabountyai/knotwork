@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { inOrg, requireOrg } from '@/core/authz/guards';
 import { now } from '@/core/clock';
 import { ActionForm } from '@/core/ui/action-form';
@@ -22,7 +23,7 @@ export default async function MoveDate({ params, searchParams }: { params: Promi
   const { v, move, waiting } = data;
   return (
     <main>
-      <WeddingNav slug={ctx.slug} />
+      <WeddingNav slug={ctx.slug} mode={v.wedding.mode} />
       <h1>Move the date</h1>
       <p>The wedding is on <strong>{showDay(v.date)}</strong>. Pick a new date to see what it does to the plan. Nothing changes until your partner approves.</p>
       {waiting && <p role="status">Already waiting for your partner: {waiting.summary}.</p>}
@@ -42,6 +43,7 @@ export default async function MoveDate({ params, searchParams }: { params: Promi
             <button type="submit">Propose this move</button>
           </ActionForm>
           <p>Moving the date also flags every booked vendor for re-confirmation.</p>
+          <p><Link href={`/o/${ctx.slug}/wedding/date/insurance?to=${to}`}>Before you decide: contracts, payments and insurance questions for this move</Link> (general information, not insurance or legal advice).</p>
         </>
       )}
     </main>

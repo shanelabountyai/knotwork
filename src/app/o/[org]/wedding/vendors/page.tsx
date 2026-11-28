@@ -19,7 +19,7 @@ export default async function Vendors({ params }: { params: Promise<{ org: strin
   const { v, vendors } = data;
   return (
     <main>
-      <WeddingNav slug={ctx.slug} />
+      <WeddingNav slug={ctx.slug} mode={v.wedding.mode} />
       <h1>Vendors</h1>
       <table aria-label="Vendors">
         <thead><tr><th scope="col">Vendor</th><th scope="col">Category</th><th scope="col">Status</th><th scope="col">Contract</th><th scope="col">Re-confirmation</th></tr></thead>

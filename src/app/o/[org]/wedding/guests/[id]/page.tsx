@@ -2,14 +2,15 @@ import { notFound } from 'next/navigation';
 import { inOrg, requireOrg } from '@/core/authz/guards';
 import { ActionForm } from '@/core/ui/action-form';
 import { allows, isPartner } from '@/lib/knotwork/access';
-import { dayOfDb, showDay } from '@/lib/knotwork/days';
+import { dayOfDb, showDay, todayIn } from '@/lib/knotwork/days';
 import { heldSeats } from '@/lib/knotwork/guests/backfill';
+import { CHANNEL_TEXT, CHANNELS, channelOf } from '@/lib/knotwork/guests/delivery';
 import { entitlement } from '@/lib/knotwork/guests/plus-one';
 import { ACCESSIBILITY, DIETARY, TAG_LABEL } from '@/lib/knotwork/guests/projection';
 import { loadPlan, toIn } from '@/lib/knotwork/guests/store';
 import { NoWedding, WeddingNav } from '../../bits';
 import { view } from '../../view';
-import { addGuest, markSaveTheDate, newRsvpLink, proposeGuestRemoval, recordRsvp, showRsvpLink, updateGuest, updateHousehold } from '../actions';
+import { addGuest, markSaveTheDate, newRsvpLink, proposeGuestRemoval, recordRsvp, setReminderChannel, showRsvpLink, updateGuest, updateHousehold } from '../actions';
 import { GuestNav } from '../nav';
 
 export const metadata = { title: 'Household' };
@@ -36,7 +37,7 @@ export default async function HouseholdPage({ params }: { params: Promise<{ org:
 
   return (
     <main>
-      <WeddingNav slug={ctx.slug} />
+      <WeddingNav slug={ctx.slug} mode={v.wedding.mode} />
       <GuestNav slug={ctx.slug} />
       <h1>{h.name}</h1>
       <p aria-label="Invitation status">
@@ -114,6 +115,25 @@ export default async function HouseholdPage({ params }: { params: Promise<{ org:
           </ActionForm>
         </>
       )}
+
+      <section aria-label="Reminders">
+        <h2>Reminders</h2>
+        <p>
+          {h.remindersStoppedAt
+            ? <>They stopped reminders from their own link on {showDay(todayIn(v.wedding.timeZone, h.remindersStoppedAt))}. No reminder goes to them; call them if you need to.</>
+            : <>Reminders go by <strong>{CHANNEL_TEXT[h.remindVia].toLowerCase()}</strong>{h.smsConsentOn && h.remindVia === 'sms' && <> (they agreed on {showDay(dayOfDb(h.smsConsentOn))})</>}.{h.remindVia !== 'none' && !channelOf(h) && ' Nothing on file to send them to, so they are on the call list.'}</>}
+          {' '}Every reminder carries a link that stops further reminders at once.
+        </p>
+        {canEdit && !h.remindersStoppedAt && (
+          <ActionForm action={bind(setReminderChannel)}>
+            <input type="hidden" name="id" value={h.id} />
+            <label>Remind by <select name="channel" defaultValue={h.remindVia}>{CHANNELS.map((c) => <option key={c} value={c}>{CHANNEL_TEXT[c]}</option>)}</select></label>
+            <label>Day they agreed to text messages <input name="smsConsentOn" type="date" defaultValue={h.smsConsentOn ? dayOfDb(h.smsConsentOn) : ''} /></label>
+            <p><small>Text messages need a phone number in international form (like +15551234567) and the day the household said yes to texts.</small></p>
+            <button type="submit">Save reminder settings</button>
+          </ActionForm>
+        )}
+      </section>
 
       {canEdit && (
         <>

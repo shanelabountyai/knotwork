@@ -1,6 +1,90 @@
 # NEXT
 
-## ▶ 2026-11-25 (latest): Knotwork Phase 4 built (branch `phase-4`, four slices, not merged, not deployed)
+## ▶ 2026-11-26 (latest): independent pre-merge review of PR #6, three must-fixes fixed (D-153; not merged, not deployed)
+Unattended run (Thanksgiving; no questions asked). Two review passes: one by this session, one by four fresh agents
+given only the diff, the PR text and the PRD's future-considerations section. Verdict: **merge after must-fixes**. The
+review with every should-fix and nit is on PR #6.
+
+- **Fixed (D-153), each with a test:** (1) changing an SMS household's phone to another valid number kept the old
+  consent date; now refused until the channel is changed first (`updateHousehold`, `delivery-db`). (2) One workspace's
+  non-`Refused` error in the scheduled reminders stopped the loop and, since it runs first in `cronJobs`, the template's
+  outbox drain and SSO sweeps; now `remindEach` counts it as `failed`, logs its name only, and goes on (`delivery-db`).
+  (3) `lifeadmin-db`'s archive refusal for the budget ran only `if (category)` and never ran; now unconditional.
+  CLAUDE.md rule 2 names `set_mode`.
+- **Gate here (cloud sandbox):** `npm ci` fails at `postinstall` (`prisma generate` cannot download the schema engine,
+  D-04); `npm ci --ignore-scripts` then `prisma generate` with a stub engine binary worked. lint clean; typecheck clean;
+  build OK (CI's placeholder env values); vitest database-free files (structure, pure-helpers, delivery-pure,
+  lifeadmin-pure, classifier-pure) 171 passed; pytest 132 passed. **Not run here:** the database-backed vitest files and
+  Playwright (a local Postgres could not be started in this run), and `foundation:drift` (the clone has no `v1.7.0`
+  template tag). CI is the gate for those; see the closing comment on PR #6 for the result on the new head.
+- **You:** read the review on #6; the should-fixes are yours to take or leave (the biggest: texts skipped by quiet hours
+  never go out under a 06:00 UTC cron; the mode trigger accepts an older approved request again; the stop page's copy).
+
+## ▶ 2026-11-25: Knotwork Phase 5 built (branch `phase-5`, draft PR #6, two slices, not merged, not deployed)
+Shane asked in chat on 2026-11-25: "Build all the future considerations" (PR #5 merged; `phase-5` from `main` at
+`f684765`). Plan: `docs/knotwork/PHASE-5-PLAN.md`. Two slices, one after the other (D-136). Decisions D-134 to D-151.
+Synthetic data only; no live email, SMS, payments or model calls; no env var or secret added.
+
+- **Slice E. Photo classifier-assist seam** (D-135, D-137): a `PhotoClassifier` interface given only a processed image;
+  `none` by default, a deterministic local `stub`; per photo event, off by default. A suggestion is advice: `hold` puts
+  a new post-moderation photo in the waiting queue, nothing else; it never removes, approves or publishes. Nothing in
+  the seam can reach a network (a structure scan). **Date-move insurance information page** (D-141):
+  `/wedding/date/insurance`, partners only, the couple's own facts through `insuranceView` (signed contracts, payments
+  made and due, what a move leaves late), general questions to ask; no prices, insurers or statistics. **Delivery
+  readiness** (D-134, D-138 to D-140): a reminder channel per household (email, SMS with a recorded consent day, none),
+  an opt-out page and post on the household's own link (`/r/[token]/stop`, `/stop/confirm`, on rule 3's closed list),
+  scheduled reminders per couple (off by default) through the cron, request shapes for the template's Resend and Twilio
+  transports tested against a stubbed `fetch`; `docs/knotwork/PRODUCTIONIZE.md`. Turning sends on is setting keys.
+- **Slice F. Life-admin mode** (D-143 to D-150): once the wedding day has passed (derived), a partner proposes the
+  switch; it is a designated action (`set_mode`, executed only in `executeApproved`, a database trigger refuses any
+  other writer, solo mode as D-33), reversible the same way, logged, with a date of fact (`Wedding.modeChangedAt`). In
+  life-admin mode the home page is the couple's dashboard (the next anniversary and which one, household tasks, the
+  name change, thank-yous still owed, the vendors' contract pages read-only, the photo albums) and the plan is a
+  read-only archive (`/wedding/archive`; every write to it refused with one sentence; designated changes to the plan
+  refused when proposed and when approved). Recurring household tasks (`/wedding/life`): a rule (every N days, weeks or
+  months, or yearly on the anniversary) and a done-on log; next due computed on read (`lifeadmin/recurrence.ts`, pure:
+  month ends clamp, Feb 29 weddings on Feb 28, calendar days in the wedding's time zone); nine fixtures recomputed by
+  `tools/recurrence_oracle.py`. Helpers keep their grants read-only and the album if they moderate it; household tasks
+  are the partners'. Secrecy holds: a sweep of every page by glob in life-admin mode shows no private label. On the
+  guest side the RSVP link takes no reply ("Replies are closed now") and no reminder goes; gifts, the opt-out, the photo
+  and vendor links are unchanged (D-148). A second synthetic couple (Sage & Wren, married 40 days ago, still planning)
+  carries the e2e story; Juniper and Rowan stay in planning mode.
+- **Server actions:** 124 → 126 (slice F added `proposeMode` and `householdTask`, one action with an `op`). The template's
+  action harness ("passes INV-01/02/03/04/22") still runs past its fixed 180 s in this sandbox (the only cause of failure in
+  both vitest legs); an uncommitted copy with only the time limit lifted passed every assertion in 286.4 s, and
+  305.3 s when run again, with slice F (126 actions); 259.2 s at `7984011` (slice E, 124 actions, a worktree on the same
+  machine and database, run between the two). The sandbox varies by tens of seconds run to run. CI took 149.5 s at 123
+  actions (D-133); scaled by these ratios slice F would take about 165 to 176 s of its 180 s there. Not measured in CI
+  yet: **likely to run out of the budget soon, if not on this PR** (D-150).
+- **Gate (sandbox, 2026-11-25, after slice F):** lint 0 problems; typecheck clean; vitest (RLS off) 87 files, 1529 passed / 66 skipped, 2 failed: the
+  harness's 180 s timer, and in the same file a control ("refuses an untagged id field") that hit a deadlock against the
+  timed-out harness still running beside it (run alone, the file's other 13 tests pass); RLS
+  enforce leg 87 files, 1595 passed / 1 skipped, 1 failed (the harness's 180 s timer, as above); `npm run build` OK;
+  `foundation:drift` clean; `foundation:check-modules` pass; `fixtures:check` 88 the same, no difference; pytest 132
+  passed; sandbox schema check after rebuilding the test database from scratch: 46 clone models, 31 enums, 72 tables,
+  no difference; Playwright 52 passed (all specs, one worker).
+- **CI (GitHub Actions) at `de056af`:** `ci (off)` success (migrate deploy, "Migrations match the schema", vitest 87
+  files 1531 passed / 66 skipped, Playwright 52 passed), `modules-removed` success, `oracles` success. The action harness
+  took **154.5 s** of its 180 s at 126 actions (149.5 s at 123, 158.5 s at 124: CI's run-to-run spread is as large as
+  the per-action cost; D-152).
+- **Not verified:** real sends through Resend or Twilio (no keys, by rule); a real photo classifier; the life-admin
+  pages with years of done-day history (the household page lists the last five days per task).
+- **Open for Shane** (a line each is enough):
+  - D-133/D-150/D-152: the template's action harness has a fixed 180 s; CI used 154.5 s at 126 actions. A per-action
+    budget upstream, or a `FOUNDATION_PATCHES.md` entry, before a phase adds many more actions?
+  - D-134: delivery uses the template's Resend and Twilio transports; another provider only if those are not the ones.
+  - D-135/D-137: plug a real classifier into the seam at productionize; should `review` hold a photo too?
+  - D-138/D-139: may the couple undo a household's own stop (with a recorded reason)? Drop the `none` channel?
+  - D-140: scheduled reminders off by default; on by default instead? Other SMS hours?
+  - D-141: the insurance page is partners only; open it to helpers with `vendors_edit`?
+  - D-143: the switch to life-admin mode is designated (two keys); automatic the day after the wedding instead?
+  - D-144: the archive is enforced in the app (one gate); a database trigger per planning table as well?
+  - D-145/D-146: household tasks count from the day last done (never done: due now); Feb 29 weddings on Feb 28.
+  - D-147: helpers keep their grants read-only after the switch; end them at the switch instead?
+  - D-148: in life-admin mode the RSVP link takes no reply, but the gift page stays open; close that too?
+- **You:** review draft PR #6; answer what you care about above.
+
+## ▶ 2026-11-25: Knotwork Phase 4 built (branch `phase-4`, four slices, not merged, not deployed)
 Shane asked in chat on 2026-11-24: "Merge it start phase 4" (PR #4 merged; `phase-4` branched from `main` at `a932b6d`). Plan:
 `docs/knotwork/PHASE-4-PLAN.md`. Built in four slices, one after another (D-90). Decisions D-89 to D-130; ADR-001 for
 secrecy. Synthetic data only. No PR opened yet for `phase-4`.

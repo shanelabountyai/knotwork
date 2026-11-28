@@ -1,0 +1,74 @@
+{
+  "name": "06-never-done",
+  "note": "Never done: an interval task is due today; an anniversary task is due on the next anniversary (today's, if it is today).",
+  "weddingDate": "2026-06-20",
+  "timeZone": "America/Los_Angeles",
+  "at": "2027-06-21T06:30:00Z",
+  "tasks": [
+    {
+      "id": "smoke-alarms",
+      "rule": {
+        "unit": "month",
+        "every": 6
+      },
+      "done": []
+    },
+    {
+      "id": "gutters",
+      "rule": {
+        "unit": "week",
+        "every": 26
+      },
+      "done": []
+    },
+    {
+      "id": "dinner",
+      "rule": {
+        "unit": "anniversary",
+        "every": 1
+      },
+      "done": []
+    }
+  ],
+  "months": [],
+  "expect": {
+    "today": "2027-06-20",
+    "anniversary": {
+      "k": 1,
+      "day": "2027-06-20",
+      "inDays": 0,
+      "today": true,
+      "label": "1st anniversary"
+    },
+    "tasks": [
+      {
+        "id": "smoke-alarms",
+        "rule": "every 6 months",
+        "due": "2027-06-20",
+        "never": true,
+        "lastDone": null,
+        "state": "today",
+        "overdueDays": 0
+      },
+      {
+        "id": "gutters",
+        "rule": "every 26 weeks",
+        "due": "2027-06-20",
+        "never": true,
+        "lastDone": null,
+        "state": "today",
+        "overdueDays": 0
+      },
+      {
+        "id": "dinner",
+        "rule": "every year, on the anniversary",
+        "due": "2027-06-20",
+        "never": true,
+        "lastDone": null,
+        "state": "today",
+        "overdueDays": 0
+      }
+    ],
+    "months": []
+  }
+}

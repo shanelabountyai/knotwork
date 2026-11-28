@@ -8,6 +8,7 @@
 //   change_date      Wedding.date, via commitMove      (Wedding_guard)
 //   change_settings  the three wedding settings        (Wedding_guard)
 //   remove_guest     Guest.removedAt                   (Guest_guard)
+//   set_mode         Wedding.mode, planning ⇄ life     (Wedding_mode_guard; Phase 5, D-143)
 //
 // tests/knotwork/structure.test.ts scans src/ for any other writer.
 import { z } from 'zod';
@@ -17,12 +18,13 @@ import type { Tx } from '@/core/db/rls';
 import { Refused } from '@/core/errors';
 import { createExpense } from '../budget-store';
 import { logChange } from '../changelog';
-import { requireWedding, todayOf } from '../context';
+import { lifeModeOpen, requireWedding, todayOf } from '../context';
 import { dbOfDay, isRealDay } from '../days';
 import { deltaFor } from '../guests/headcount';
 import { assertWithinCap, loadGuestState } from '../guests/store';
 import { commitMove, lockWedding, syncRsvpTask } from '../schedule/store';
-import type { ConsentKind } from './machine';
+import { ARCHIVE_REFUSAL } from '../access';
+import { PLAN_KINDS, type ConsentKind } from './machine';
 
 const day = z.string().refine(isRealDay);
 export const PAYLOAD = {
@@ -32,6 +34,7 @@ export const PAYLOAD = {
   change_date: z.object({ from: day, to: day }),
   change_settings: z.object({ spendThresholdCents: z.number().int().min(0), consentExpiryDays: z.number().int().min(1), chaseBufferDays: z.number().int().min(0) }),
   remove_guest: z.object({ guestIds: z.array(z.uuid()).min(1).max(50) }),
+  set_mode: z.object({ to: z.enum(['planning', 'life']) }),
 } as const;
 export type Payload<K extends keyof typeof PAYLOAD> = z.infer<(typeof PAYLOAD)[K]>;
 
@@ -44,6 +47,8 @@ export const keysMark = (solo: boolean | undefined) => (solo ? { twoKey: false, 
 /** Does what an approved request allows. `seen` is the date-move fingerprint the approver was shown, and whether the approval was solo. */
 export async function executeApproved(tx: Tx, ctx: Ctx, r: Approved, seen: { fingerprint?: string; solo?: boolean }): Promise<void> {
   const mark = keysMark(seen.solo);
+  // D-144: a change to the plan asked for before the switch to life-admin mode cannot happen in the archive.
+  if (PLAN_KINDS.includes(r.kind) && (await requireWedding(tx, ctx)).mode === 'life') throw new Refused(ARCHIVE_REFUSAL);
   switch (r.kind) {
     case 'book_vendor': {
       const p = PAYLOAD.book_vendor.parse(r.payload);
@@ -92,6 +97,17 @@ export async function executeApproved(tx: Tx, ctx: Ctx, r: Approved, seen: { fin
       await tx.wedding.update({ where: { orgId: ctx.orgId }, data: { ...p, settingsRequestId: r.id } });
       await logChange(tx, ctx, 'wedding', 'updated', w.id, 'Approval rules', before, p, mark);
       await syncRsvpTask(tx, ctx); // the chase buffer moves the RSVP deadline
+      return;
+    }
+    case 'set_mode': {
+      // Phase 5 (D-143): into life-admin mode only once the wedding day has passed (today in the wedding's time zone is
+      // after the wedding date: derived, nothing stored); back to planning at any time. The moment is a date of fact.
+      const p = PAYLOAD.set_mode.parse(r.payload);
+      const w = await requireWedding(tx, ctx);
+      if (w.mode === p.to) throw new Refused(p.to === 'life' ? 'The workspace is already in life-admin mode.' : 'The workspace is already in planning mode.');
+      if (p.to === 'life' && !lifeModeOpen(w)) throw new Refused('Life-admin mode opens the day after the wedding.');
+      await tx.wedding.update({ where: { orgId: ctx.orgId }, data: { mode: p.to, modeRequestId: r.id, modeChangedAt: now() } });
+      await logChange(tx, ctx, 'wedding', 'updated', w.id, 'Workspace mode', { mode: w.mode }, { mode: p.to }, mark);
       return;
     }
     case 'remove_guest': {

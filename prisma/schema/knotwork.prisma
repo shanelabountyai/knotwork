@@ -53,6 +53,7 @@ enum ConsentKind {
   change_date
   change_settings
   remove_guest
+  set_mode
 }
 
 enum ConsentStatus {
@@ -99,6 +100,13 @@ model Wedding {
   /// A date of fact (D-33): the first moment the workspace was seen with two partners. Never unset; while it is null
   /// and there is one partner, that partner's designated actions execute solo.
   pairedAt            DateTime?       @db.Timestamptz(6)
+  /// Phase 5, designated: planning, or the couple's life-admin mode after the wedding day. Changes only with an
+  /// approved set_mode request (modeRequestId), whose payload names this mode.
+  mode                WeddingMode     @default(planning)
+  modeRequestId       String?         @db.Uuid
+  modeRequest         ConsentRequest? @relation("weddingMode", fields: [modeRequestId], references: [id], onDelete: NoAction)
+  /// A date of fact: when the mode last changed (null while it never has). Never a deadline.
+  modeChangedAt       DateTime?       @db.Timestamptz(6)
   createdById         String?         @db.Uuid
   createdAt           DateTime        @default(now()) @db.Timestamptz(6)
   updatedAt           DateTime        @updatedAt @db.Timestamptz(6)
@@ -356,6 +364,7 @@ model ConsentRequest {
   solo            Boolean            @default(false)
   weddingDates    Wedding[]          @relation("weddingDate")
   weddingSettings Wedding[]          @relation("weddingSettings")
+  weddingModes    Wedding[]          @relation("weddingMode")
   bookedVendors   Vendor[]           @relation("vendorBooked")
   signedVendors   Vendor[]           @relation("vendorContract")
   expenses        Expense[]
@@ -442,7 +451,16 @@ model GuestPlan {
   mealOptions     String[]
   /// P1-5: whether the seating chart also seats guests who have not answered yet (attending guests always are).
   seatPending     Boolean  @default(false)
+  /// Phase 5: due reminders also go out on the daily schedule (cron), not only from the button. Off by default.
+  autoReminders   Boolean  @default(false)
   updatedAt       DateTime @updatedAt @db.Timestamptz(6)
+}
+
+/// Phase 5: how a household's reminders are delivered.
+enum ReminderChannel {
+  email
+  sms
+  none
 }
 
 /// The invitation unit.
@@ -471,6 +489,12 @@ model Household {
   /// sha256 of the RSVP link token (INV-07), and a sealed copy so a reminder can carry the same link. Never exported.
   rsvpTokenHash     String?          @unique
   rsvpTokenSealed   String?
+  /// Phase 5: how reminders reach this household. sms only with a phone and an SMS consent date (the database checks).
+  remindVia         ReminderChannel  @default(email)
+  /// A date of fact: the day the household agreed to reminders by text message.
+  smsConsentOn      DateTime?        @db.Date
+  /// A date of fact: when the household stopped reminders from its own link. No reminder goes after it.
+  remindersStoppedAt DateTime?       @db.Timestamptz(6)
   createdAt         DateTime         @default(now()) @db.Timestamptz(6)
   guests            Guest[]
   chaseEvents       ChaseEvent[]
@@ -674,6 +698,20 @@ enum PhotoBlobKind {
   thumb
 }
 
+/// Phase 5 (D-135): which classifier advises the moderator on an event. none: no advice (today's behaviour).
+enum PhotoClassifier {
+  none
+  stub
+}
+
+/// A classifier's advice. ok: nothing to look at. review: shown flagged in the console. hold: under post-moderation,
+/// the photo starts in the waiting queue instead of on the wall. Advice never approves, removes or publishes.
+enum PhotoSuggestion {
+  ok
+  review
+  hold
+}
+
 /// One wall: an upload link (its sha256, and a sealed copy for the QR code), and how it is moderated.
 model PhotoEvent {
   id                String        @id @default(uuid()) @db.Uuid
@@ -689,6 +727,8 @@ model PhotoEvent {
   uploadDays        Int           @default(7)
   /// Photos are purged this many days after the wedding date (derived on read).
   retentionDays     Int           @default(365)
+  /// Phase 5 (D-135): off (none) by default.
+  classifier        PhotoClassifier @default(none)
   createdById       String?       @db.Uuid
   createdAt         DateTime      @default(now()) @db.Timestamptz(6)
   photos            Photo[]
@@ -737,6 +777,10 @@ model Photo {
   createdAt       DateTime     @default(now()) @db.Timestamptz(6)
   /// A date of fact: when the retention purge deleted this photo's bytes.
   purgedAt        DateTime?    @db.Timestamptz(6)
+  /// Phase 5 (D-135): the classifier's advice at ingest (null: none ran), why, and its labels with scores.
+  suggestion       PhotoSuggestion?
+  suggestionReason String       @default("")
+  suggestionLabels Json?
   blobs           PhotoBlob[]
 
   @@index([orgId])
@@ -1107,4 +1151,53 @@ model Seat {
 
   @@index([orgId])
   @@index([tableId])
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
+// Phase 5, slice F: the couple's life-admin mode after the wedding (D-143 onward).
+
+enum WeddingMode {
+  planning
+  life
+}
+
+/// How a household task comes round again: every N days, weeks or months after it was last done, or yearly on the
+/// wedding anniversary (derived from Wedding.date).
+enum RecurUnit {
+  day
+  week
+  month
+  anniversary
+}
+
+/// A recurring household task. RULE 1: it stores a RULE (unit and every), never a date; when it is next due is
+/// worked out on read from its done-on log, or from Wedding.date for the anniversary (lifeadmin/recurrence.ts).
+model RecurringTask {
+  id          String          @id @default(uuid()) @db.Uuid
+  orgId       String          @db.Uuid
+  org         Org             @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  title       String
+  unit        RecurUnit
+  every       Int             @default(1)
+  notes       String          @default("")
+  createdById String?         @db.Uuid
+  createdAt   DateTime        @default(now()) @db.Timestamptz(6)
+  done        RecurringDone[]
+
+  @@index([orgId])
+}
+
+/// One day a recurring task was done: a date of fact, typed or today. At most one per task and day.
+model RecurringDone {
+  id        String        @id @default(uuid()) @db.Uuid
+  orgId     String        @db.Uuid
+  org       Org           @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  taskId    String        @db.Uuid
+  task      RecurringTask @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  doneOn    DateTime      @db.Date
+  byId      String?       @db.Uuid
+  createdAt DateTime      @default(now()) @db.Timestamptz(6)
+
+  @@unique([taskId, doneOn])
+  @@index([orgId])
 }

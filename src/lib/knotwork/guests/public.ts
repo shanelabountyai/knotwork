@@ -6,12 +6,13 @@ import { inOrg } from '@/core/authz/guards';
 import { asSystem, withOrg, type Tx } from '@/core/db/rls';
 import { hit } from '@/core/rate-limit';
 import { Refused } from '@/core/errors';
+import { log } from '@/core/log';
 import { hashToken } from '@/core/tokens';
 import { requireWedding, weddingDay } from '../context';
 import { lockWedding } from '../schedule/store';
 import { entitlement } from './plus-one';
-import { checkGuestReply, RSVP_PROBLEM, rsvpView, type RsvpSubmission, type RsvpView } from './projection';
-import { applyRsvp, loadPlan, rsvpDeadline, toIn } from './store';
+import { checkGuestReply, RSVP_PROBLEM, rsvpView, stopView, type RsvpSubmission, type RsvpView, type StopView } from './projection';
+import { applyRsvp, loadPlan, rsvpDeadline, sendDueReminders, stopReminders, toIn } from './store';
 
 /** Generous for a family filling in a form, tight for someone guessing tokens. Per IP. */
 export const RSVP_LIMIT = { limit: 60, windowMs: 15 * 60_000 };
@@ -66,6 +67,9 @@ export async function submitRsvp(token: string, ip: string, submission: RsvpSubm
     await lockWedding(tx, h.orgId);
     const view = await viewOf(tx, h.orgId, h.id);
     if (!view) return null;
+    // Phase 5 (D-148): in life-admin mode the guest list is an archive; the page still shows the invitation, and a
+    // reply gets one fixed sentence, the same for every household.
+    if ((await requireWedding(tx, { orgId: h.orgId })).mode === 'life') return { ok: false as const, message: RSVP_PROBLEM.closed };
     const checked = checkGuestReply(view, submission);
     if (!checked.ok) return checked;
     await applyRsvp(tx, { orgId: h.orgId, userId: null }, h.id, checked);
@@ -78,4 +82,61 @@ export async function submitRsvp(token: string, ip: string, submission: RsvpSubm
     if (e instanceof Refused) return { ok: false as const, message: RSVP_PROBLEM.full };
     throw e;
   });
+}
+
+// ---- the opt-out (Phase 5): /r/[token]/stop, on the same token, the same rate limit and the same 404s
+
+/** What the opt-out page shows: the wedding's title and nothing about the household (stopView). */
+export async function readStop(token: string, ip: string): Promise<StopView | 'limited' | null> {
+  if (!(await hit(`rsvp:ip:${ip}`, RSVP_LIMIT))) return 'limited';
+  const h = await find(token);
+  return h ? withOrg({ orgId: h.orgId }, async (tx) => stopView({ wedding: { title: (await requireWedding(tx, { orgId: h.orgId })).title } })) : null;
+}
+
+/** The household stops its reminders: at once, and a second time changes nothing (the answer is the same). */
+export async function stopFromLink(token: string, ip: string): Promise<'stopped' | 'limited' | null> {
+  if (!(await hit(`rsvp:ip:${ip}`, RSVP_LIMIT))) return 'limited';
+  const h = await find(token);
+  if (!h) return null;
+  await withOrg({ orgId: h.orgId }, (tx) => stopReminders(tx, h.orgId, h.id));
+  return 'stopped';
+}
+
+/**
+ * The cron job (src/app/cron-jobs.ts): due reminders in every workspace that turned the daily schedule on
+ * (GuestPlan.autoReminders). The same `sendDueReminders` as the button, so the cadence and its idempotence are one.
+ * A workspace that cannot send (its saved links can no longer be read) is counted and skipped; the others go on.
+ */
+export async function sendRemindersEverywhere(): Promise<{ orgs: number; reminded: number; skipped: number; failed: number }> {
+  // Cross-org (cross-org.ts): a cron run has no org; it lists the ones that asked for scheduled reminders.
+  const plans = await asSystem((sys) => sys.guestPlan.findMany({ where: { autoReminders: true }, select: { orgId: true }, orderBy: { orgId: 'asc' } }));
+  return remindEach(
+    plans.map((p) => p.orgId),
+    (orgId) => withOrg({ orgId }, async (tx) => ((await tx.wedding.findUnique({ where: { orgId }, select: { id: true } })) ? sendDueReminders(tx, { orgId, userId: null }) : 0)),
+  );
+}
+
+/**
+ * D-153: one workspace never stops the others, or the template's own cron jobs that run after this one (the outbox
+ * drain, the SSO sweeps). A refusal (its saved links cannot be read) is `skipped`; any other error is `failed` and
+ * logged; both roll back that workspace's transaction only, and the loop goes on.
+ */
+export async function remindEach(orgIds: readonly string[], remindOne: (orgId: string) => Promise<number>): Promise<{ orgs: number; reminded: number; skipped: number; failed: number }> {
+  let reminded = 0;
+  let skipped = 0;
+  let failed = 0;
+  for (const orgId of orgIds) {
+    try {
+      reminded += await remindOne(orgId);
+    } catch (e) {
+      if (e instanceof Refused) {
+        skipped++;
+        log('knotwork.reminders.skipped', { orgId });
+      } else {
+        failed++;
+        log('knotwork.reminders.failed', { orgId, error: e instanceof Error ? e.name : 'unknown' });
+      }
+    }
+  }
+  return { orgs: orgIds.length, reminded, skipped, failed };
 }

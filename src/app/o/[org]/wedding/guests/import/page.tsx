@@ -14,7 +14,7 @@ export default async function ImportGuests({ params }: { params: Promise<{ org: 
   if (!data) return <NoWedding slug={ctx.slug} />;
   return (
     <main>
-      <WeddingNav slug={ctx.slug} />
+      <WeddingNav slug={ctx.slug} mode={data.v.wedding.mode} />
       <GuestNav slug={ctx.slug} />
       <h1>Import guests</h1>
       <p>Paste rows from a spreadsheet saved as CSV. One row per person; rows with the same household name become one invitation. The first line names the columns.</p>

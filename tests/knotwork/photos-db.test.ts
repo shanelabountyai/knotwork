@@ -3,6 +3,7 @@ import { createHash } from 'node:crypto';
 import { mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import sharp from 'sharp';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { cronJobs } from '@/app/cron-jobs';
 import { exportSkipped, exportTables } from '@/app/export-hooks';
@@ -136,7 +137,7 @@ describe('the upload link: a token, no account (PRD P0-6)', () => {
     await ok(updatePhotoEvent(c.slug, { id: eventId, name: 'Reception', mode: 'post', uploadDays: '10', retentionDays: '365' }));
     expect(await readUploadPage(token, IP)).not.toBeNull();
     const columns = await db.$queryRaw<{ column_name: string }[]>`SELECT column_name FROM information_schema.columns WHERE table_name = 'PhotoEvent'`;
-    expect(columns.map((x) => x.column_name).sort()).toEqual(['createdAt', 'createdById', 'id', 'mode', 'name', 'orgId', 'retentionDays', 'uploadDays', 'uploadTokenHash', 'uploadTokenSealed', 'uploadsOpen']);
+    expect(columns.map((x) => x.column_name).sort()).toEqual(['classifier', 'createdAt', 'createdById', 'id', 'mode', 'name', 'orgId', 'retentionDays', 'uploadDays', 'uploadTokenHash', 'uploadTokenSealed', 'uploadsOpen']); // classifier: Phase 5, D-135
   });
   it('a post from another site is a 404; a post from this one is answered with a redirect that carries only a code', async () => {
     const picture = await flat(5, 5, 5);
@@ -558,7 +559,7 @@ describe('who may do what, and another workspace\'s photos', () => {
     const exported = await withOrg({ orgId: c.orgId }, async (tx) => Promise.all(exportTables.map(async (t) => ({ name: t.name, rows: await t.rows(tx, c.orgId) }))));
     const byName = Object.fromEntries(exported.map((t) => [t.name, t.rows as Record<string, unknown>[]]));
     expect(byName.Photo).toEqual([expect.objectContaining({ id: p.id, uploaderName: 'Ada', caption: 'Exported', status: 'live', mime: 'image/jpeg', width: 640, height: 480 })]);
-    expect(Object.keys(byName.PhotoEvent![0]!).sort()).toEqual(['createdAt', 'createdById', 'id', 'mode', 'name', 'orgId', 'retentionDays', 'uploadDays', 'uploadsOpen']);
+    expect(Object.keys(byName.PhotoEvent![0]!).sort()).toEqual(['classifier', 'createdAt', 'createdById', 'id', 'mode', 'name', 'orgId', 'retentionDays', 'uploadDays', 'uploadsOpen']);
     expect(Object.keys(byName.PhotoDevice![0]!).sort()).toEqual(['blockedAt', 'blockedById', 'createdAt', 'eventId', 'id', 'orgId']);
     expect(byName.PhotoBlob).toBeUndefined();
     expect(exportSkipped.PhotoBlob).toMatch(/gallery download/);
@@ -611,4 +612,81 @@ describe('the load case (PRD P0-6 metric): 200 uploads in 10 minutes from 20 dev
     for (const p of [feed[0]!, feed[99]!, feed[199]!]) expect(((await image(p.id)).result as Response).status).toBe(200);
     expect((await log(c.orgId)).filter((e) => e.action === 'knotwork.photo.uploaded')).toHaveLength(200);
   }, 180_000);
+});
+
+// Phase 5, D-135: the classifier-assist seam, through the real upload route and the real moderation actions.
+describe('classifier suggestions: advice to the moderator, never an action', () => {
+  const busy = () => sharp({ create: { width: 320, height: 240, channels: 3, background: '#808080', noise: { type: 'gaussian', mean: 128, sigma: 50 } } }).jpeg({ quality: 80 }).toBuffer();
+  const setClassifier = (classifier: string, mode = 'post') => ok(updatePhotoEvent(c.slug, { id: eventId, name: 'Reception', mode, uploadDays: '7', retentionDays: '365', classifier }));
+
+  it('is off by default: no suggestion is stored, and a post-moderation photo is live at once', async () => {
+    expect((await events())[0]!.classifier).toBe('none');
+    expect((await send(await flat(2, 2, 2))).location).toBe(`/p/${token}?done=live`);
+    expect(await lastPhoto()).toMatchObject({ status: 'live', suggestion: null, suggestionReason: '', suggestionLabels: null });
+  });
+
+  it('the stub holds a dark frame in the queue, flags a white one where it is, passes the rest; each with its reason, shown and logged', async () => {
+    await setClassifier('stub');
+    expect((await send(await flat(2, 2, 2), { name: 'Ada' })).location).toBe(`/p/${token}?done=pending`); // held: the guest is told it waits
+    const dark = await lastPhoto();
+    expect((await send(await flat(253, 253, 253), { name: 'Ben' })).location).toBe(`/p/${token}?done=live`);
+    const white = await lastPhoto();
+    expect((await send(await busy(), { name: 'Cy' })).location).toBe(`/p/${token}?done=live`);
+    const fine = await lastPhoto();
+    expect(dark).toMatchObject({ status: 'pending', suggestion: 'hold', suggestionReason: expect.stringMatching(/dark/) });
+    expect(white).toMatchObject({ status: 'live', suggestion: 'review', suggestionReason: expect.stringMatching(/white/) });
+    expect(fine).toMatchObject({ status: 'live', suggestion: 'ok', suggestionReason: 'Nothing stood out.' });
+    expect((dark.suggestionLabels as { name: string }[]).map((l) => l.name)).toEqual(['brightness', 'contrast', 'detail']);
+    const con = await consoleOf();
+    expect(con.queue.map((p) => [p.id, p.suggestion])).toEqual([[dark.id, 'hold']]);
+    expect(con.live.map((p) => [p.id, p.suggestion])).toEqual([[fine.id, 'ok'], [white.id, 'review']]);
+    expect(await feedIds()).toEqual([fine.id, white.id]); // advice put nothing on the wall and took nothing off it
+    const uploaded = (await log(c.orgId)).filter((e) => e.action === 'knotwork.photo.uploaded').map((e) => (e.data as { after: Record<string, unknown> }).after);
+    expect(uploaded.map((a) => [a.classifier, a.suggestion, a.status])).toEqual([['stub', 'hold', 'pending'], ['stub', 'review', 'live'], ['stub', 'ok', 'live']]);
+    expect(uploaded[0]!.reason).toMatch(/dark/);
+    // The guest's page and answer carry none of it (rule 3): the upload page is still two strings.
+    expect(await readUploadPage(token, IP)).toEqual({ weddingTitle: 'Juniper & Rowan', eventName: 'Reception' });
+  });
+
+  it('under pre-moderation every photo waits anyway; the advice is only shown', async () => {
+    await setClassifier('stub', 'pre');
+    for (const bytes of [await flat(2, 2, 2), await flat(253, 253, 253), await busy()]) expect((await send(bytes)).location).toBe(`/p/${token}?done=pending`);
+    expect((await consoleOf()).queue.map((p) => p.suggestion)).toEqual(['hold', 'review', 'ok']);
+    expect(await feedIds()).toEqual([]);
+  });
+
+  it('every moderation move works the same on a photo with each suggestion: only a person approves, rejects, takes down or undoes', async () => {
+    await setClassifier('stub');
+    await send(await flat(2, 2, 2)); // hold: waiting
+    await send(await flat(253, 253, 253)); // review: live
+    await send(await busy()); // ok: live
+    const [held, review, fine] = await photos();
+    expect([held!.suggestion, review!.suggestion, fine!.suggestion]).toEqual(['hold', 'review', 'ok']);
+    // From waiting: approve, reject, undo; nothing else.
+    await refused(moderatePhoto(c.slug, { id: held!.id, action: 'take_down' }), /not on the wall/);
+    await refused(moderatePhoto(c.slug, { id: held!.id, action: 'undo' }), /has not been removed/);
+    await ok(moderatePhoto(c.slug, { id: held!.id, action: 'reject' }));
+    await ok(moderatePhoto(c.slug, { id: held!.id, action: 'undo' }));
+    await ok(moderatePhoto(c.slug, { id: held!.id, action: 'approve' }));
+    // From live, for review and ok alike: take down, undo; approve and reject are refused.
+    for (const p of [review!, fine!]) {
+      await refused(moderatePhoto(c.slug, { id: p.id, action: 'approve' }), /not waiting for a decision/);
+      await refused(moderatePhoto(c.slug, { id: p.id, action: 'reject' }), /not waiting for a decision/);
+      await ok(moderatePhoto(c.slug, { id: p.id, action: 'take_down' }));
+      await ok(moderatePhoto(c.slug, { id: p.id, action: 'undo' }));
+    }
+    expect((await photos()).map((p) => [p.status, p.suggestion])).toEqual([['live', 'hold'], ['live', 'review'], ['live', 'ok']]); // the advice stays as it was given
+    // Switching the classifier off changes no stored photo; switching it on changes none either.
+    await setClassifier('none');
+    await setClassifier('stub');
+    expect((await photos()).map((p) => [p.status, p.suggestion])).toEqual([['live', 'hold'], ['live', 'review'], ['live', 'ok']]);
+    expect((await log(c.orgId)).filter((e) => e.action === 'knotwork.photoevent.updated').map((e) => (e.data as { after: { classifier?: string } }).after.classifier)).toEqual(['stub', 'none', 'stub']);
+  });
+
+  it('the database refuses advice without a reason, and a reason without advice', async () => {
+    await send(await busy());
+    const p = await lastPhoto();
+    await expect(db.photo.update({ where: { id: p.id }, data: { suggestion: 'hold' } })).rejects.toThrow(/Photo_suggestion_check/);
+    await expect(db.photo.update({ where: { id: p.id }, data: { suggestionReason: 'why' } })).rejects.toThrow(/Photo_suggestion_check/);
+  });
 });

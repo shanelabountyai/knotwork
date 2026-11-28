@@ -9,6 +9,7 @@ import { NoWedding, WeddingNav } from '../../bits';
 import { view } from '../../view';
 import { replacePhotoLink, setPhotoUploads, updatePhotoEvent } from '../actions';
 import { PhotoNav, UUID } from '../nav';
+import { CLASSIFIER_TEXT, CLASSIFIERS } from '@/lib/knotwork/photos/classifier';
 
 export const metadata = { title: 'Photo event' };
 
@@ -30,13 +31,14 @@ export default async function PhotoEventPage({ params }: { params: Promise<{ org
   const qr = link ? await qrDataUrl(link) : null;
   return (
     <main>
-      <WeddingNav slug={ctx.slug} />
+      <WeddingNav slug={ctx.slug} life={v.wedding.mode === 'life'} />
       <PhotoNav slug={ctx.slug} event={e} />
       <h1>{e.name}</h1>
       <p aria-label="Event status">
         {e.mode === 'pre' ? 'Each photo waits until someone approves it.' : 'A photo is on the wall at once; remove what should not be there.'}{' '}
         {e.linkOpen ? `Uploads are open until ${showDay(e.lastUploadDay)} (${e.uploadDays} days after the wedding).` : e.uploadsOpen ? `Uploads ended on ${showDay(e.lastUploadDay)}.` : 'Uploads are closed.'}{' '}
-        Photos are kept until {showDay(e.lastKeptDay)} ({e.retentionDays} days after the wedding), then deleted.
+        Photos are kept until {showDay(e.lastKeptDay)} ({e.retentionDays} days after the wedding), then deleted.{' '}
+        Suggestions for moderators: {CLASSIFIER_TEXT[e.classifier]}.
       </p>
       <p>{e.counts.live} live, {e.counts.pending} waiting, {e.counts.removed} removed{e.counts.purged > 0 && `, ${e.counts.purged} deleted`}. <a href={`/o/${ctx.slug}/wedding/photos/${e.id}/zip`} download>Download the gallery (zip)</a></p>
 
@@ -62,6 +64,8 @@ export default async function PhotoEventPage({ params }: { params: Promise<{ org
             <label>Moderation <select name="mode" defaultValue={e.mode}><option value="post">Live at once; remove on sight</option><option value="pre">Approve each photo first</option></select></label>
             <label>Uploads stay open this many days after the wedding <input name="uploadDays" inputMode="numeric" required defaultValue={e.uploadDays} /></label>
             <label>Photos are kept this many days after the wedding <input name="retentionDays" inputMode="numeric" required defaultValue={e.retentionDays} /></label>
+            <label>Suggestions for moderators <select name="classifier" defaultValue={e.classifier}>{CLASSIFIERS.map((k) => <option key={k} value={k}>{CLASSIFIER_TEXT[k]}</option>)}</select></label>
+            <p><small>A suggestion is advice only: it can hold a new photo for a decision, and never approves, removes or publishes one. It runs on this server; no photo is sent anywhere.</small></p>
             <button type="submit">Save event</button>
           </ActionForm>
           <ActionForm action={bind(setPhotoUploads)}>

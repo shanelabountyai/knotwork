@@ -9,6 +9,7 @@ import { NoWedding, WeddingNav } from '../bits';
 import { view } from '../view';
 import { createPhotoEvent, purgeExpiredPhotos } from './actions';
 import { PhotoNav } from './nav';
+import { CLASSIFIER_TEXT, CLASSIFIERS } from '@/lib/knotwork/photos/classifier';
 
 export const metadata = { title: 'Photos' };
 
@@ -23,7 +24,7 @@ export default async function Photos({ params }: { params: Promise<{ org: string
   const due = events.filter((e) => e.purgeDue && e.counts.pending + e.counts.live + e.counts.removed > 0);
   return (
     <main>
-      <WeddingNav slug={ctx.slug} />
+      <WeddingNav slug={ctx.slug} life={v.wedding.mode === 'life'} />
       <PhotoNav slug={ctx.slug} />
       <h1>Photos</h1>
       <p>Guests add photos through an event&apos;s link, with no account. Where and when a photo was taken, and everything else stored inside the file, is removed before it is kept.</p>
@@ -53,6 +54,7 @@ export default async function Photos({ params }: { params: Promise<{ org: string
             <label>Moderation <select name="mode" defaultValue="post"><option value="post">Live at once; remove on sight</option><option value="pre">Approve each photo first</option></select></label>
             <label>Uploads stay open this many days after the wedding <input name="uploadDays" inputMode="numeric" required defaultValue={EVENT_DEFAULTS.uploadDays} /></label>
             <label>Photos are kept this many days after the wedding <input name="retentionDays" inputMode="numeric" required defaultValue={EVENT_DEFAULTS.retentionDays} /></label>
+            <label>Suggestions for moderators <select name="classifier" defaultValue="none">{CLASSIFIERS.map((k) => <option key={k} value={k}>{CLASSIFIER_TEXT[k]}</option>)}</select></label>
             <button type="submit">Add photo event</button>
           </ActionForm>
 

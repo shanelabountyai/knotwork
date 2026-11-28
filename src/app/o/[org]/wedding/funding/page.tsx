@@ -37,7 +37,7 @@ export default async function Funding({ params }: { params: Promise<{ org: strin
 
   return (
     <main>
-      <WeddingNav slug={ctx.slug} />
+      <WeddingNav slug={ctx.slug} mode={v.wedding.mode} />
       <h1>{f.scope === 'own' ? 'What you are giving toward' : 'Funding'}</h1>
       {f.scope === 'own' ? (
         <p>What you pledged, what has arrived, and what it has paid for. The rest of the budget is the couple&apos;s.</p>

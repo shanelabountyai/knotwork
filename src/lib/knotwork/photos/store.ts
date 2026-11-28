@@ -17,14 +17,16 @@ import type { Processed } from '../uploads/process';
 import { deleteBlobs, readBlob, writeBlobs } from './blobs';
 import { EVENT_BOUNDS, lastKeptDay, lastUploadDay, linkOpen, purgeDue } from './dates';
 import { PHOTO_LIMITS } from './limits';
-import { inAlbum, initialStatus, moderate, MODERATION_PROBLEM, onWall, type Action, type Mode } from './moderation';
+import { startStatus, type Advice, type ClassifierName } from './classifier';
+import { classifierFor } from './classify';
+import { inAlbum, moderate, MODERATION_PROBLEM, onWall, type Action, type Mode } from './moderation';
 import { zipStored, type ZipTime } from './zip';
 
 type Ctx = { orgId: string; userId: string | null };
 const SEAL = 'knotwork-photo-link';
 const linkOf = (token: string) => `${env.APP_URL}/p/${token}`;
 
-export type EventInput = { name: string; mode: Mode; uploadDays: number; retentionDays: number };
+export type EventInput = { name: string; mode: Mode; uploadDays: number; retentionDays: number; classifier: ClassifierName };
 
 function checkDays(i: EventInput) {
   const { uploadDays: u, retentionDays: r } = EVENT_BOUNDS;
@@ -49,7 +51,7 @@ export async function updateEvent(tx: Tx, ctx: Ctx, id: string, input: EventInpu
   checkDays(input);
   if (input.name !== e.name && (await tx.photoEvent.findFirst({ where: { ...inOrg(ctx), name: input.name }, select: { id: true } }))) throw new Refused(`There is already a photo event called ${input.name}.`);
   await tx.photoEvent.update({ where: { id }, data: input });
-  await logChange(tx, ctx, 'photoevent', 'updated', id, input.name, { name: e.name, mode: e.mode, uploadDays: e.uploadDays, retentionDays: e.retentionDays }, { ...input });
+  await logChange(tx, ctx, 'photoevent', 'updated', id, input.name, { name: e.name, mode: e.mode, uploadDays: e.uploadDays, retentionDays: e.retentionDays, classifier: e.classifier }, { ...input });
 }
 
 /** The couple's own switch: closed, the link is a 404 at once, whatever the date. */
@@ -88,7 +90,9 @@ export type Stored = { ok: true; id: string; status: 'pending' | 'live' } | { ok
 
 /**
  * Stores one processed photo for a device (made here on its first upload). Null when the event is gone or its link no
- * longer works. The status it starts in is the event's mode's (post: live; pre: pending).
+ * longer works. The status it starts in is the event's mode's (post: live; pre: pending), except that the event's
+ * classifier (D-135, off by default) may HOLD a post-moderation photo in the waiting queue. Its advice is stored
+ * with its reason and logged with the upload; it never approves, removes or publishes anything.
  */
 export async function addPhoto(tx: Tx, orgId: string, eventId: string, deviceHash: string, text: { name: string; caption: string }, image: Processed): Promise<Stored | null> {
   const event = await tx.photoEvent.findFirst({ where: { id: eventId, orgId } });
@@ -97,10 +101,14 @@ export async function addPhoto(tx: Tx, orgId: string, eventId: string, deviceHas
   const at = now();
   const device = await tx.photoDevice.upsert({ where: { eventId_tokenHash: { eventId, tokenHash: deviceHash } }, create: { orgId, eventId, tokenHash: deviceHash, createdAt: at }, update: {} });
   if (device.blockedAt) return null;
-  const status = initialStatus(event.mode) as 'pending' | 'live';
-  const photo = await tx.photo.create({ data: { orgId, eventId, deviceId: device.id, uploaderName: text.name, caption: text.caption, status, mime: image.mime, width: image.width, height: image.height, createdAt: at } });
+  // A classifier that fails gives no advice: a guest's photo is never lost to an advisor.
+  const advice: Advice | null = await classifierFor(event.classifier).classify(image).catch(() => null);
+  const status = startStatus(event.mode, advice);
+  const suggested = advice ? { suggestion: advice.suggestion, suggestionReason: advice.reason, suggestionLabels: advice.labels } : {};
+  const photo = await tx.photo.create({ data: { orgId, eventId, deviceId: device.id, uploaderName: text.name, caption: text.caption, status, mime: image.mime, width: image.width, height: image.height, createdAt: at, ...suggested } });
   await writeBlobs(tx, orgId, photo.id, image);
-  await logChange(tx, { orgId, userId: null }, 'photo', 'uploaded', photo.id, labelOf(photo, event.name), null, { event: event.name, by: text.name, caption: text.caption, status, width: image.width, height: image.height }, { via: 'photo-link' });
+  const advised = advice ? { classifier: event.classifier, suggestion: advice.suggestion, reason: advice.reason } : {};
+  await logChange(tx, { orgId, userId: null }, 'photo', 'uploaded', photo.id, labelOf(photo, event.name), null, { event: event.name, by: text.name, caption: text.caption, status, width: image.width, height: image.height, ...advised }, { via: 'photo-link' });
   return { ok: true, id: photo.id, status };
 }
 
@@ -136,7 +144,7 @@ export async function setDeviceBlocked(tx: Tx, ctx: Ctx & { userId: string }, de
 // ---- reads
 
 export type EventRow = {
-  id: string; name: string; mode: Mode; uploadsOpen: boolean; uploadDays: number; retentionDays: number;
+  id: string; name: string; mode: Mode; uploadsOpen: boolean; uploadDays: number; retentionDays: number; classifier: ClassifierName;
   lastUploadDay: Day; lastKeptDay: Day; linkOpen: boolean; purgeDue: boolean;
   counts: { pending: number; live: number; removed: number; purged: number };
 };
@@ -150,13 +158,13 @@ export async function loadEvents(tx: Tx, ctx: { orgId: string }): Promise<EventR
   const purged = await tx.photo.groupBy({ by: ['eventId'], where: { ...inOrg(ctx), purgedAt: { not: null } }, _count: { _all: true } });
   const n = (eventId: string, status: string) => byStatus.find((r) => r.eventId === eventId && r.status === status)?._count._all ?? 0;
   return events.map((e) => ({
-    id: e.id, name: e.name, mode: e.mode, uploadsOpen: e.uploadsOpen, uploadDays: e.uploadDays, retentionDays: e.retentionDays,
+    id: e.id, name: e.name, mode: e.mode, uploadsOpen: e.uploadsOpen, uploadDays: e.uploadDays, retentionDays: e.retentionDays, classifier: e.classifier,
     lastUploadDay: lastUploadDay(date, e.uploadDays), lastKeptDay: lastKeptDay(date, e.retentionDays), linkOpen: linkOpen(e, date, today), purgeDue: purgeDue(e, date, today),
     counts: { pending: n(e.id, 'pending'), live: n(e.id, 'live'), removed: n(e.id, 'removed'), purged: purged.find((r) => r.eventId === e.id)?._count._all ?? 0 },
   }));
 }
 
-const PHOTO_FIELDS = { id: true, uploaderName: true, caption: true, status: true, removedFrom: true, hiddenFromWall: true, hiddenFromAlbum: true, width: true, height: true, createdAt: true, purgedAt: true, deviceId: true } as const;
+const PHOTO_FIELDS = { id: true, uploaderName: true, caption: true, status: true, removedFrom: true, hiddenFromWall: true, hiddenFromAlbum: true, width: true, height: true, createdAt: true, purgedAt: true, deviceId: true, suggestion: true, suggestionReason: true } as const;
 
 /** Everything the moderation console shows for one event: the queue, what is live, what was removed, and the devices. */
 export async function loadConsole(tx: Tx, ctx: { orgId: string }, eventId: string) {

@@ -3,6 +3,7 @@
 // metadata stripped, inspected clean. Images only; a PDF is refused by the pipeline with a sentence saying so.
 import { inOrg } from '@/core/authz/guards';
 import type { Tx } from '@/core/db/rls';
+import { ARCHIVE_REFUSAL } from '../access';
 import { logChange } from '../changelog';
 import type { Processed } from '../uploads/process';
 
@@ -15,6 +16,7 @@ const ONE_LINE = /^[^\p{Cc}\p{Cf}\p{Zl}\p{Zp}]*$/u;
 export const ATTACHMENT_PROBLEM = {
   label: `Use one line of plain text for the label, ${LABEL_MAX} characters or fewer.`,
   many: `A vendor can hold ${ATTACHMENTS_PER_VENDOR} attachments. Remove one first.`,
+  archived: ARCHIVE_REFUSAL,
 } as const;
 export type AttachmentProblem = keyof typeof ATTACHMENT_PROBLEM;
 

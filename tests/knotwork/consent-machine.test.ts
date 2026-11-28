@@ -43,7 +43,7 @@ describe('consent state machine', () => {
     expect(spendNeedsConsent(1, 0)).toBe(true);
   });
 
-  it('names the designated kinds of the PRD, plus the settings themselves', () => {
-    expect([...DESIGNATED_KINDS].sort()).toEqual(['book_vendor', 'change_date', 'change_settings', 'remove_guest', 'sign_contract', 'spend']);
+  it('names the designated kinds of the PRD, plus the settings themselves and (Phase 5) the switch into life-admin mode and back', () => {
+    expect([...DESIGNATED_KINDS].sort()).toEqual(['book_vendor', 'change_date', 'change_settings', 'remove_guest', 'set_mode', 'sign_contract', 'spend']);
   });
 });

@@ -51,7 +51,7 @@ async function sweep(): Promise<Record<string, string>> {
   const zero = '00000000-0000-4000-8000-000000000000';
   for (const [file, load] of Object.entries(PAGES)) {
     const params = { org: c.slug, id: file.includes('/vendors/') ? ids.publicVendor : zero, event: zero, photo: zero, kind: 'thumb' };
-    const search: Record<string, string> = file.endsWith('/date/page.tsx') ? { to: addDays(wedding, 7) } : file.endsWith('/schedule/page.tsx') ? { edit: ids.task } : {};
+    const search: Record<string, string> = file.endsWith('/date/page.tsx') || file.endsWith('/date/insurance/page.tsx') ? { to: addDays(wedding, 7) } : file.endsWith('/schedule/page.tsx') ? { edit: ids.task } : {};
     out[file] = await render(await load(), params, search);
   }
   out['vendors/[secret]'] = await render(await PAGES['src/app/o/[org]/wedding/vendors/[id]/page.tsx']!(), { org: c.slug, id: ids.vendor });
@@ -142,6 +142,7 @@ describe('the leak sweep', () => {
     expect(pages['vendors/[secret]']).toContain('Private to you');
     expect(pages.attachment).not.toBe(NOT_FOUND);
     expect(has('funding')).toContain(`${SECRET} Watch for Rowan`);
+    expect(has('date/insurance')).toContain(`${SECRET} balance`); // Phase 5: the insurance page lists payments due
   });
 
   for (const who of ['the other partner', 'a helper with every grant', 'a helper linked to a funder'] as const) {
@@ -164,6 +165,7 @@ describe('the leak sweep', () => {
       expect(has('vendors')).toContain('Private vendor');
       expect(has('funding')).toContain('Pledged $1,000.00'); // Hazel's two pledges, one toward the private category
       if (who === 'the other partner') expect(has('approvals')).toContain('Private task'); // the date-move preview
+      if (who === 'the other partner') expect(has('date/insurance')).toContain('including 1 private item, counted but not named'); // Phase 5
     });
   }
 

@@ -4,17 +4,20 @@ import { inOrg, type OrgCtx } from '@/core/authz/guards';
 import { now } from '@/core/clock';
 import type { Tx } from '@/core/db/rls';
 import { Refused } from '@/core/errors';
-import { allows, isPartner, type Capability, type GrantScope, type Who } from './access';
+import { allows, ARCHIVE_REFUSAL, archives, isPartner, type Capability, type GrantScope, type Who } from './access';
 import { dayOfDb, todayIn, type Day } from './days';
 
+/** Who is asking, and (Phase 5) whether the workspace is in life-admin mode, which makes the plan a read-only archive. */
 export async function loadWho(tx: Tx, ctx: OrgCtx): Promise<Who> {
-  if (isPartner(ctx.role)) return { role: ctx.role, grants: [] };
+  const archived = (await tx.wedding.findUnique({ where: { orgId: ctx.orgId }, select: { mode: true } }))?.mode === 'life';
+  if (isPartner(ctx.role)) return { role: ctx.role, grants: [], archived };
   const grants = await tx.helperGrant.findMany({ where: { ...inOrg(ctx), userId: ctx.userId }, select: { scope: true } });
-  return { role: ctx.role, grants: grants.map((g) => g.scope as GrantScope) };
+  return { role: ctx.role, grants: grants.map((g) => g.scope as GrantScope), archived };
 }
 
-/** Refuses with a message the form can show. Partners pass every capability. */
+/** Refuses with a message the form can show. Partners pass every capability, except a write to the archive (D-144). */
 export function need(who: Who, cap: Capability) {
+  if (archives(who, cap) && allows({ ...who, archived: false }, cap)) throw new Refused(ARCHIVE_REFUSAL);
   if (!allows(who, cap)) throw new Refused('You do not have access to that. Ask one of the partners for it.');
 }
 
@@ -30,6 +33,8 @@ export async function requireWedding(tx: Tx, ctx: { orgId: string }): Promise<We
 /** Today, as the couple sees it. The only place the scheduler's "today" comes from. */
 export const todayOf = (w: { timeZone: string }): Day => todayIn(w.timeZone, now());
 export const weddingDay = (w: { date: Date }): Day => dayOfDb(w.date);
+/** Phase 5 (D-143): life-admin mode is offered once the wedding day has passed in the wedding's time zone. Derived. */
+export const lifeModeOpen = (w: { date: Date; timeZone: string }): boolean => todayOf(w) > weddingDay(w);
 
 /** The org's partners (owner memberships), for "who else can approve" and for names in the feed. */
 export const partnersOf = (tx: Tx, ctx: { orgId: string }) =>

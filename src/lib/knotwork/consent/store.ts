@@ -5,11 +5,11 @@ import { now } from '@/core/clock';
 import type { Tx } from '@/core/db/rls';
 import { Refused } from '@/core/errors';
 import type { Prisma } from '@/generated/prisma/client';
-import { isPartner } from '../access';
+import { ARCHIVE_REFUSAL, isPartner } from '../access';
 import { logChange } from '../changelog';
 import { syncPairing, type WeddingRow } from '../context';
 import { executeApproved } from './execute';
-import { canPropose, expiresAt, KIND_LABEL, REFUSAL_MESSAGE, soloAllowed, transition, type ConsentEvent, type ConsentKind, type ConsentStatus } from './machine';
+import { canPropose, expiresAt, KIND_LABEL, PLAN_KINDS, REFUSAL_MESSAGE, soloAllowed, transition, type ConsentEvent, type ConsentKind, type ConsentStatus } from './machine';
 
 type Ctx = { orgId: string; userId: string; role: string };
 
@@ -21,6 +21,7 @@ type Ctx = { orgId: string; userId: string; role: string };
 export async function propose(tx: Tx, ctx: Ctx, wedding: WeddingRow, kind: ConsentKind, payload: Prisma.InputJsonObject, summary: string, opts: { fingerprint?: string } = {}) {
   const actor = { userId: ctx.userId, isPartner: isPartner(ctx.role) };
   if (!canPropose(actor)) throw new Refused('Only the two partners can ask for this.');
+  if (PLAN_KINDS.includes(kind) && wedding.mode === 'life') throw new Refused(ARCHIVE_REFUSAL); // D-144: the plan is an archive
   const pairing = await syncPairing(tx, ctx, wedding);
   const t = now();
   const r = await tx.consentRequest.create({

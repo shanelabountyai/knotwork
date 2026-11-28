@@ -10,7 +10,8 @@
 // fixtures/namechange/ (P1-4, ordering and gating) by namechange/workflow.ts against the rules files, recomputed by
 // tools/namechange_oracle.py, which also re-checks the order of every file in rules/name-change/; fixtures/seating/
 // (P1-5, generate-score-repair) by seating/engine.ts, re-scored (and, being small, solved by brute force) by
-// tools/seating_oracle.py.
+// tools/seating_oracle.py. Phase 5: fixtures/lifeadmin/ (anniversaries and recurring household tasks: month ends, leap
+// days, daylight-saving days) by lifeadmin/recurrence.ts, recomputed by tools/recurrence_oracle.py.
 import { existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
@@ -22,6 +23,7 @@ import { ledger, type Obligation } from '../../src/lib/knotwork/thanks/aging';
 import { RULESETS } from '../../src/lib/knotwork/namechange/rules';
 import { board, invariantProblems, replay as replayNameChange, type Op as NameOp } from '../../src/lib/knotwork/namechange/workflow';
 import { generate, type Problem as SeatingProblem } from '../../src/lib/knotwork/seating/engine';
+import { addMonths, dayAt, nextAnniversary, nextDue, ruleText, type Rule } from '../../src/lib/knotwork/lifeadmin/recurrence';
 import { LIMITS_DIR, MODERATION_FILE, regenerateLimits, regenerateModeration, regenerateStrip, STRIP_DIR, writeStripImages, type LimitFx } from './gen-photo-fixtures';
 
 const DIR = 'fixtures/schedule';
@@ -96,6 +98,25 @@ export function regenerateSeating(fx: SeatingFx): string {
   return `${JSON.stringify({ name, note, claim, seed, tables, guests, rules, locked, expect: generate({ tables, guests, rules, locked }, seed) }, null, 2)}\n`;
 }
 
+const LIFE_DIR = 'fixtures/lifeadmin';
+export type LifeFx = { name: string; note: string; weddingDate: string; timeZone: string; at: string; tasks: { id: string; rule: Rule; done: string[] }[]; months: { from: string; n: number }[]; expect?: unknown };
+
+/**
+ * A life-admin fixture with its expect block recomputed: today (the calendar day at `at` in the wedding's time zone),
+ * the next anniversary, each task's next due day and state, and each month step.
+ */
+export function regenerateLife(fx: LifeFx): string {
+  const today = dayAt(fx.timeZone, new Date(fx.at));
+  const expect = {
+    today,
+    anniversary: nextAnniversary(fx.weddingDate, today),
+    tasks: fx.tasks.map((t) => ({ id: t.id, rule: ruleText(t.rule), ...nextDue(t.rule, fx.weddingDate, t.done, today) })),
+    months: fx.months.map((m) => addMonths(m.from, m.n)),
+  };
+  const { name, note, weddingDate, timeZone, at, tasks, months } = fx;
+  return `${JSON.stringify({ name, note, weddingDate, timeZone, at, tasks, months, expect }, null, 2)}\n`;
+}
+
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const write = process.argv.includes('--write');
   if (write) writeFileSync(join(DIR, `${TEMPLATE_FIXTURE.name}.json`), regenerate(TEMPLATE_FIXTURE));
@@ -153,6 +174,15 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
       if (write) writeFileSync(join(SEATING_DIR, f), next);
     }
     console.log(`${next === text ? 'same ' : write ? 'wrote' : 'DIFF '} seating/${f}`);
+  }
+  for (const f of readdirSync(LIFE_DIR).filter((n) => n.endsWith('.json')).sort()) {
+    const text = readFileSync(join(LIFE_DIR, f), 'utf8');
+    const next = regenerateLife(JSON.parse(text) as LifeFx);
+    if (next !== text) {
+      diffs++;
+      if (write) writeFileSync(join(LIFE_DIR, f), next);
+    }
+    console.log(`${next === text ? 'same ' : write ? 'wrote' : 'DIFF '} lifeadmin/${f}`);
   }
   // Photos. Images are written only when missing, or with --images (their bytes depend on the encoder's version).
   for (const name of await writeStripImages(process.argv.includes('--images'))) console.log(`wrote photos/strip/${name}`);

@@ -150,6 +150,8 @@ model Org {
   seatingTables SeatingTable[] // app
   seatingRules SeatingRule[] // app
   seats Seat[] // app
+  recurringTasks RecurringTask[] // app
+  recurringDone RecurringDone[] // app
 }
 
 model Membership {

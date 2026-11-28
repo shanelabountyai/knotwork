@@ -37,7 +37,7 @@ export default async function Approvals({ params }: { params: Promise<{ org: str
 
   return (
     <main>
-      <WeddingNav slug={ctx.slug} counts={{ approvals: forMe.length, flags: 0 }} />
+      <WeddingNav slug={ctx.slug} life={v.wedding.mode === 'life'} counts={{ approvals: forMe.length, flags: 0 }} />
       <h1>Approvals</h1>
       <p>Booking a vendor, signing a contract, a spend over {usd(w.spendThresholdCents)}, moving the date and changing these rules each need both of you.</p>
       {v.partners.length < 2 && (

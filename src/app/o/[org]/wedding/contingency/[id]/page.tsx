@@ -36,7 +36,7 @@ export default async function Plan({ params, searchParams }: { params: Promise<{
     const result = plan.run.result as { tasks: string[]; expenses: string[]; requests: string[] };
     return (
       <main>
-        <WeddingNav slug={ctx.slug} />
+        <WeddingNav slug={ctx.slug} mode={v.wedding.mode} />
         <h1>{plan.title}</h1>
         <p>Put into action on {showDay(dayOfDb(plan.run.executedAt))} by {nameOf(v, plan.run.executedById)}. A plan runs once.</p>
         {ran && <Answers answers={ran.answers} />}
@@ -67,7 +67,7 @@ export default async function Plan({ params, searchParams }: { params: Promise<{
   const path = at.answers.map((a) => a.index);
   return (
     <main>
-      <WeddingNav slug={ctx.slug} />
+      <WeddingNav slug={ctx.slug} mode={v.wedding.mode} />
       <h1>{plan.title}</h1>
       <p>Not put into action yet. Answer the questions to see what it would do.</p>
       <Answers answers={at.answers} back={(i) => href(path.slice(0, i))} />

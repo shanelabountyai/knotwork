@@ -27,7 +27,7 @@ export default async function Guests({ params }: { params: Promise<{ org: string
   const canEdit = allows(v.who, 'guests.edit');
   return (
     <main>
-      <WeddingNav slug={ctx.slug} />
+      <WeddingNav slug={ctx.slug} mode={v.wedding.mode} />
       <GuestNav slug={ctx.slug} />
       <h1>Guests</h1>
       <section aria-label="Headcount">

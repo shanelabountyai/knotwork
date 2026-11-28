@@ -31,7 +31,7 @@ export default async function Waves({ params }: { params: Promise<{ org: string 
 
   return (
     <main>
-      <WeddingNav slug={ctx.slug} />
+      <WeddingNav slug={ctx.slug} mode={v.wedding.mode} />
       <GuestNav slug={ctx.slug} />
       <h1>Invitations and cap</h1>
       <ul aria-label="Cap">
@@ -91,6 +91,7 @@ export default async function Waves({ params }: { params: Promise<{ org: string 
             <label>No B-list invitations inside this many days <input name="lockoutDays" inputMode="numeric" required defaultValue={p.lockoutDays} /></label>
             <label>Smallest B-list batch, in seats <input name="minBatchSeats" inputMode="numeric" required defaultValue={p.minBatchSeats} /></label>
             <label>Meal options, separated by commas <input name="mealOptions" maxLength={400} defaultValue={p.mealOptions.join(', ')} /></label>
+            <label><input type="checkbox" name="autoReminders" defaultChecked={p.autoReminders} /> Send due RSVP reminders on their own, once a day (as well as the button on the chase page)</label>
             <button type="submit">Save</button>
           </ActionForm>
         </section>
