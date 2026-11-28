@@ -1,3 +1,4 @@
+import { TableWrap } from '@/app/ui/kw';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { requireOrg } from '@/core/authz/guards';
@@ -36,7 +37,7 @@ export default async function Plan({ params, searchParams }: { params: Promise<{
     const result = plan.run.result as { tasks: string[]; expenses: string[]; requests: string[] };
     return (
       <main>
-        <WeddingNav slug={ctx.slug} mode={v.wedding.mode} />
+        <WeddingNav who={v.who} slug={ctx.slug} mode={v.wedding.mode} />
         <h1>{plan.title}</h1>
         <p>Put into action on {showDay(dayOfDb(plan.run.executedAt))} by {nameOf(v, plan.run.executedById)}. A plan runs once.</p>
         {ran && <Answers answers={ran.answers} />}
@@ -67,7 +68,7 @@ export default async function Plan({ params, searchParams }: { params: Promise<{
   const path = at.answers.map((a) => a.index);
   return (
     <main>
-      <WeddingNav slug={ctx.slug} mode={v.wedding.mode} />
+      <WeddingNav who={v.who} slug={ctx.slug} mode={v.wedding.mode} />
       <h1>{plan.title}</h1>
       <p>Not put into action yet. Answer the questions to see what it would do.</p>
       <Answers answers={at.answers} back={(i) => href(path.slice(0, i))} />
@@ -89,10 +90,12 @@ export default async function Plan({ params, searchParams }: { params: Promise<{
           ) : <p>No booked vendor to tell.</p>}
           <h3>Tasks to add to the schedule</h3>
           {preview.tasks.length ? (
+            <TableWrap label="Tasks to add">
             <table aria-label="Tasks to add">
               <thead><tr><th scope="col">Task</th><th scope="col">Start by</th><th scope="col">Due</th><th scope="col">State</th></tr></thead>
               <tbody>{preview.tasks.map((t) => <tr key={t.key}><th scope="row">{t.title}</th><td>{showDay(t.startBy)}</td><td>{showDay(t.due)}</td><td>{stateText(t.state)}</td></tr>)}</tbody>
             </table>
+            </TableWrap>
           ) : <p>No tasks to add.</p>}
           <p><small>Dates are worked out from the wedding date ({showDay(v.date)}); nothing already on the schedule moves.</small></p>
           <h3>Spends</h3>

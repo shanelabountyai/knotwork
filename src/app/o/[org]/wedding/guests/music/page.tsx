@@ -22,7 +22,7 @@ export default async function Music({ params }: { params: Promise<{ org: string 
   const canEdit = allows(v.who, 'guests.edit');
   return (
     <main>
-      <WeddingNav slug={ctx.slug} mode={v.wedding.mode} />
+      <WeddingNav who={v.who} slug={ctx.slug} mode={v.wedding.mode} />
       <GuestNav slug={ctx.slug} />
       <h1>Music</h1>
       <h2>Requests from guests who are coming</h2>

@@ -1,11 +1,11 @@
-import Link from 'next/link';
+import { NavLink } from '@/app/ui/nav-link';
 
 export function GuestNav({ slug }: { slug: string }) {
   const base = `/o/${slug}/wedding/guests`;
+  const items: [string, string, boolean?][] = [[base, 'Households', true], [`${base}/waves`, 'Invitations and cap'], [`${base}/chase`, 'Chasing'], [`${base}/music`, 'Music'], [`${base}/seating`, 'Seating'], [`${base}/import`, 'Import']];
   return (
-    <nav aria-label="Guest list">
-      <Link href={base}>Households</Link> · <Link href={`${base}/waves`}>Invitations and cap</Link> · <Link href={`${base}/chase`}>Chasing</Link> ·{' '}
-      <Link href={`${base}/music`}>Music</Link> · <Link href={`${base}/seating`}>Seating</Link> · <Link href={`${base}/import`}>Import</Link>
+    <nav aria-label="Guest list" className="kw-subtabs">
+      <ul>{items.map(([href, text, exact]) => <li key={href}><NavLink href={href} exact={exact}>{text}</NavLink></li>)}</ul>
     </nav>
   );
 }

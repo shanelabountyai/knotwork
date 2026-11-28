@@ -4,6 +4,7 @@ import { notFound } from 'next/navigation';
 import { clientIp } from '@/core/http';
 import { ACCESSIBILITY, DIETARY, isRsvpProblem, RSVP_PROBLEM, TAG_LABEL } from '@/lib/knotwork/guests/projection';
 import { readRsvp } from '@/lib/knotwork/guests/public';
+import { GuestHead } from '@/app/ui/kw';
 
 // RULE 3: this page is guest-facing. It renders the RsvpView and nothing else: no list, wave, invite date or state
 // exists in that shape. No-store and no-referrer headers come from next.config.ts on /r/:path*.
@@ -21,14 +22,13 @@ export default async function Rsvp({ params, searchParams }: { params: Promise<{
   const { token } = await params;
   const q = await searchParams;
   const view = await readRsvp(token, clientIp(await headers()));
-  if (view === 'limited') return <main><h1>Too many requests</h1><p>Wait a few minutes and try again.</p></main>;
+  if (view === 'limited') return <main className="guest"><h1>Too many requests</h1><p>Wait a few minutes and try again.</p></main>;
   if (!view) notFound();
   // The query carries a code from a closed list; the sentence comes from here. Unknown codes show nothing.
   const problem = typeof q.e === 'string' && isRsvpProblem(q.e) ? RSVP_PROBLEM[q.e] : null;
   return (
-    <main>
-      <h1>{view.wedding.title}</h1>
-      <p>{view.wedding.dateText}</p>
+    <main className="guest">
+      <GuestHead title={view.wedding.title}><p className="kw-when">{view.wedding.dateText}</p></GuestHead>
       <p>Dear {view.householdName}, please reply by <strong>{view.rsvpByText}</strong>.</p>
       {/* The message takes focus when the page loads after a reply: a live region that is already in the page at load is often not announced. */}
       {q.done && !problem && <p role="status" tabIndex={-1} autoFocus>{NOTE.thanks}</p>}
@@ -58,7 +58,7 @@ export default async function Rsvp({ params, searchParams }: { params: Promise<{
         <button type="submit">Send reply</button>
       </form>
       {/* The same link for every household, whatever is on the registry: it says nothing about this one (rule 3). */}
-      <p><a href={`/r/${token}/gifts`}>Gift registry</a></p>
+      <p className="kw-guest-foot"><a href={`/r/${token}/gifts`}>Gift registry</a></p>
     </main>
   );
 }

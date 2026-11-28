@@ -24,18 +24,17 @@ export default async function Album({ params }: { params: Promise<{ org: string;
   const base = `/o/${ctx.slug}/wedding/photos`;
   return (
     <main>
-      <WeddingNav slug={ctx.slug} life={data.v.wedding.mode === 'life'} />
+      <WeddingNav who={data.v.who} slug={ctx.slug} life={data.v.wedding.mode === 'life'} />
       <PhotoNav slug={ctx.slug} event={event} />
       <h1>Album: {event.name}</h1>
       <p>{photos.length} {photos.length === 1 ? 'photo' : 'photos'}. {photos.length > 0 && <a href={`${base}/${event.id}/zip`} download>Download the gallery (zip)</a>}</p>
-      <ul aria-label="Album" style={{ listStyle: 'none', padding: 0, display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(11rem, 1fr))', gap: '0.75rem' }}>
+      <ul aria-label="Album" className="kw-photos">
         {photos.map((p) => (
           <li key={p.id}>
             <a href={`${base}/image/${p.id}/full`}>
               {/* eslint-disable-next-line @next/next/no-img-element -- served by the signed-in image route, already a thumbnail */}
-              <img src={`${base}/image/${p.id}/thumb`} alt={p.caption || `Photo from ${p.uploaderName || 'a guest'}`} style={{ width: '100%' }} loading="lazy" />
+              <img src={`${base}/image/${p.id}/thumb`} alt={p.caption || `Photo from ${p.uploaderName || 'a guest'}`} loading="lazy" />
             </a>
-            <br />
             <small>{p.uploaderName || 'No name'}{p.caption && `: ${p.caption}`}</small>
           </li>
         ))}

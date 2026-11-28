@@ -1,4 +1,5 @@
 import { notFound } from 'next/navigation';
+import { Keys, Status, TableWrap, vendorKind } from '@/app/ui/kw';
 import { requireOrg } from '@/core/authz/guards';
 import { ActionForm } from '@/core/ui/action-form';
 import { allows, isPartner } from '@/lib/knotwork/access';
@@ -49,11 +50,11 @@ export default async function VendorPage({ params, searchParams }: { params: Pro
 
   return (
     <main>
-      <WeddingNav slug={ctx.slug} mode={v.wedding.mode} />
+      <WeddingNav who={v.who} slug={ctx.slug} mode={v.wedding.mode} />
       <h1>{x.name}</h1>
       {mine && <p role="note">Private to you<MineNote mine={mine} />. Your partner and the helpers see it as &quot;Private vendor&quot;, with no name. Proposing to book it or sign its contract reveals it.</p>}
-      <p aria-label="Vendor status">
-        {x.category} · <strong>{x.status}</strong>
+      <p aria-label="Vendor status" className="kw-meta">
+        {x.category} · <Status k={vendorKind(x.status)}><strong>{x.status}</strong></Status>
         {x.contractSignedOn && <> · contract signed {showDay(dayOfDb(x.contractSignedOn))}{x.contractTotalCents !== null && ` for ${usd(x.contractTotalCents)}`}</>}
       </p>
 
@@ -68,7 +69,7 @@ export default async function VendorPage({ params, searchParams }: { params: Pro
                   <ActionForm action={bind(acknowledgeFlag)}>
                     <input type="hidden" name="id" value={f.id} />
                     <label>Note <input name="note" maxLength={500} placeholder="How they confirmed" /></label>
-                    <button type="submit">Mark re-confirmed</button>
+                    <button type="submit" className="secondary">Mark re-confirmed</button>
                   </ActionForm>
                 )}
               </li>
@@ -80,6 +81,9 @@ export default async function VendorPage({ params, searchParams }: { params: Pro
       {partner && (
         <section aria-label="Needs both partners">
           <h2>Needs both of you</h2>
+          {v.partners.length < 2 && !v.wedding.pairedAt
+            ? <Keys on={1} solo>You are the only partner so far: booking and signing happen as soon as you propose them, marked solo.</Keys>
+            : <Keys on={0}>Booking and signing take both keys: proposing turns yours; it happens when your partner approves.</Keys>}
           {x.status === 'considering' && (
             <ActionForm action={bind(proposeBooking)}>
               <input type="hidden" name="id" value={x.id} />
@@ -98,7 +102,7 @@ export default async function VendorPage({ params, searchParams }: { params: Pro
             <ActionForm action={bind(setVendorPrivacy)}>
               <input type="hidden" name="id" value={x.id} />
               <PrivacySelect defaultValue={privacyValue(x, mine)} />
-              <button type="submit">Save privacy</button>
+              <button type="submit" className="secondary">Save privacy</button>
             </ActionForm>
           )}
         </section>
@@ -130,6 +134,7 @@ export default async function VendorPage({ params, searchParams }: { params: Pro
 
       <section aria-label="Payments">
         <h2>Payments</h2>
+        <TableWrap label="Payments">
         <table aria-label="Payments">
           <thead><tr><th scope="col">Payment</th><th scope="col">Amount</th><th scope="col">Due</th><th scope="col">Paid</th></tr></thead>
           <tbody>
@@ -149,6 +154,7 @@ export default async function VendorPage({ params, searchParams }: { params: Pro
             ))}
           </tbody>
         </table>
+        </TableWrap>
         {canEdit && (
           <ActionForm action={bind(addVendorPayment)}>
             <input type="hidden" name="vendorId" value={x.id} />
@@ -186,12 +192,13 @@ export default async function VendorPage({ params, searchParams }: { params: Pro
           )}
           <ActionForm action={bind(newVendorLink)}>
             <input type="hidden" name="id" value={x.id} />
-            <button type="submit">{link.exists ? 'Replace the vendor link' : 'Make a vendor link'}</button>
+            <button type="submit" className={link.exists ? 'secondary' : undefined}>{link.exists ? 'Replace the vendor link' : 'Make a vendor link'}</button>
+            {link.exists && <small>Replacing it stops the link the vendor has now.</small>}
           </ActionForm>
           {link.exists && (
             <ActionForm action={bind(endVendorReadLink)}>
               <input type="hidden" name="id" value={x.id} />
-              <button type="submit">End the vendor link</button>
+              <button type="submit" className="secondary">End the vendor link</button>
             </ActionForm>
           )}
           {mine && <p><small>While this vendor is private there is no link: making one is refused.</small></p>}

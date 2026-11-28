@@ -1,7 +1,8 @@
 # NEXT
 
 ## ▶ 2026-11-28 (latest): the D-172 guard findings (branch `fix/d172-guards`, draft PR, not merged, not deployed)
-Unattended run; Shane approved it in chat (2026-11-28 00:33 CT). No questions asked. Cut from `main` at `bba4823`. PR #7,
+Unattended run; Shane approved it in chat (2026-11-28 00:33 CT). No questions asked. Cut from `main` at `bba4823`; PR #7
+was merged into `main` during the run (`1c4e4c0`), and that `main` was merged into this branch (no conflict, no rebase). PR #7,
 `design/impl` and any `design/*` branch were not touched. Decisions D-190 to D-198 (numbered above tonight's other runs).
 
 - **One new migration, `20261128000010_knotwork_guard_d172`** (no applied migration edited, no old function replaced;
@@ -46,7 +47,33 @@ Unattended run on Shane's instruction in chat (2026-11-27): "merge #6 now, then 
 - **Gate here:** see the PR body (lint, typecheck, build, vitest, fixtures, pytest, Playwright).
 - **You:** review and merge the draft PR (it adds a migration, so the merge loop will not). Then decide on D-172's list.
 
-## ▶ 2026-11-26 (latest): independent pre-merge review of PR #6, three must-fixes fixed (D-153; not merged, not deployed)
+## ▶ 2026-11-26: design pass, branch `design/impl` from `phase-5`, draft PR "Knotwork: design pass" (not merged, not deployed)
+Unattended run (Thanksgiving; no questions asked). Method mirrored from Turnstile's design pass; Knotwork's own look
+(D-154). Decisions D-154 to D-169; PRD items DUX-1 to DUX-8 for Shane.
+
+- **Design system:** `docs/DESIGN_SYSTEM.md`: plum on linen, OKLCH tokens (light and dark), system fonts, six status
+  families (word, glyph, colour), the keys motif, 44 px targets, 390 px. `npm run design:contrast` (`tools/contrast.py`):
+  68 pairs, 0 under floor.
+- **Design:** ten artboards in `docs/design/` (Home, Plan with the date-move preview, Money, Guests with the chase,
+  Approvals desktop and phone, RSVP and photo upload on a phone, Seating, life-admin home), `HANDOFF.md` maps every one
+  of the 59 page routes, `canvas.json`.
+- **Built:** one stylesheet (`src/app/ui/knotwork.css`), `src/app/ui/kw.tsx` (Status, Keys, Figs, TableWrap, GuestHead),
+  `src/app/ui/nav-link.tsx`, a root `not-found.tsx`. 40 Knotwork page files edited (38 wedding and guest routes, the
+  workspace home, the landing page); the 19 template-owned routes are styled by element rules. No engine, rule, mask,
+  money, permission, schema, server action or dependency changed; no template-owned path changed.
+- **Reviews (three fresh agents):** design 3 must-fix (all fixed), UX 1 must-fix (fixed), accessibility 1 must-fix
+  (fixed); should-fixes fixed where they are look or interaction; the ones that change behaviour are PRD DUX-1 to DUX-8.
+- **Gate here:** lint 0; typecheck clean; vitest 88 files, 1543 passed / 66 skipped (fresh test database; the action
+  harness passed inside its 180 s); Playwright 56 passed (production build); `fixtures:check` 88 the same;
+  pytest 132 passed; design:contrast OK. Not run here: `foundation:drift` (no template tag in this clone; no
+  template-owned path differs from `phase-5`), `foundation:check-modules` (no rsync; the marked layout lines were
+  removed by hand and it still typechecks). CI is the gate for those.
+- **Sandbox notes (D-168):** `npm ci --ignore-scripts` plus `prisma generate` with a stub engine; Postgres 17.12 from
+  `@embedded-postgres`; migrations by stand-in with a `_prisma_migrations` table. A vitest run left the demo org renamed
+  ("acme"), which failed two template e2e specs until the test database was rebuilt; on a fresh database all pass.
+- **You:** read the PR; answer DUX-1 to DUX-8; merge after PR #6 if you like the look.
+
+## ▶ 2026-11-26: independent pre-merge review of PR #6, three must-fixes fixed (D-153; not merged, not deployed)
 Unattended run (Thanksgiving; no questions asked). Two review passes: one by this session, one by four fresh agents
 given only the diff, the PR text and the PRD's future-considerations section. Verdict: **merge after must-fixes**. The
 review with every should-fix and nit is on PR #6.

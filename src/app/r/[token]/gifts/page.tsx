@@ -3,6 +3,7 @@ import { headers } from 'next/headers';
 import { notFound } from 'next/navigation';
 import { clientIp } from '@/core/http';
 import { GIFT_DONE, GIFT_PROBLEM, isGiftDone, isGiftProblem } from '@/lib/knotwork/gifts/projection';
+import { GuestHead } from '@/app/ui/kw';
 import { readGifts } from '@/lib/knotwork/gifts/public';
 import { LINK_REL, LINK_TARGET } from '@/lib/knotwork/registry/links';
 
@@ -21,14 +22,14 @@ export default async function Gifts({ params, searchParams }: { params: Promise<
   const { token } = await params;
   const q = await searchParams;
   const view = await readGifts(token, clientIp(await headers()));
-  if (view === 'limited') return <main><h1>Too many requests</h1><p>Wait a few minutes and try again.</p></main>;
+  if (view === 'limited') return <main className="guest"><h1>Too many requests</h1><p>Wait a few minutes and try again.</p></main>;
   if (!view) notFound();
   // The query carries a code from a closed list; the sentence comes from here. Unknown codes show nothing.
   const problem = typeof q.e === 'string' && isGiftProblem(q.e) ? GIFT_PROBLEM[q.e] : null;
   const done = typeof q.done === 'string' && isGiftDone(q.done) ? GIFT_DONE[q.done] : null;
   return (
-    <main>
-      <h1>{view.weddingTitle}: gifts</h1>
+    <main className="guest">
+      <GuestHead title={`${view.weddingTitle}: gifts`} />
       <p>Dear {view.householdName}, these are gifts several people can give toward together. Give any part; if a gift needs less than you offer, the rest comes straight back to you.</p>
       <p>No payment is taken on this page: a contribution is recorded, not charged.</p>
       {done && !problem && <p role="status" tabIndex={-1} autoFocus>{done}</p>}

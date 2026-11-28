@@ -1,3 +1,4 @@
+import { TableWrap } from '@/app/ui/kw';
 import Link from 'next/link';
 import { requireOrg } from '@/core/authz/guards';
 import { ActionForm } from '@/core/ui/action-form';
@@ -24,12 +25,13 @@ export default async function Photos({ params }: { params: Promise<{ org: string
   const due = events.filter((e) => e.purgeDue && e.counts.pending + e.counts.live + e.counts.removed > 0);
   return (
     <main>
-      <WeddingNav slug={ctx.slug} life={v.wedding.mode === 'life'} />
+      <WeddingNav who={v.who} slug={ctx.slug} life={v.wedding.mode === 'life'} />
       <PhotoNav slug={ctx.slug} />
       <h1>Photos</h1>
       <p>Guests add photos through an event&apos;s link, with no account. Where and when a photo was taken, and everything else stored inside the file, is removed before it is kept.</p>
       {events.length === 0 && <p>No photo events yet.</p>}
       {events.length > 0 && (
+        <TableWrap label="Photo events">
         <table aria-label="Photo events">
           <thead><tr><th scope="col">Event</th><th scope="col">Moderation</th><th scope="col">Uploads</th><th scope="col">Photos</th><th scope="col">Kept until</th></tr></thead>
           <tbody>
@@ -44,6 +46,7 @@ export default async function Photos({ params }: { params: Promise<{ org: string
             ))}
           </tbody>
         </table>
+        </TableWrap>
       )}
 
       {canManage && (

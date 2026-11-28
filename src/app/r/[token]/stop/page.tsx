@@ -3,6 +3,7 @@ import { headers } from 'next/headers';
 import { notFound } from 'next/navigation';
 import { clientIp } from '@/core/http';
 import { readStop } from '@/lib/knotwork/guests/public';
+import { GuestHead } from '@/app/ui/kw';
 
 // RULE 3: guest-facing. The opt-out page every reminder links to (Phase 5). It shows the wedding's title and fixed
 // sentences, the same for every household: nothing about the household, its list or whether it already stopped.
@@ -14,11 +15,11 @@ export default async function StopReminders({ params, searchParams }: { params: 
   const { token } = await params;
   const done = (await searchParams).done === '1';
   const view = await readStop(token, clientIp(await headers()));
-  if (view === 'limited') return <main><h1>Too many requests</h1><p>Wait a few minutes and try again.</p></main>;
+  if (view === 'limited') return <main className="guest"><h1>Too many requests</h1><p>Wait a few minutes and try again.</p></main>;
   if (!view) notFound();
   return (
-    <main>
-      <h1>{view.weddingTitle}</h1>
+    <main className="guest">
+      <GuestHead title={view.weddingTitle} />
       {done ? (
         <p role="status" tabIndex={-1} autoFocus>Reminders are stopped. You will not get another one. You can still reply using the link in your invitation.</p>
       ) : (
