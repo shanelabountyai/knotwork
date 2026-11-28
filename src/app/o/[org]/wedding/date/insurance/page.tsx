@@ -23,7 +23,7 @@ export default async function Insurance({ params, searchParams }: { params: Prom
   const back = `/o/${ctx.slug}/wedding/date${move ? `?to=${move.to}` : ''}`;
   return (
     <main>
-      <WeddingNav slug={ctx.slug} mode={v.wedding.mode} />
+      <WeddingNav who={v.who} slug={ctx.slug} mode={v.wedding.mode} />
       <h1>Moving the date: insurance and contracts</h1>
       <p role="note"><strong>General information, not insurance or legal advice.</strong> Policies and contracts differ. What yours say is what counts; read the wording, and ask the vendor or the insurer when something is unclear. Nothing here is a quote, an offer or a recommendation of any company.</p>
       <p><Link href={back}>Back to the date move</Link></p>

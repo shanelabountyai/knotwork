@@ -6,6 +6,7 @@ import { loadConsole } from '@/lib/knotwork/photos/store';
 import { NoWedding, WeddingNav } from '../../../bits';
 import { view } from '../../../view';
 import { moderatePhoto, setPhotoDeviceBlocked, setPhotoHidden } from '../../actions';
+import { Status } from '@/app/ui/kw';
 import { PhotoNav, UUID } from '../../nav';
 import { CLASSIFIER_TEXT, SUGGESTION_TEXT } from '@/lib/knotwork/photos/classifier';
 
@@ -51,19 +52,19 @@ export default async function Moderate({ params }: { params: Promise<{ org: stri
     );
   };
   const Card = ({ p, children }: { p: Row; children?: React.ReactNode }) => (
-    <li aria-label={what(p)} style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-start', margin: '0.5rem 0' }}>
+    <li aria-label={what(p)}>
       {/* eslint-disable-next-line @next/next/no-img-element -- served by the signed-in image route, already a thumbnail */}
       <img src={src(p)} alt={p.caption || `Photo from ${p.uploaderName || 'a guest'}`} width={120} loading="lazy" />
-      <div>
+      <div className="kw-col">
         <p>{p.uploaderName || 'No name'}{p.caption && <>: {p.caption}</>} <small>(device {p.device}, {p.width}×{p.height})</small></p>
-        {p.suggestion && p.suggestion !== 'ok' && <p aria-label={`Suggestion for ${what(p)}`}><strong>Suggestion: {SUGGESTION_TEXT[p.suggestion]}.</strong> {p.suggestionReason} <small>(advice only; you decide)</small></p>}
-        {can && children}
+        {p.suggestion && p.suggestion !== 'ok' && <p aria-label={`Suggestion for ${what(p)}`}><Status k="wait">advice</Status> <strong>Suggestion: {SUGGESTION_TEXT[p.suggestion]}.</strong> {p.suggestionReason} <small>(advice only; you decide)</small></p>}
+        {can && <div className="kw-row">{children}</div>}
       </div>
     </li>
   );
   return (
     <main>
-      <WeddingNav slug={ctx.slug} life={v.wedding.mode === 'life'} />
+      <WeddingNav who={v.who} slug={ctx.slug} life={v.wedding.mode === 'life'} />
       <PhotoNav slug={ctx.slug} event={event} />
       <h1>Moderate: {event.name}</h1>
       <p>{event.mode === 'pre' ? 'Each new photo waits here until someone approves it.' : 'New photos go on the wall at once. Take down what should not be there; a takedown can be undone.'}</p>
@@ -72,13 +73,13 @@ export default async function Moderate({ params }: { params: Promise<{ org: stri
       <section aria-label="Waiting">
         <h2>Waiting ({c.queue.length})</h2>
         {c.queue.length === 0 && <p>Nothing is waiting.</p>}
-        <ul style={{ listStyle: 'none', padding: 0 }}>{c.queue.map((p) => <Card key={p.id} p={p}><Move p={p} action="approve" label="Approve" /> <Move p={p} action="reject" label="Reject" /></Card>)}</ul>
+        <ul className="kw-mod">{c.queue.map((p) => <Card key={p.id} p={p}><Move p={p} action="approve" label="Approve" /> <Move p={p} action="reject" label="Reject" /></Card>)}</ul>
       </section>
 
       <section aria-label="Live">
         <h2>Live ({c.live.length})</h2>
         {c.live.length === 0 && <p>Nothing is live.</p>}
-        <ul style={{ listStyle: 'none', padding: 0 }}>
+        <ul className="kw-mod">
           {c.live.map((p) => (
             <Card key={p.id} p={p}>
               {(p.hiddenFromWall || p.hiddenFromAlbum) && <p><strong>{[p.hiddenFromWall && 'Hidden from the wall', p.hiddenFromAlbum && 'Hidden from the album'].filter(Boolean).join('. ')}.</strong></p>}
@@ -91,7 +92,7 @@ export default async function Moderate({ params }: { params: Promise<{ org: stri
       <section aria-label="Removed">
         <h2>Removed ({c.removed.length})</h2>
         {c.removed.length === 0 && <p>Nothing has been removed.</p>}
-        <ul style={{ listStyle: 'none', padding: 0 }}>{c.removed.map((p) => <Card key={p.id} p={p}><p>{p.removedFrom === 'live' ? 'Taken down.' : 'Rejected.'}</p><Move p={p} action="undo" label={p.removedFrom === 'live' ? 'Undo: put it back' : 'Undo: back to waiting'} /></Card>)}</ul>
+        <ul className="kw-mod">{c.removed.map((p) => <Card key={p.id} p={p}><p>{p.removedFrom === 'live' ? 'Taken down.' : 'Rejected.'}</p><Move p={p} action="undo" label={p.removedFrom === 'live' ? 'Undo: put it back' : 'Undo: back to waiting'} /></Card>)}</ul>
       </section>
 
       <section aria-label="Devices">

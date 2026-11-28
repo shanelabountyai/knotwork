@@ -25,7 +25,7 @@ export default async function Flags({ params }: { params: Promise<{ org: string 
   const canEdit = allows(v.who, 'vendors.edit');
   return (
     <main>
-      <WeddingNav slug={ctx.slug} mode={v.wedding.mode} counts={{ approvals: 0, flags: open.length }} />
+      <WeddingNav who={v.who} slug={ctx.slug} mode={v.wedding.mode} counts={{ approvals: 0, flags: open.length }} />
       <h1>Vendor flags</h1>
       <section aria-label="Open flags">
         <h2>Needs re-confirmation</h2>

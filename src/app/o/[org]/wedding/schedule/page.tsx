@@ -6,6 +6,7 @@ import { showDay } from '@/lib/knotwork/days';
 import { scheduleView } from '@/lib/knotwork/secrecy/views';
 import { addTask, removeTask, setTaskStatus, updateTask } from '../actions';
 import { HiddenText, MineNote, NoWedding, PrivacySelect, privacyValue, stateText, WeddingNav } from '../bits';
+import { Status, stateKind, TableWrap } from '@/app/ui/kw';
 import { setTaskPrivacy } from '../privacy/actions';
 import { nameOf, view } from '../view';
 
@@ -28,12 +29,13 @@ export default async function Schedule({ params, searchParams }: { params: Promi
 
   return (
     <main>
-      <WeddingNav slug={ctx.slug} mode={v.wedding.mode} />
+      <WeddingNav who={v.who} slug={ctx.slug} mode={v.wedding.mode} />
       <h1>Schedule</h1>
-      <p>
+      <p className="kw-lede">
         Wedding: <strong>{showDay(v.date)}</strong>. Today: {showDay(v.today)}.
         {partner && <> <Link href={`/o/${ctx.slug}/wedding/date`}>Move the date</Link></>}
       </p>
+      <div className="kw-grid">
       <section aria-label="Critical path">
         <h2>Critical path</h2>
         {s.criticalPath.length ? (
@@ -45,7 +47,19 @@ export default async function Schedule({ params, searchParams }: { params: Promi
           <p>Every task is finished.</p>
         )}
       </section>
+        {partner && (
+          <div className="card">
+            <h2>Move the date</h2>
+            <p>Pick a new date to see what it does to the plan first. Nothing changes until your partner approves.</p>
+            <form method="get" action={`/o/${ctx.slug}/wedding/date`}>
+              <label>New date <input name="to" type="date" required /></label>
+              <button type="submit" className="secondary">Preview the move</button>
+            </form>
+          </div>
+        )}
+      </div>
 
+      <TableWrap label="Schedule">
       <table aria-label="Schedule">
         <thead>
           <tr><th scope="col">Task</th><th scope="col">Start by</th><th scope="col">Due</th><th scope="col">Slack</th><th scope="col">State</th><th scope="col">Who</th><th scope="col">Status</th></tr>
@@ -57,7 +71,7 @@ export default async function Schedule({ params, searchParams }: { params: Promi
               return (
                 <tr key={`hidden-${n}`} aria-label={l.label}>
                   <th scope="row"><HiddenText h={l} owner={nameOf(v, l.owner)} /></th>
-                  <td>{showDay(d.startBy)}</td><td>{showDay(d.due)}</td><td>{d.slackDays === null ? '' : `${d.slackDays} days`}</td><td>{stateText(d.state)}</td><td /><td />
+                  <td>{showDay(d.startBy)}</td><td>{showDay(d.due)}</td><td>{d.slackDays === null ? '' : `${d.slackDays} days`}</td><td><Status k={stateKind(d.state)}>{stateText(d.state)}</Status></td><td /><td />
                 </tr>
               );
             }
@@ -72,7 +86,7 @@ export default async function Schedule({ params, searchParams }: { params: Promi
                 <td>{showDay(d.startBy)}</td>
                 <td>{showDay(d.due)}</td>
                 <td>{d.slackDays === null ? '' : `${d.slackDays} days`}</td>
-                <td>{stateText(d.state)}</td>
+                <td><Status k={stateKind(d.state)}>{stateText(d.state)}</Status></td>
                 <td>{t.assigneeId ? nameOf(v, t.assigneeId) : ''}</td>
                 <td>
                   {mayMove ? (
@@ -83,7 +97,7 @@ export default async function Schedule({ params, searchParams }: { params: Promi
                         <option value="in_progress">in progress</option>
                         <option value="done">done</option>
                       </select>
-                      <button type="submit">Save</button>
+                      <button type="submit" className="secondary">Save</button>
                     </ActionForm>
                   ) : (
                     { todo: 'to do', in_progress: 'in progress', done: 'done' }[t.status]
@@ -95,6 +109,7 @@ export default async function Schedule({ params, searchParams }: { params: Promi
           })}
         </tbody>
       </table>
+      </TableWrap>
 
       {canEdit && (
         <section aria-label={editing ? 'Edit task' : 'Add a task'}>
@@ -125,13 +140,13 @@ export default async function Schedule({ params, searchParams }: { params: Promi
             <ActionForm action={bind(setTaskPrivacy)}>
               <input type="hidden" name="id" value={editing.row.id} />
               <PrivacySelect defaultValue={privacyValue(editing.row, editing.mine)} />
-              <button type="submit">Save privacy</button>
+              <button type="submit" className="secondary">Save privacy</button>
             </ActionForm>
           )}
           {editing && editing.row.kind !== 'payment' && editing.row.kind !== 'rsvp' && (
             <ActionForm action={bind(removeTask)}>
               <input type="hidden" name="id" value={editing.row.id} />
-              <button type="submit">Remove this task</button>
+              <button type="submit" className="secondary">Remove this task</button>
             </ActionForm>
           )}
         </section>

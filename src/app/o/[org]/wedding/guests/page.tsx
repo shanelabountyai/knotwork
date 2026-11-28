@@ -8,6 +8,7 @@ import { loadGuestState } from '@/lib/knotwork/guests/store';
 import { usd } from '@/lib/knotwork/money';
 import { NoWedding, WeddingNav } from '../bits';
 import { view } from '../view';
+import { householdKind, Status, TableWrap } from '@/app/ui/kw';
 import { addHousehold } from './actions';
 import { GuestNav } from './nav';
 
@@ -27,20 +28,20 @@ export default async function Guests({ params }: { params: Promise<{ org: string
   const canEdit = allows(v.who, 'guests.edit');
   return (
     <main>
-      <WeddingNav slug={ctx.slug} mode={v.wedding.mode} />
+      <WeddingNav who={v.who} slug={ctx.slug} mode={v.wedding.mode} />
       <GuestNav slug={ctx.slug} />
       <h1>Guests</h1>
       <section aria-label="Headcount">
         <h2>Headcount</h2>
-        <ul aria-label="Headcount summary">
+        <ul aria-label="Headcount summary" className="kw-plain kw-rows">
           <li>{s.count.attending} attending ({s.count.adults} adults, {s.count.kids} children, {s.count.infants} infants), {s.count.declined} declined, {s.count.pending} not answered</li>
           <li>{s.count.responded} of {s.count.invited} invited have answered ({s.count.responseRatePct}%)</li>
           <li>{s.cap.held} of {s.plan.cap} seats held, {s.cap.available} free</li>
           <li>Cost so far: {usd(s.costCents)} ({s.count.catererMeals} meals: {s.count.adults} adult, {s.count.kids} kids, {s.count.vendorMeals} vendor)</li>
-          <li>Venue: {VENUE[venueStatus(s.count.attending, s.plan.venueMin, s.plan.venueMax)]}{s.plan.venueMin !== null && ` (minimum ${s.plan.venueMin})`}{s.plan.venueMax !== null && ` (maximum ${s.plan.venueMax})`}</li>
+          <li>Venue: <Status k={({ unset: 'off', 'below-min': 'wait', ok: 'ok', 'over-max': 'late' } as const)[venueStatus(s.count.attending, s.plan.venueMin, s.plan.venueMax)]}>{VENUE[venueStatus(s.count.attending, s.plan.venueMin, s.plan.venueMax)]}</Status>{s.plan.venueMin !== null && ` (minimum ${s.plan.venueMin})`}{s.plan.venueMax !== null && ` (maximum ${s.plan.venueMax})`}</li>
         </ul>
         <h3>What changed</h3>
-        <ul aria-label="Headcount changes">
+        <ul aria-label="Headcount changes" className="kw-plain kw-rows">
           {deltas.length === 0 && <li>No replies yet.</li>}
           {deltas.map((d) => (
             <li key={d.id}>{d.label}: {d.deltaCents === 0 ? 'no change in cost' : `${d.deltaCents < 0 ? '−' : '+'}${usd(Math.abs(d.deltaCents))}`} ({d.attendingAfter} attending, {usd(d.costAfterCents)})</li>
@@ -48,6 +49,7 @@ export default async function Guests({ params }: { params: Promise<{ org: string
         </ul>
       </section>
 
+      <TableWrap label="Households">
       <table aria-label="Households">
         <thead><tr><th scope="col">Household</th><th scope="col">List</th><th scope="col">Invitation</th><th scope="col">People</th><th scope="col">Answers</th><th scope="col">Seats held</th></tr></thead>
         <tbody>
@@ -57,19 +59,21 @@ export default async function Guests({ params }: { params: Promise<{ org: string
             return (
               <tr key={h.id} aria-label={`Household ${h.name}`}>
                 <th scope="row"><Link href={`/o/${ctx.slug}/wedding/guests/${h.id}`}>{h.name}</Link></th>
-                <td>{h.list}</td><td>{h.state === 'invited' ? 'invited' : h.state === 'regrets' ? 'not invited (regrets)' : 'waiting'}</td><td>{people.length}</td>
+                <td>{h.list}</td><td><Status k={householdKind(h.state)}>{h.state === 'invited' ? 'invited' : h.state === 'regrets' ? 'not invited (regrets)' : 'waiting'}</Status></td><td>{people.length}</td>
                 <td>{h.state === 'invited' ? `${by('attending')} yes, ${by('declined')} no, ${by('pending')} waiting` : ''}</td><td>{heldSeats(s.households[i]!)}</td>
               </tr>
             );
           })}
         </tbody>
       </table>
+      </TableWrap>
+      {s.rows.length === 0 && <p>No households yet.{canEdit && ' Add one below, or paste a list on the Import tab.'}</p>}
 
       {canEdit && (
         <>
           <h2>Add a household</h2>
           <ActionForm action={addHousehold.bind(null, ctx.slug)}>
-            <label>Household name <input name="name" required maxLength={120} placeholder="The Lindqvists" /></label>
+            <label>Household name <input name="name" required maxLength={120} placeholder="e.g. the Rivera family" /></label>
             <label>Email <input name="email" type="email" maxLength={200} /></label>
             <label>Phone <input name="phone" maxLength={40} /></label>
             <label>Address <input name="address1" maxLength={200} /></label>

@@ -7,6 +7,7 @@ import { usd } from '@/lib/knotwork/money';
 import { dashboardView } from '@/lib/knotwork/secrecy/views';
 import { showAge } from '@/lib/knotwork/thanks/aging';
 import { flagText } from '@/lib/knotwork/vendors/store';
+import { Status } from '@/app/ui/kw';
 import { HiddenText, NoWedding, WeddingNav } from '../bits';
 import { nameOf, view } from '../view';
 
@@ -35,9 +36,10 @@ export default async function Dashboard({ params }: { params: Promise<{ org: str
 
   return (
     <main>
-      <WeddingNav slug={ctx.slug} mode={v.wedding.mode} counts={{ approvals: approvals?.waitingForYou ?? 0, flags: flags?.length ?? 0 }} />
+      <WeddingNav who={v.who} slug={ctx.slug} mode={v.wedding.mode} counts={{ approvals: approvals?.waitingForYou ?? 0, flags: flags?.length ?? 0 }} />
       <h1>Dashboard</h1>
-      <p>{v.wedding.title}: <strong>{showDay(v.date)}</strong>, {daysToGo >= 0 ? `${daysToGo} days to go` : `${-daysToGo} days ago`}. Every figure is worked out now, from the plan as it stands.</p>
+      <p className="kw-lede">{v.wedding.title}: <strong>{showDay(v.date)}</strong>, {daysToGo >= 0 ? `${daysToGo} days to go` : `${-daysToGo} days ago`}. Every figure is worked out now, from the plan as it stands.</p>
+      <div className="kw-grid">
 
       <section aria-label="Tasks">
         <h2><Link href={`${base}/schedule`}>Tasks</Link>: {tasks.onTrackPct}% on track</h2>
@@ -63,7 +65,7 @@ export default async function Dashboard({ params }: { params: Promise<{ org: str
           {flags.length > 0 && (
             <ul>
               {flags.map((f, n) => (f.hidden
-                ? <li key={`hidden-${n}`}>{f.label}: needs re-confirmation</li>
+                ? <li key={`hidden-${n}`}><Status k="priv">{f.label}</Status>: <Status k="wait">needs re-confirmation</Status></li>
                 : <li key={f.row.id}><Link href={`${base}/vendors/${f.row.vendor.id}`}>{f.row.vendor.name}</Link>: {flagText(f.row.reason, f.row.detail)}</li>))}
             </ul>
           )}
@@ -116,6 +118,7 @@ export default async function Dashboard({ params }: { params: Promise<{ org: str
           {contingency.ran > 0 && <p>{plural(contingency.openItems, 'checklist line', 'checklist lines')} not ticked off yet.</p>}
         </section>
       )}
+      </div>
     </main>
   );
 }

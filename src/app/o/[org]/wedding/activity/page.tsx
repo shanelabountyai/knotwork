@@ -25,7 +25,7 @@ export default async function Activity({ params }: { params: Promise<{ org: stri
   const { v, lines } = data;
   return (
     <main>
-      <WeddingNav slug={ctx.slug} life={v.wedding.mode === 'life'} />
+      <WeddingNav who={v.who} slug={ctx.slug} life={v.wedding.mode === 'life'} />
       <h1>Activity</h1>
       <p>Everything anyone changed, newest first. Entries cannot be edited or removed.</p>
       <ol aria-label="Activity" reversed>

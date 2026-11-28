@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { dueKind, Status } from '@/app/ui/kw';
 import { requireOrg } from '@/core/authz/guards';
 import { ActionForm } from '@/core/ui/action-form';
 import { showDay } from '@/lib/knotwork/days';
@@ -25,7 +26,7 @@ export default async function Household({ params }: { params: Promise<{ org: str
   if (!tasks) {
     return (
       <main>
-        <WeddingNav slug={ctx.slug} />
+        <WeddingNav who={data.v.who} slug={ctx.slug} />
         <h1>Household tasks</h1>
         <p>Household tasks begin in life-admin mode, after the wedding. <Link href={`/o/${ctx.slug}/wedding/archive`}>About life-admin mode</Link>.</p>
       </main>
@@ -33,21 +34,21 @@ export default async function Household({ params }: { params: Promise<{ org: str
   }
   return (
     <main>
-      <WeddingNav slug={ctx.slug} life />
+      <WeddingNav who={data.v.who} slug={ctx.slug} life />
       <h1>Household tasks</h1>
       <p>Things that come round again. Each one is next due its interval after the last time it was done (a month from the 31st lands on the month&apos;s last day), or, yearly, on your anniversary. Never done: due now.</p>
 
       {tasks.length === 0 ? <p>No household tasks yet.</p> : (
-        <ul aria-label="Household tasks">
+        <ul aria-label="Household tasks" className="kw-plain kw-cards">
           {tasks.map((t) => (
             <li key={t.id} aria-label={t.title}>
-              <strong>{t.title}</strong>: {DUE_TEXT[t.state]}{t.never ? ' (never done)' : ''}, {showDay(t.due)} <small>({t.ruleText}{t.lastDone ? `; last done ${showDay(t.lastDone)}` : ''})</small>
+              <strong>{t.title}</strong>: <Status k={dueKind(t.state)}>{DUE_TEXT[t.state]}</Status>{t.never ? ' (never done)' : ''}, {showDay(t.due)} <small>({t.ruleText}{t.lastDone ? `; last done ${showDay(t.lastDone)}` : ''})</small>
               {t.notes && <p>{t.notes}</p>}
               <ActionForm action={bind(householdTask)}>
                 <input type="hidden" name="op" value="done" />
                 <input type="hidden" name="id" value={t.id} />
                 <label>Done on <input name="on" type="date" /></label>
-                <button type="submit" aria-label={`Mark ${t.title} done`}>Mark done</button> <small>(empty: today)</small>
+                <span className="kw-row"><button type="submit" aria-label={`Mark ${t.title} done`}>Mark done</button> <small>(empty: today)</small></span>
               </ActionForm>
               {t.recent.length > 0 && (
                 <details>
@@ -59,7 +60,7 @@ export default async function Household({ params }: { params: Promise<{ org: str
                           <input type="hidden" name="op" value="undo" />
                           <input type="hidden" name="id" value={t.id} />
                           <input type="hidden" name="on" value={d} />
-                          <button type="submit" aria-label={`Take ${showDay(d)} off ${t.title}`}>Take off</button>
+                          <button type="submit" className="secondary" aria-label={`Take ${showDay(d)} off ${t.title}`}>Take off</button>
                         </ActionForm>
                       </li>
                     ))}
@@ -72,12 +73,12 @@ export default async function Household({ params }: { params: Promise<{ org: str
                   <input type="hidden" name="op" value="edit" />
                   <input type="hidden" name="id" value={t.id} />
                   <RuleFields title={t.title} unit={t.rule.unit} every={t.rule.every} notes={t.notes} />
-                  <button type="submit">Save</button>
+                  <button type="submit" className="secondary">Save</button>
                 </ActionForm>
                 <ActionForm action={bind(householdTask)}>
                   <input type="hidden" name="op" value="remove" />
                   <input type="hidden" name="id" value={t.id} />
-                  <button type="submit" aria-label={`Remove ${t.title}`}>Remove</button>
+                  <button type="submit" className="secondary" aria-label={`Remove ${t.title}`}>Remove</button>
                 </ActionForm>
               </details>
             </li>

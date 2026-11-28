@@ -4,6 +4,7 @@ import { ActionForm } from '@/core/ui/action-form';
 import { allows, isPartner } from '@/lib/knotwork/access';
 import { vendorsView } from '@/lib/knotwork/secrecy/views';
 import { VENDOR_CATEGORIES } from '@/lib/knotwork/vendors/brief';
+import { Status, TableWrap, vendorKind } from '@/app/ui/kw';
 import { addVendor } from '../actions';
 import { HiddenText, MineNote, NoWedding, PrivacySelect, WeddingNav } from '../bits';
 import { nameOf, view } from '../view';
@@ -19,8 +20,9 @@ export default async function Vendors({ params }: { params: Promise<{ org: strin
   const { v, vendors } = data;
   return (
     <main>
-      <WeddingNav slug={ctx.slug} mode={v.wedding.mode} />
+      <WeddingNav who={v.who} slug={ctx.slug} mode={v.wedding.mode} />
       <h1>Vendors</h1>
+      <TableWrap label="Vendors">
       <table aria-label="Vendors">
         <thead><tr><th scope="col">Vendor</th><th scope="col">Category</th><th scope="col">Status</th><th scope="col">Contract</th><th scope="col">Re-confirmation</th></tr></thead>
         <tbody>
@@ -30,15 +32,18 @@ export default async function Vendors({ params }: { params: Promise<{ org: strin
             return (
               <tr key={x.id} aria-label={`Vendor ${x.name}`}>
                 <th scope="row"><Link href={`/o/${ctx.slug}/wedding/vendors/${x.id}`}>{x.name}</Link><MineNote mine={l.mine} /></th>
-                <td>{x.category}</td><td>{x.status}</td><td>{x.contractSignedOn ? 'signed' : ''}</td><td>{x.flags.length ? 'needs re-confirmation' : ''}</td>
+                <td>{x.category}</td><td><Status k={vendorKind(x.status)}>{x.status}</Status></td><td>{x.contractSignedOn ? <Status k="ok">signed</Status> : ''}</td><td>{x.flags.length ? <Status k="wait">needs re-confirmation</Status> : ''}</td>
               </tr>
             );
           })}
         </tbody>
       </table>
+      </TableWrap>
+      {vendors.length === 0 && <p>No vendors yet.</p>}
       {allows(v.who, 'vendors.edit') && (
         <>
           <h2>Add a vendor</h2>
+          <div className="card">
           <ActionForm action={addVendor.bind(null, ctx.slug)}>
             <label>Name <input name="name" required maxLength={120} /></label>
             <label>Category <select name="category">{VENDOR_CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}</select></label>
@@ -48,6 +53,7 @@ export default async function Vendors({ params }: { params: Promise<{ org: strin
             {isPartner(ctx.role) && <PrivacySelect />}
             <button type="submit">Add vendor</button>
           </ActionForm>
+          </div>
         </>
       )}
     </main>

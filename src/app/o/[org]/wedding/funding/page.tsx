@@ -1,3 +1,4 @@
+import { TableWrap } from '@/app/ui/kw';
 import { inOrg, requireOrg } from '@/core/authz/guards';
 import { ActionForm } from '@/core/ui/action-form';
 import { allows } from '@/lib/knotwork/access';
@@ -37,7 +38,7 @@ export default async function Funding({ params }: { params: Promise<{ org: strin
 
   return (
     <main>
-      <WeddingNav slug={ctx.slug} mode={v.wedding.mode} />
+      <WeddingNav who={v.who} slug={ctx.slug} mode={v.wedding.mode} />
       <h1>{f.scope === 'own' ? 'What you are giving toward' : 'Funding'}</h1>
       {f.scope === 'own' ? (
         <p>What you pledged, what has arrived, and what it has paid for. The rest of the budget is the couple&apos;s.</p>
@@ -52,6 +53,7 @@ export default async function Funding({ params }: { params: Promise<{ org: strin
           {fu.note && <p>{fu.note}</p>}
           <p aria-label={`Totals for ${fu.name}`}>Pledged {usd(fu.pledgedCents)} · received {usd(fu.receivedCents)} · spent {usd(fu.spentCents)}</p>
           {f.scope === 'all' && fu.userId && <p>Linked to {nameOf(v, fu.userId)}, who sees only this funder&apos;s part.</p>}
+          <TableWrap label={`Pledges from ${fu.name}`}>
           <table aria-label={`Pledges from ${fu.name}`}>
             <thead><tr><th scope="col">Toward</th><th scope="col">Pledged</th><th scope="col">Received</th><th scope="col">Spent</th><th scope="col">Stage</th></tr></thead>
             <tbody>
@@ -91,6 +93,7 @@ export default async function Funding({ params }: { params: Promise<{ org: strin
               })}
             </tbody>
           </table>
+          </TableWrap>
 
           {canEdit && options && (
             <details>
