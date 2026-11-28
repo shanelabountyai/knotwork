@@ -155,7 +155,9 @@ export async function budgetView(tx: Tx, ctx: OrgCtx, v: V) {
 
 export async function vendorsView(tx: Tx, ctx: OrgCtx, v: V) {
   const L = lens(seenFor(ctx, v));
-  const rows = await tx.vendor.findMany({ where: inOrg(ctx), include: { flags: { where: { ackAt: null }, select: { id: true } } }, orderBy: { name: 'asc' } });
+  // Round 2 (D-175): the scheduled payments ride along for the vendor book's money columns; a hidden vendor's line
+  // drops its row, payments included, exactly as before.
+  const rows = await tx.vendor.findMany({ where: inOrg(ctx), include: { flags: { where: { ackAt: null }, select: { id: true } }, payments: { select: { amountCents: true, dueDaysBefore: true, paidOn: true } } }, orderBy: { name: 'asc' } });
   const out = rows.map((x) => L.vendor(x));
   return [...out.filter((x) => !x.hidden), ...out.filter((x) => x.hidden)];
 }

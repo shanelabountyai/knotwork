@@ -99,3 +99,35 @@ Where the build differs from an artboard, and why:
 - **Dashboard**: the headings keep their wording ("Tasks: N% on track"), which the dashboard tests assert; see PRD DUX-8.
 - **Every wedding tab row** hides tabs that would be a 404 to the viewer (D-162); counts show where the page loads them
   (PRD DUX-4).
+
+## Round 2 (2026-11-28): navigation, home hero, approvals, money, phones, keys, plain words
+
+Seven fixes from four persona reviews (style-focused, planner, phone-only, product-designer brides). Decisions
+D-173 to D-182. Screenshots of the real routes at 1280 and 390 px: `docs/design/round-2/`.
+
+### The tab map (D-173)
+
+| Top tab | Its own page | Second row (each an existing route, unchanged) |
+| --- | --- | --- |
+| **Home** | `/o/[org]` | Progress (`/wedding/dashboard`) · Activity · Helpers |
+| **Plan** | first of its row | Schedule · Move the date (`/wedding/date`, and `/date/insurance` under it) · Contingency plans · Name change; `/wedding/archive` belongs here in planning mode |
+| **Money** | first of its row | Budget · Vendors (and `/vendors/[id]`) · Funding · Re-confirmations [n] (`/wedding/flags`) |
+| **Guests** | first of its row | Guest list (its own row: Households · Invitations and cap · Chasing · Music · Import) · Seating · Gifts (its own row: Registry · Thank-yous) · Photos (an event keeps its row) |
+| **Approvals [n]** | `/wedding/approvals` | none |
+
+Life-admin mode: **Home** (Activity · Helpers) · **Household** (Household tasks · Name change) · **Gifts and photos**
+(Thank-yous · Photos) · **Archive** (every planning page sits under it) · **Approvals**. A viewer sees only the pages
+their grants open (D-162). Before: 15 tabs on up to two rows plus section rows; after: 5 top tabs.
+
+### What changed on the boards
+
+- **Home**: the countdown is the hero in `--t-2xl`/`--ink`, under the couple's name; none after the day. The keys card
+  is `KeysLegend`.
+- **Approvals**: Approve alone; "Decline…" opens "Why not? (optional)" and Decline; after you decide, the result card
+  (`role="status"`) sits where the card was; "Waiting for <partner>"; the same keys legend as Home.
+- **Money / vendor book**: Paid · Balance · Next due per vendor (D-175).
+- **Plan / Schedule**: "Spare days", "The longest chain", "nobody yet" on unowned tasks; "can't fit before the day".
+- **Phones**: Schedule, Vendors and Households are stacked cards under 600 px (D-178).
+- **Guests**: a guest's "declined" is the neutral `off` pill (the Guests artboard's pill updated).
+
+The artboards other than the Guests pill were not redrawn; the screenshots are the current record.

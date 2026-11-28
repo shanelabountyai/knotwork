@@ -50,17 +50,17 @@ export default async function Guests({ params }: { params: Promise<{ org: string
       </section>
 
       <TableWrap label="Households">
-      <table aria-label="Households">
-        <thead><tr><th scope="col">Household</th><th scope="col">List</th><th scope="col">Invitation</th><th scope="col">People</th><th scope="col">Answers</th><th scope="col">Seats held</th></tr></thead>
+      <table aria-label="Households" role="table" className="kw-stack-sm">
+        <thead><tr role="row"><th role="columnheader" scope="col">Household</th><th role="columnheader" scope="col">List</th><th role="columnheader" scope="col">Invitation</th><th role="columnheader" scope="col">People</th><th role="columnheader" scope="col">Answers</th><th role="columnheader" scope="col">Seats held</th></tr></thead>
         <tbody>
           {s.rows.map((h, i) => {
             const people = h.guests.filter((g) => !g.removedAt);
             const by = (r: string) => people.filter((g) => g.rsvp === r).length;
             return (
-              <tr key={h.id} aria-label={`Household ${h.name}`}>
-                <th scope="row"><Link href={`/o/${ctx.slug}/wedding/guests/${h.id}`}>{h.name}</Link></th>
-                <td>{h.list}</td><td><Status k={householdKind(h.state)}>{h.state === 'invited' ? 'invited' : h.state === 'regrets' ? 'not invited (regrets)' : 'waiting'}</Status></td><td>{people.length}</td>
-                <td>{h.state === 'invited' ? `${by('attending')} yes, ${by('declined')} no, ${by('pending')} waiting` : ''}</td><td>{heldSeats(s.households[i]!)}</td>
+              <tr role="row" key={h.id} aria-label={`Household ${h.name}`}>
+                <th role="rowheader" scope="row"><Link href={`/o/${ctx.slug}/wedding/guests/${h.id}`}>{h.name}</Link></th>
+                <td role="cell" data-label="List">{h.list}</td><td role="cell" data-label="Invitation"><Status k={householdKind(h.state)}>{h.state === 'invited' ? 'invited' : h.state === 'regrets' ? 'not invited (regrets)' : 'waiting'}</Status></td><td role="cell" data-label="People">{people.length}</td>
+                <td role="cell" data-label="Answers">{h.state === 'invited' ? `${by('attending')} yes, ${by('declined')} no, ${by('pending')} waiting` : ''}</td><td role="cell" data-label="Seats held">{heldSeats(s.households[i]!)}</td>
               </tr>
             );
           })}

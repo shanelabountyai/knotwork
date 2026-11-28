@@ -11,7 +11,7 @@ import { Status } from '@/app/ui/kw';
 import { HiddenText, NoWedding, WeddingNav } from '../bits';
 import { nameOf, view } from '../view';
 
-export const metadata = { title: 'Dashboard' };
+export const metadata = { title: 'Progress' };
 
 // PRD P1-7, the progress dashboard: one page of figures, each read on this request from the engine that owns it (the
 // scheduler, the vendor flags, the guest counts, the approvals, the budget rollup, the thank-you ledger, the
@@ -37,7 +37,7 @@ export default async function Dashboard({ params }: { params: Promise<{ org: str
   return (
     <main>
       <WeddingNav who={v.who} slug={ctx.slug} mode={v.wedding.mode} counts={{ approvals: approvals?.waitingForYou ?? 0, flags: flags?.length ?? 0 }} />
-      <h1>Dashboard</h1>
+      <h1>Progress</h1>
       <p className="kw-lede">{v.wedding.title}: <strong>{showDay(v.date)}</strong>, {daysToGo >= 0 ? `${daysToGo} days to go` : `${-daysToGo} days ago`}. Every figure is worked out now, from the plan as it stands.</p>
       <div className="kw-grid">
 
@@ -60,8 +60,8 @@ export default async function Dashboard({ params }: { params: Promise<{ org: str
       </section>
 
       {flags && (
-        <section aria-label="Vendor flags">
-          <h2><Link href={`${base}/flags`}>Vendor flags</Link>: {flags.length} not acknowledged</h2>
+        <section aria-label="Re-confirmations">
+          <h2><Link href={`${base}/flags`}>Re-confirmations</Link>: {flags.length} still to re-confirm</h2>
           {flags.length > 0 && (
             <ul>
               {flags.map((f, n) => (f.hidden

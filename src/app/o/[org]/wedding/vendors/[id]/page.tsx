@@ -15,7 +15,7 @@ import { flagText } from '@/lib/knotwork/vendors/store';
 import { acknowledgeFlag, addVendorPayment, payVendorPayment, proposeBooking, proposeContract, regenerateBrief, updateVendor } from '../../actions';
 import { MineNote, NoWedding, PrivacySelect, privacyValue, WeddingNav } from '../../bits';
 import { setVendorPrivacy } from '../../privacy/actions';
-import { nameOf, view } from '../../view';
+import { nameOf, partnerName, view } from '../../view';
 import { endVendorReadLink, newVendorLink, removeVendorAttachment, showVendorLink } from '../actions';
 
 export const metadata = { title: 'Vendor' };
@@ -82,8 +82,8 @@ export default async function VendorPage({ params, searchParams }: { params: Pro
         <section aria-label="Needs both partners">
           <h2>Needs both of you</h2>
           {v.partners.length < 2 && !v.wedding.pairedAt
-            ? <Keys on={1} solo>You are the only partner so far: booking and signing happen as soon as you propose them, marked solo.</Keys>
-            : <Keys on={0}>Booking and signing take both keys: proposing turns yours; it happens when your partner approves.</Keys>}
+            ? <Keys state="solo" />
+            : <Keys state="none" partner={partnerName(v, ctx.userId)} />}
           {x.status === 'considering' && (
             <ActionForm action={bind(proposeBooking)}>
               <input type="hidden" name="id" value={x.id} />
@@ -132,7 +132,7 @@ export default async function VendorPage({ params, searchParams }: { params: Pro
         </section>
       )}
 
-      <section aria-label="Payments">
+      <section aria-label="Payments" id="payments">
         <h2>Payments</h2>
         <TableWrap label="Payments">
         <table aria-label="Payments">

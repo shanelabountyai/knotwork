@@ -6,7 +6,6 @@ import { loadSeating, problemsText, SEED_MAX, TABLE_NAME_MAX } from '@/lib/knotw
 import { NoWedding, WeddingNav } from '../../bits';
 import { view } from '../../view';
 import { Status } from '@/app/ui/kw';
-import { GuestNav } from '../nav';
 import { addSeatingRule, addSeatingTable, clearUnlockedSeats, generateSeatingChart, lockSeat, moveSeatedGuest, removeSeatingRule, removeSeatingTable, seatPendingGuests, updateSeatingTable } from './actions';
 
 export const metadata = { title: 'Seating' };
@@ -47,7 +46,6 @@ export default async function Seating({ params, searchParams }: { params: Promis
   return (
     <main>
       <WeddingNav who={v.who} slug={ctx.slug} mode={v.wedding.mode} />
-      <GuestNav slug={ctx.slug} />
       <h1>Seating</h1>
       <p aria-label="Seating summary" className="kw-lede">
         {Object.keys(s.seats).length} of {s.guests.length} guests seated at {s.tables.length} {s.tables.length === 1 ? 'table' : 'tables'} ({seatsTotal} seats).{' '}
@@ -55,9 +53,9 @@ export default async function Seating({ params, searchParams }: { params: Promis
       </p>
       <div className="kw-grid">
       <section aria-label="Score">
-        <h2>Score: {s.score.total === 0 ? '0 (nothing to improve)' : s.score.hard ? `${s.score.hard} ${s.score.hard === 1 ? 'problem' : 'problems'} with "must" rules, ${s.score.soft} preference points` : `${s.score.soft} preference points`}</h2>
-        <p><small>Lower is better. A broken &quot;must&quot; rule or a guest with no seat is a problem; a broken &quot;would like&quot; costs 3 points, and each household member sitting away from the rest of the household costs 2.</small></p>
-        {problems.length > 0 && <ul aria-label="Seating problems" className="kw-plain kw-rows">{problems.map((p, n) => <li key={n}>{n < hardCount ? <><Status k="late">problem</Status> <strong>{p}</strong></> : <><Status k="wait">preference</Status> {p}</>}</li>)}</ul>}
+        <h2>Score: {s.score.total === 0 ? '0 (nothing to improve)' : s.score.hard ? `${s.score.hard} ${s.score.hard === 1 ? 'problem' : 'problems'} with "must" rules, ${s.score.soft} ${s.score.soft === 1 ? 'point' : 'points'} for wishes not met` : `${s.score.soft} ${s.score.soft === 1 ? 'point' : 'points'} for wishes not met`}</h2>
+        <p><small>Lower is better. A broken &quot;must&quot; rule or a guest with no seat is a problem; a &quot;would like&quot; wish not met costs 3 points, and each household member sitting away from the rest of the household costs 2.</small></p>
+        {problems.length > 0 && <ul aria-label="Seating problems" className="kw-plain kw-rows">{problems.map((p, n) => <li key={n}>{n < hardCount ? <><Status k="late">problem</Status> <strong>{p}</strong></> : <><Status k="wait">wish not met</Status> {p}</>}</li>)}</ul>}
       </section>
 
       {canEdit && (

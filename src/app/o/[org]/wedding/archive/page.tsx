@@ -13,12 +13,12 @@ export const metadata = { title: 'Archive' };
 
 /** The planning pages, each with what it takes to see it. */
 const PLAN: { path: string; label: string; cap: Capability }[] = [
-  { path: 'dashboard', label: 'Progress dashboard', cap: 'schedule.view' },
+  { path: 'dashboard', label: 'Progress', cap: 'schedule.view' },
   { path: 'schedule', label: 'Schedule', cap: 'schedule.view' },
   { path: 'budget', label: 'Budget', cap: 'budget.view' },
   { path: 'funding', label: 'Funding', cap: 'funding.view' },
   { path: 'vendors', label: 'Vendors and their documents', cap: 'vendors.view' },
-  { path: 'flags', label: 'Vendor flags', cap: 'vendors.view' },
+  { path: 'flags', label: 'Re-confirmations', cap: 'vendors.view' },
   { path: 'guests', label: 'Guests and seating', cap: 'guests.view' },
   { path: 'contingency', label: 'Contingency plans', cap: 'contingency.view' },
   { path: 'date', label: 'The wedding date', cap: 'consent.propose' },
@@ -42,7 +42,7 @@ export default async function Archive({ params }: { params: Promise<{ org: strin
       {life ? (
         <p role="note">Life-admin mode{v.wedding.modeChangedAt ? ` since ${showDay(todayIn(v.wedding.timeZone, v.wedding.modeChangedAt))}` : ''}. The wedding plan below is kept as it was, <strong>read-only</strong>: nothing in it can be changed until you switch back to planning mode. Secrets stay secret here too.</p>
       ) : (
-        <p>The workspace is in planning mode. {open ? 'The wedding day has passed: you can switch to life-admin mode, and the plan below becomes a read-only archive.' : 'Life-admin mode opens the day after the wedding.'}</p>
+        <p>You are in planning mode. {open ? 'The wedding day has passed: you can switch to life-admin mode, and the plan below becomes a read-only archive.' : 'Life-admin mode opens the day after the wedding.'}</p>
       )}
       <ul aria-label="The wedding plan">
         {PLAN.filter((p) => allows(v.who, p.cap)).map((p) => <li key={p.path}><Link href={`${base}/${p.path}`}>{p.label}</Link></li>)}

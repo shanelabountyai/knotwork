@@ -65,6 +65,9 @@ test('the rain plan: answer, preview, put the tent into action; the spend waits 
   const waiting = rowan.getByRole('region', { name: 'Waiting for you', exact: true });
   await expect(waiting).toContainText('Spend $1,800.00: Tent rental for the lawn (Venue), from the plan "Rain plan"');
   await waiting.getByRole('button', { name: 'Approve' }).first().click();
+  // Round 2: wait for the approval to land (its result card) before leaving the page; going straight to the budget raced
+  // the server action here, the same race as design.spec.ts's proposal step (3e347cb).
+  await expect(rowan.getByRole('status', { name: /^You approved: Spend \$1,800\.00: Tent rental/ })).toBeVisible();
   await rowan.goto(`${ORG}/wedding/budget`);
   await expect(rowan.getByRole('table', { name: 'Spends' })).toContainText('Tent rental for the lawn');
 });

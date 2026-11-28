@@ -95,10 +95,10 @@
 
 /* ============ 3. status ============
    ok    on track, approved, attending, done, paid, signed          ✓
-   late  late, impossible, over budget, declined request, refused  ▲
-   wait  waiting for a key, not answered, needs re-confirmation    ○
-   info  invited, queued, in progress, neutral facts               ●
-   off   expired, withdrawn, archived, not invited, nobody yet     ■
+   late  late, can't fit before the day, over budget, declined request, refused  ▲
+   wait  waiting for a key, not answered, needs re-confirmation, nobody yet     ○
+   info  invited, queued, in progress, considering, locked, neutral facts       ●
+   off   expired, withdrawn, archived, not invited, a guest's "no"              ■
    priv  private to one partner (secrecy, P1-1)                    ◇
    The glyph is drawn by CSS and hidden from screen readers; the word is the text. Colour is the third signal. */
 [data-k], [role='alert'], [role='status'] {
@@ -218,8 +218,36 @@ td form > fieldset, th form > fieldset { flex-direction: row; flex-wrap: wrap; a
 th small { font-weight: 400; }
 /* Money and dates never break inside a figure (review D1/U1). Words in a cell still wrap at spaces. */
 td, th { overflow-wrap: break-word; }
+/* Round 2 (D-178): words in a table never break mid-word ("Junip/er"); a cell wraps at spaces only, and a table that
+   does not fit scrolls inside its region. On a phone the row's name stays in view while the rest scrolls. */
+table th, table td { overflow-wrap: normal; word-break: normal; hyphens: manual; }
+/* Under 600 px a table marked kw-stack-sm reads as stacked cards: the row's name, then each cell with its column's
+   name before it. The elements carry explicit table roles, so a screen reader still hears a table (D-178). */
+@media (max-width: 599px) {
+  .table-wrap:has(> table.kw-stack-sm) { overflow-x: visible; background: none; border: 0; box-shadow: none; }
+  table.kw-stack-sm { min-width: 0 !important; display: block; }
+  table.kw-stack-sm thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  table.kw-stack-sm tbody, table.kw-stack-sm tfoot { display: flex; flex-direction: column; gap: var(--s-3); }
+  table.kw-stack-sm tr { display: block; background: var(--sf); border: 1px solid var(--ln); border-radius: var(--r-2); padding: var(--s-3) var(--s-4); }
+  table.kw-stack-sm th[scope='row'] { display: block; position: static; box-shadow: none; max-width: none; padding: 0 0 var(--s-2); border: 0; font-size: var(--t-base); }
+  table.kw-stack-sm td { display: grid; grid-template-columns: minmax(5.5rem, 7.5rem) minmax(0, 1fr); gap: var(--s-2); align-items: baseline; padding: var(--s-2) 0; border: 0; border-top: 1px solid var(--ln); min-width: 0; white-space: normal; }
+  table.kw-stack-sm td::before { content: attr(data-label); content: attr(data-label) / ''; font-size: var(--t-xs); letter-spacing: 0.06em; text-transform: uppercase; color: var(--mu); font-weight: 650; }
+  /* An empty cell is hidden from sight but kept in the table, so later cells keep their column headers (review A1). */
+  table.kw-stack-sm td:empty { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); border: 0; }
+  table.kw-stack-sm .st { white-space: normal; text-align: left; } /* a pill wraps at 320 px (review A2, WCAG 1.4.10) */
+  table.kw-stack-sm td > * { justify-self: start; }
+  table.kw-stack-sm td form > fieldset { flex-wrap: wrap; }
+}
+@media (max-width: 719px) {
+  .table-wrap > table:not(.kw-stack-sm) tbody th[scope='row'] { position: sticky; left: 0; z-index: 1; background: var(--sf); box-shadow: 1px 0 0 var(--ln); min-width: 9rem; max-width: 12rem; }
+  .table-wrap > table:not(.kw-stack-sm) thead th:first-child { position: sticky; left: 0; z-index: 2; }
+}
+/* A task with nobody on it says so (round 2). */
+td.kw-nobody .st { font-weight: 650; }
 td:not(:has(form)) { min-width: 4.5em; }
 td.num, th.num, .st { white-space: nowrap; }
+/* A second figure under the first in one cell (round 2: the amount under a next-due date). */
+.kw-sub { display: block; font-size: var(--t-sm); color: var(--mu); }
 /* A row header that is a link is a 44 px target (review A3). */
 th[scope='row'] > a:first-child { display: inline-flex; align-items: center; min-height: var(--tap); }
 /* A table with no wrapper (template pages): it scrolls on its own on a phone. */
@@ -265,7 +293,13 @@ nav.kw-tabs, nav.kw-subtabs { margin: calc(-1 * var(--s-2)) 0 0; }
 .kw-tabs li, .kw-subtabs li { margin: 0; flex: none; }
 .kw-tabs a, .kw-subtabs a { position: relative; display: inline-flex; align-items: center; gap: 6px; min-height: var(--tap); padding: 0 14px; border-radius: var(--r-pill); color: var(--ink); text-decoration: none; font-size: 15px; font-weight: 550; white-space: nowrap; border: 1px solid transparent; }
 .kw-tabs a:hover, .kw-subtabs a:hover { background: var(--sf-2); }
-.kw-tabs a[aria-current='page'], .kw-subtabs a[aria-current='page'] { background: var(--ac-tint); color: var(--ink); border-color: var(--ac); font-weight: 700; }
+.kw-tabs a[aria-current='page'], .kw-tabs a[aria-current='true'], .kw-subtabs a[aria-current='page'] { background: var(--ac-tint); color: var(--ink); border-color: var(--ac); font-weight: 700; }
+/* Round 2 (D-173): the five top tabs, then the current one's pages as a second row, smaller, under a rule. The five
+   fit at 390 px; each row still scrolls inside itself if a font is larger. */
+.kw-tabs { display: flex; flex-direction: column; gap: var(--s-2); }
+.kw-tabs > ul + ul.kw-tabs-sub { border-top: 1px solid var(--ln); padding-top: var(--s-2); }
+.kw-tabs-sub a { font-size: var(--t-sm); }
+@media (max-width: 480px) { .kw-tabs > ul:first-child { gap: var(--s-1); } .kw-tabs > ul:first-child a { padding: 0 var(--s-2); } }
 .kw-subtabs a { font-size: var(--t-sm); min-height: var(--tap); }
 .kw-subtabs { border-bottom: 1px solid var(--ln); padding-bottom: var(--s-2); }
 .kw-count { display: inline-flex; align-items: center; justify-content: center; min-width: 22px; height: 22px; padding: 0 6px; border-radius: var(--r-pill); background: var(--ac); color: var(--acf); font-size: 12px; font-weight: 700; }
@@ -282,9 +316,9 @@ nav.kw-tabs, nav.kw-subtabs { margin: calc(-1 * var(--s-2)) 0 0; }
 .st[data-k='priv']::before { content: '◇'; content: '◇' / ''; }
 
 /* Keys: the two-key state of a designated action. Two rings, one per partner; a filled ring is a key turned. */
-.keys { display: inline-flex; align-items: center; gap: 8px; font-weight: 650; font-size: var(--t-sm); color: var(--ink); }
-.keys-rings { display: inline-flex; gap: 3px; }
-.keys-rings i { width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--ac); display: block; }
+.keys { display: inline-flex; align-items: center; gap: var(--s-2); font-weight: 650; font-size: var(--t-sm); color: var(--ink); }
+.keys-rings { display: inline-flex; gap: 4px; flex: none; }
+.keys-rings i { width: 20px; height: 20px; border-radius: 50%; border: 2.5px solid var(--ac); display: block; flex: none; }
 .keys-rings i.on { background: var(--ac); }
 .keys-rings.solo i:last-child { border-style: dashed; }
 
@@ -329,6 +363,8 @@ section .table-wrap { box-shadow: none; background: var(--sf); }
 .kw-hero { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: var(--s-3) var(--s-6); padding-bottom: var(--s-4); border-bottom: 1px solid var(--ln); }
 .kw-hero > div { display: flex; flex-direction: column; gap: var(--s-2); min-width: 0; }
 .kw-when { font-size: 17px; color: var(--mu); }
+/* Round 2 (D-174): the countdown is the hero, the one use of --t-2xl, in ink. */
+.kw-countdown { font-size: var(--t-2xl); font-weight: 700; line-height: 1.1; color: var(--ink); letter-spacing: -0.015em; font-variant-numeric: tabular-nums; }
 .kw-when strong { color: var(--ink); }
 
 /* Approvals: a request card with its keys. */
@@ -338,6 +374,17 @@ section .table-wrap { box-shadow: none; background: var(--sf); }
 @media (max-width: 719px) { .kw-request .kw-actions, .kw-request .kw-actions > form { width: 100%; } .kw-request .kw-actions button, .kw-request .kw-actions input:not([type='hidden']) { width: 100%; } }
 .kw-request .kw-actions { display: flex; flex-wrap: wrap; gap: var(--s-3); align-items: flex-end; }
 .kw-request .kw-actions > form { flex: 0 1 auto; }
+/* Round 2 (D-177): Approve stands alone; Decline opens its own small form with the reason. */
+.kw-request .kw-actions { flex-direction: column; align-items: stretch; }
+.kw-request .kw-approve > form { align-items: flex-start; }
+.kw-decline { border-top: 1px solid var(--ln); padding-top: var(--s-2); }
+.kw-decline > summary { color: var(--ink); font-weight: 600; }
+/* The result of your own approval or decline, in place of its card. */
+.kw-stack > article.kw-result { background: var(--k-bg); color: var(--k-fg); border-color: var(--k-dot); border-left-color: var(--k-dot); }
+.kw-stack > article.kw-result::before { content: none; }
+.kw-result > h3::before { content: '✓ '; content: '✓ ' / ''; }
+.kw-result[data-k='off'] > h3::before { content: '■ '; content: '■ ' / ''; }
+.kw-result .keys { color: var(--k-fg); }
 
 /* The move preview: summary figures first, lists after. */
 section[aria-label='Move preview'] > ul[aria-label='Preview summary'] { list-style: none; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr)); gap: var(--s-2); }

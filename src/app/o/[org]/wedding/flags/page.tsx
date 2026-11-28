@@ -8,7 +8,7 @@ import { acknowledgeFlag } from '../actions';
 import { HiddenText, NoWedding, WeddingNav } from '../bits';
 import { nameOf, view } from '../view';
 
-export const metadata = { title: 'Vendor flags' };
+export const metadata = { title: 'Re-confirmations' };
 const when = (d: Date) => `${d.toISOString().slice(0, 16).replace('T', ' ')} UTC`;
 
 // PRD P0-2 (bride review #4): a change touching a booked vendor's scope keeps them flagged until someone marks the
@@ -26,15 +26,15 @@ export default async function Flags({ params }: { params: Promise<{ org: string 
   return (
     <main>
       <WeddingNav who={v.who} slug={ctx.slug} mode={v.wedding.mode} counts={{ approvals: 0, flags: open.length }} />
-      <h1>Vendor flags</h1>
-      <section aria-label="Open flags">
+      <h1>Re-confirmations</h1>
+      <section aria-label="Needs re-confirmation">
         <h2>Needs re-confirmation</h2>
         {open.length === 0 && hidden.length === 0 && <p>No vendor needs re-confirmation.</p>}
         <ul>
           {hidden.map((h, n) => <li key={`hidden-${n}`}><HiddenText h={h} owner={nameOf(v, h.owner)} /></li>)}
           {open.map((f) => (
-            <li key={f.id} aria-label={`Flag for ${f.vendor.name}`}>
-              <Link href={`/o/${ctx.slug}/wedding/vendors/${f.vendor.id}`}>{f.vendor.name}</Link>: {flagText(f.reason, f.detail)} <small>(flagged {when(f.raisedAt)} by {nameOf(v, f.raisedById)})</small>
+            <li key={f.id} aria-label={`Re-confirmation for ${f.vendor.name}`}>
+              <Link href={`/o/${ctx.slug}/wedding/vendors/${f.vendor.id}`}>{f.vendor.name}</Link>: {flagText(f.reason, f.detail)} <small>(raised {when(f.raisedAt)} by {nameOf(v, f.raisedById)})</small>
               {canEdit && (
                 <ActionForm action={acknowledgeFlag.bind(null, ctx.slug)}>
                   <input type="hidden" name="id" value={f.id} />
@@ -46,7 +46,7 @@ export default async function Flags({ params }: { params: Promise<{ org: string 
           ))}
         </ul>
       </section>
-      <section aria-label="Acknowledged flags">
+      <section aria-label="Re-confirmed">
         <h2>Re-confirmed</h2>
         <ul>
           {done.map((f) => (

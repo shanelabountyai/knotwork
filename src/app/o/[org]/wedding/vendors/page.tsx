@@ -4,6 +4,9 @@ import { ActionForm } from '@/core/ui/action-form';
 import { allows, isPartner } from '@/lib/knotwork/access';
 import { vendorsView } from '@/lib/knotwork/secrecy/views';
 import { VENDOR_CATEGORIES } from '@/lib/knotwork/vendors/brief';
+import { showDay } from '@/lib/knotwork/days';
+import { usd } from '@/lib/knotwork/money';
+import { paymentSummary } from '@/lib/knotwork/vendors/payments';
 import { Status, TableWrap, vendorKind } from '@/app/ui/kw';
 import { addVendor } from '../actions';
 import { HiddenText, MineNote, NoWedding, PrivacySelect, WeddingNav } from '../bits';
@@ -23,16 +26,21 @@ export default async function Vendors({ params }: { params: Promise<{ org: strin
       <WeddingNav who={v.who} slug={ctx.slug} mode={v.wedding.mode} />
       <h1>Vendors</h1>
       <TableWrap label="Vendors">
-      <table aria-label="Vendors">
-        <thead><tr><th scope="col">Vendor</th><th scope="col">Category</th><th scope="col">Status</th><th scope="col">Contract</th><th scope="col">Re-confirmation</th></tr></thead>
+      <table aria-label="Vendors" role="table" className="kw-stack-sm">
+        <thead><tr role="row"><th role="columnheader" scope="col">Vendor</th><th role="columnheader" scope="col">Category</th><th role="columnheader" scope="col">Status</th><th role="columnheader" scope="col">Contract</th><th role="columnheader" scope="col">Re-confirmation</th><th role="columnheader" scope="col" className="num">Paid</th><th role="columnheader" scope="col" className="num">Balance</th><th role="columnheader" scope="col">Next due</th></tr></thead>
         <tbody>
           {vendors.map((l, n) => {
-            if (l.hidden) return <tr key={`hidden-${n}`} aria-label={l.label}><th scope="row"><HiddenText h={l} owner={nameOf(v, l.owner)} /></th><td /><td /><td /><td /></tr>;
+            if (l.hidden) return <tr role="row" key={`hidden-${n}`} aria-label={l.label}><th role="rowheader" scope="row"><HiddenText h={l} owner={nameOf(v, l.owner)} /></th><td role="cell" data-label="Category" /><td role="cell" data-label="Status" /><td role="cell" data-label="Contract" /><td role="cell" data-label="Re-confirmation" /><td role="cell" data-label="Paid" /><td role="cell" data-label="Balance" /><td role="cell" data-label="Next due" /></tr>;
             const x = l.row;
+            // Round 2 (D-175): the vendor's scheduled payments, summed; each due day from the wedding date (rule 1).
+            const m = paymentSummary(x.payments, v.date);
+            const page = `/o/${ctx.slug}/wedding/vendors/${x.id}`;
             return (
-              <tr key={x.id} aria-label={`Vendor ${x.name}`}>
-                <th scope="row"><Link href={`/o/${ctx.slug}/wedding/vendors/${x.id}`}>{x.name}</Link><MineNote mine={l.mine} /></th>
-                <td>{x.category}</td><td><Status k={vendorKind(x.status)}>{x.status}</Status></td><td>{x.contractSignedOn ? <Status k="ok">signed</Status> : ''}</td><td>{x.flags.length ? <Status k="wait">needs re-confirmation</Status> : ''}</td>
+              <tr role="row" key={x.id} aria-label={`Vendor ${x.name}`}>
+                <th role="rowheader" scope="row"><Link href={page}>{x.name}</Link><MineNote mine={l.mine} /></th>
+                <td role="cell" data-label="Category">{x.category}</td><td role="cell" data-label="Status"><Status k={vendorKind(x.status)}>{x.status}</Status></td><td role="cell" data-label="Contract">{x.contractSignedOn ? <Status k="ok">signed</Status> : ''}</td><td role="cell" data-label="Re-confirmation">{x.flags.length ? <Status k="wait">needs re-confirmation</Status> : ''}</td>
+                <td role="cell" data-label="Paid" className="num">{m.count ? usd(m.paidCents) : ''}</td><td role="cell" data-label="Balance" className="num">{m.count ? usd(m.balanceCents) : ''}</td>
+                <td role="cell" data-label="Next due" className="num">{m.nextDue ? <Link href={`${page}#payments`}>{showDay(m.nextDue.day)}<span className="kw-sub">{usd(m.nextDue.amountCents)}</span></Link> : m.count ? <Status k="ok">all paid</Status> : <small>no payments scheduled</small>}</td>
               </tr>
             );
           })}

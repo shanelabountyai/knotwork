@@ -7,7 +7,7 @@ import { movePreview } from '@/lib/knotwork/secrecy/views';
 import { proposeDateMove } from '../actions';
 import { MovePreviewView, NoWedding, WeddingNav } from '../bits';
 import { Keys } from '@/app/ui/kw';
-import { view } from '../view';
+import { partnerName, view } from '../view';
 
 export const metadata = { title: 'Move the date' };
 
@@ -45,8 +45,8 @@ export default async function MoveDate({ params, searchParams }: { params: Promi
               <button type="submit">Propose this move</button>
             </ActionForm>
             {v.partners.length < 2 && !v.wedding.pairedAt
-              ? <Keys on={1} solo>You are the only partner so far, so the move happens as soon as you propose it, marked solo.</Keys>
-              : <Keys on={0}>Proposing turns your key; the move happens when your partner turns theirs.</Keys>}
+              ? <Keys state="solo" />
+              : <Keys state="none" partner={partnerName(v, ctx.userId)} />}
             <p>Moving the date also flags every booked vendor for re-confirmation.</p>
           </div>
           <p><Link href={`/o/${ctx.slug}/wedding/date/insurance?to=${to}`}>Before you decide: contracts, payments and insurance questions for this move</Link> (general information, not insurance or legal advice).</p>

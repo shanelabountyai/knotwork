@@ -19,7 +19,7 @@ export type Outcome = { ok: true; status: ConsentStatus } | { ok: false; reason:
 export const KIND_LABEL: Record<ConsentKind, string> = {
   book_vendor: 'Book a vendor',
   sign_contract: 'Sign a contract',
-  spend: 'Spend over the threshold',
+  spend: 'A spend that needs both of you',
   change_date: 'Change the wedding date',
   change_settings: 'Change the approval rules',
   remove_guest: 'Remove a guest',

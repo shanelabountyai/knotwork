@@ -30,3 +30,8 @@ export async function view<T>(ctx: OrgCtx, cap: Capability, fn: (tx: Tx, v: View
 }
 
 export const nameOf = (v: View, userId: string | null | undefined) => (userId ? (v.people.get(userId) ?? 'someone who has left') : 'the app');
+/** The other partner's name, for the keys' words; "your partner" while there is none. */
+export const partnerName = (v: View, me: string) => {
+  const other = v.partners.find((id) => id !== me);
+  return other ? nameOf(v, other) : 'your partner';
+};

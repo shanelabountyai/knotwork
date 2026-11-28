@@ -1,5 +1,27 @@
 # NEXT
 
+## ▶ 2026-11-28 (latest): design round 2, branch `design/round-2` on `design/impl` (NOT pushed: no repo access this run)
+Unattended scheduled run (Shane, chat 2026-11-27 6:03 PM CT: seven fixes from four persona reviews). `design/dux` did
+not exist on the remote, so this is cut from `design/impl` at `3e347cb` (PR #7, still open). Decisions D-173 to D-182.
+
+- **Built (7 of 7):** five top tabs (Home · Plan · Money · Guests · Approvals) with each one's pages as a second row,
+  one name per concept (Home, Progress, Re-confirmations) (D-173); the countdown as the home hero in `--t-2xl` (D-174);
+  the approval card (Decline with "Why not? (optional)", the result in place of the card, the partner named, the move
+  preview's task lists) (D-177); Paid · Balance · Next due on the vendor book (D-175); stacked cards for Schedule,
+  Vendors and Households under 600 px, no mid-word breaks, "nobody yet" on unowned tasks (D-178); `Keys` owns its words
+  and one legend, rings 20 px, guests' "declined" neutral, "can't fit before the day" (D-176, D-179, D-180); plain
+  words (D-181). No engine, rule, mask, money math, permission, schema, server action or dependency changed.
+- **Gate here (cloud sandbox, Postgres 16.15 locally, `npm ci --ignore-scripts` + stub-engine `prisma generate`,
+  migrations by stand-in, D-04/D-168):** lint 0; typecheck clean; `next build` OK; vitest 88 files, 1548 passed /
+  66 skipped / 3 failed, all in `inv-01-04-22-actions`: the template's action harness hit its fixed 180 s (126 actions,
+  unchanged; not raised) and two controls in the same file then collided with it (`Org_pkey`); run alone, the
+  controls pass (4 passed). Playwright 57 passed (production build, fresh database). fixtures:check 88 the same;
+  `design:contrast` OK, 0 pairs under floor; pytest 132 passed. Not run: `foundation:drift`, `check-modules`.
+- **Not done here:** push, PR and CI (GitHub refused this session for this repository, D-182). The branch was handed
+  over as a git bundle.
+- **You:** push `design/round-2` from the bundle (or re-run the task with the repo added) and open the draft PR on
+  `design/impl`; it waits for PR #7.
+
 ## ▶ 2026-11-26 (latest): design pass, branch `design/impl` from `phase-5`, draft PR "Knotwork: design pass" (not merged, not deployed)
 Unattended run (Thanksgiving; no questions asked). Method mirrored from Turnstile's design pass; Knotwork's own look
 (D-154). Decisions D-154 to D-169; PRD items DUX-1 to DUX-8 for Shane.

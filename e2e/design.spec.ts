@@ -28,7 +28,9 @@ test('the current tab is marked, and the skip link lands on the page', async ({ 
   await juniper.goto(`${ORG}/wedding/schedule`);
   const wedding = juniper.getByRole('navigation', { name: 'Wedding' });
   await expect(wedding.getByRole('link', { name: 'Schedule' })).toHaveAttribute('aria-current', 'page');
-  await expect(wedding.getByRole('link', { name: 'Budget' })).not.toHaveAttribute('aria-current', 'page');
+  // Round 2 (D-173): Schedule is a page of the Plan tab; Plan is the current section, Money is not.
+  await expect(wedding.getByRole('link', { name: 'Plan', exact: true })).toHaveAttribute('aria-current', 'true');
+  await expect(wedding.getByRole('link', { name: 'Money', exact: true })).not.toHaveAttribute('aria-current', /./);
   await juniper.keyboard.press('Tab');
   await expect(juniper.getByRole('link', { name: 'Skip to content' })).toBeFocused();
   await juniper.keyboard.press('Enter');
@@ -50,7 +52,7 @@ test('Approvals shows the keys: one turned by the proposer, the second waiting',
   await juniper.goto(`${ORG}/wedding/date?to=2027-12-03`);
   await juniper.getByRole('button', { name: 'Propose this move' }).click();
   await expect(juniper).toHaveURL(new RegExp(`${ORG}/wedding/approvals$`)); // the proposal redirects here once it is stored
-  await expect(juniper.getByRole('article', { name: /^Your request: Move the wedding/ })).toContainText("Your key is turned; your partner's is the second");
+  await expect(juniper.getByRole('article', { name: /^Your request: Move the wedding/ })).toContainText("Your key is turned; Rowan Ashby's is the second."); // round 2: the keys name the partner (D-176)
   const rowan = await signIn(browser, 'rowan@knotwork.demo.test', { viewport: { width: 390, height: 844 } });
   await rowan.goto(`${ORG}/wedding/approvals`);
   const request = rowan.getByRole('article', { name: /^Request: Move the wedding/ });
@@ -79,4 +81,35 @@ test('review fixes: the current tab is in view on a phone, the wall pauses, and 
   expect(res!.status()).toBe(404);
   await expect(stranger.getByRole('heading', { level: 1 })).toHaveText('This page isn’t here');
   expect(await stranger.locator('main').innerText()).not.toContain('Juniper');
+});
+
+test('round 2: the hero countdown, money on the vendor row, an unowned task flagged, and Decline with its reason', async ({ browser }) => {
+  const phone = await signIn(browser, 'juniper@knotwork.demo.test', { viewport: { width: 390, height: 844 } });
+  await phone.goto(ORG);
+  await expect(phone.locator('.kw-countdown')).toHaveText(/^\d+ days to go$/);
+  await expect(phone.getByRole('navigation', { name: 'Wedding' }).getByRole('link', { name: 'Home', exact: true })).toHaveAttribute('aria-current', 'page');
+
+  await phone.goto(`${ORG}/wedding/vendors`);
+  const barn = phone.getByRole('row', { name: 'Vendor Cedar Hollow Barn' });
+  await expect(barn).toContainText('$2,000.00'); // the deposit, paid
+  await expect(barn.getByRole('link', { name: /2027/ })).toHaveAttribute('href', /\/wedding\/vendors\/[^/]+#payments$/); // next due
+  expect(await sideways(phone)).toBe(0);
+
+  await phone.goto(`${ORG}/wedding/schedule`);
+  await expect(phone.getByRole('table', { name: 'Schedule' })).toContainText('nobody yet');
+  await expect(phone.getByRole('table', { name: 'Schedule' })).not.toContainText('impossible');
+
+  const rowan = await signIn(browser, 'rowan@knotwork.demo.test');
+  await phone.goto(`${ORG}/wedding/date?to=2027-12-03`);
+  await phone.getByRole('button', { name: 'Propose this move' }).click();
+  await expect(phone).toHaveURL(new RegExp(`${ORG}/wedding/approvals$`));
+  await rowan.goto(`${ORG}/wedding/approvals`);
+  const request = rowan.getByRole('article', { name: /^Request: Move the wedding/ });
+  await expect(request.getByLabel('Why not? (optional)')).toBeHidden(); // the reason belongs to Decline, behind it
+  await request.getByText('Decline…').click();
+  await request.getByLabel('Why not? (optional)').fill('Not that weekend');
+  await request.getByRole('button', { name: /^Decline/ }).click();
+  const result = rowan.getByRole('status', { name: /^You declined: Move the wedding/ });
+  await expect(result).toContainText('Nothing changed.');
+  await expect(rowan.getByRole('article', { name: /^Request: Move the wedding/ })).toHaveCount(0);
 });

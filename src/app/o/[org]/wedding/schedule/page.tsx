@@ -11,6 +11,8 @@ import { setTaskPrivacy } from '../privacy/actions';
 import { nameOf, view } from '../view';
 
 export const metadata = { title: 'Schedule' };
+/** Days a task can slip and still be done in time (the engine's slack), in words. */
+const spare = (n: number | null) => (n === null ? '' : n < 0 ? (n === -1 ? '1 day short' : `${-n} days short`) : n === 1 ? '1 day' : `${n} days`);
 
 // PRD P0-1: every date on this page is computed, on this request, from the wedding date; none is stored.
 // P1-1: the rows come through secrecy/views.ts. A task private to the other partner is a masked line with its dates.
@@ -36,11 +38,11 @@ export default async function Schedule({ params, searchParams }: { params: Promi
         {partner && <> <Link href={`/o/${ctx.slug}/wedding/date`}>Move the date</Link></>}
       </p>
       <div className="kw-grid">
-      <section aria-label="Critical path">
-        <h2>Critical path</h2>
+      <section aria-label="The longest chain">
+        <h2>The longest chain</h2>
         {s.criticalPath.length ? (
           <>
-            <p>The longest chain back from the wedding. It needs {s.runwayDays} days{s.marginDays !== null && (s.marginDays >= 0 ? `; you have ${s.marginDays} to spare` : `; you are ${-s.marginDays} short`)}.</p>
+            <p>The longest chain of tasks that each wait for the one before, counted back from the wedding. It takes {s.runwayDays} days{s.marginDays !== null && (s.marginDays >= 0 ? `; you have ${s.marginDays} to spare` : `; you are ${-s.marginDays} short`)}.</p>
             <ol>{s.criticalPath.map((title, n) => <li key={n}>{title}</li>)}</ol>
           </>
         ) : (
@@ -60,35 +62,35 @@ export default async function Schedule({ params, searchParams }: { params: Promi
       </div>
 
       <TableWrap label="Schedule">
-      <table aria-label="Schedule">
+      <table aria-label="Schedule" role="table" className="kw-stack-sm">
         <thead>
-          <tr><th scope="col">Task</th><th scope="col">Start by</th><th scope="col">Due</th><th scope="col">Slack</th><th scope="col">State</th><th scope="col">Who</th><th scope="col">Status</th></tr>
+          <tr role="row"><th role="columnheader" scope="col">Task</th><th role="columnheader" scope="col">Start by</th><th role="columnheader" scope="col">Due</th><th role="columnheader" scope="col">Spare days</th><th role="columnheader" scope="col">State</th><th role="columnheader" scope="col">Who</th><th role="columnheader" scope="col">Status</th></tr>
         </thead>
         <tbody>
           {s.lines.map((l, n) => {
             const d = l.dates;
             if (l.hidden) {
               return (
-                <tr key={`hidden-${n}`} aria-label={l.label}>
-                  <th scope="row"><HiddenText h={l} owner={nameOf(v, l.owner)} /></th>
-                  <td>{showDay(d.startBy)}</td><td>{showDay(d.due)}</td><td>{d.slackDays === null ? '' : `${d.slackDays} days`}</td><td><Status k={stateKind(d.state)}>{stateText(d.state)}</Status></td><td /><td />
+                <tr role="row" key={`hidden-${n}`} aria-label={l.label}>
+                  <th role="rowheader" scope="row"><HiddenText h={l} owner={nameOf(v, l.owner)} /></th>
+                  <td role="cell" data-label="Start by" className="num">{showDay(d.startBy)}</td><td role="cell" data-label="Due" className="num">{showDay(d.due)}</td><td role="cell" data-label="Spare days" className="num">{spare(d.slackDays)}</td><td role="cell" data-label="State"><Status k={stateKind(d.state)}>{stateText(d.state)}</Status></td><td role="cell" data-label="Who" /><td role="cell" data-label="Status" />
                 </tr>
               );
             }
             const t = l.row;
             const mayMove = t.kind !== 'payment' && (canEdit || t.assigneeId === ctx.userId);
             return (
-              <tr key={t.id} aria-label={`Task ${t.title}`}>
-                <th scope="row">
+              <tr role="row" key={t.id} aria-label={`Task ${t.title}`}>
+                <th role="rowheader" scope="row">
                   {t.title}{l.critical && ' (critical)'}<MineNote mine={l.mine} />
                   {l.after.length > 0 && <small> after {l.after.join(', ')}</small>}
                 </th>
-                <td>{showDay(d.startBy)}</td>
-                <td>{showDay(d.due)}</td>
-                <td>{d.slackDays === null ? '' : `${d.slackDays} days`}</td>
-                <td><Status k={stateKind(d.state)}>{stateText(d.state)}</Status></td>
-                <td>{t.assigneeId ? nameOf(v, t.assigneeId) : ''}</td>
-                <td>
+                <td role="cell" data-label="Start by" className="num">{showDay(d.startBy)}</td>
+                <td role="cell" data-label="Due" className="num">{showDay(d.due)}</td>
+                <td role="cell" data-label="Spare days" className="num">{spare(d.slackDays)}</td>
+                <td role="cell" data-label="State"><Status k={stateKind(d.state)}>{stateText(d.state)}</Status></td>
+                {t.assigneeId ? <td role="cell" data-label="Who">{nameOf(v, t.assigneeId)}</td> : <td role="cell" data-label="Who" className="kw-nobody">{t.status === 'done' ? '' : <Status k="wait">nobody yet</Status>}</td>}
+                <td role="cell" data-label="Status">
                   {mayMove ? (
                     <ActionForm action={bind(setTaskStatus)}>
                       <input type="hidden" name="id" value={t.id} />

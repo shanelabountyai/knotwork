@@ -19,7 +19,7 @@ const SECRET = 'ZEPHYR-7';
 let c: Couple;
 const HOME = 'src/app/o/[org]/page.tsx';
 const dashboard = async () => render(await PAGES['src/app/o/[org]/wedding/dashboard/page.tsx']!(), { org: c.slug });
-const SECTIONS = ['Tasks', 'Vendor flags', 'Headcount', 'Approvals', 'Budget', 'Thank-you notes', 'Contingency plans'];
+const SECTIONS = ['Tasks', 'Re-confirmations', 'Headcount', 'Approvals', 'Budget', 'Thank-you notes', 'Contingency plans'];
 const sections = (html: string) => SECTIONS.filter((s) => html.includes(`<section aria-label="${s}">`));
 
 beforeEach(async () => {
@@ -67,7 +67,7 @@ describe('the figures', () => {
   });
 
   it('the home page links to it prominently', async () => {
-    expect(await render(await PAGES[HOME]!(), { org: c.slug })).toContain(`<a href="/o/${c.slug}/wedding/dashboard"><strong>Progress dashboard</strong></a>`);
+    expect(await render(await PAGES[HOME]!(), { org: c.slug })).toContain(`<a href="/o/${c.slug}/wedding/dashboard"><strong>Progress</strong></a>`);
   });
 });
 
@@ -106,7 +106,7 @@ describe('secrecy and grants', () => {
     await as(c.helper);
     html = await dashboard();
     // Approvals, thank-yous and contingency plans are the partners' alone: no grant reaches them.
-    expect(sections(html)).toEqual(['Tasks', 'Vendor flags', 'Headcount', 'Budget']);
+    expect(sections(html)).toEqual(['Tasks', 'Re-confirmations', 'Headcount', 'Budget']);
     for (const s of ['Great-aunt Odile', 'unthanked', 'Rain plan', 'waiting for you']) expect(html).not.toContain(s);
   });
 });

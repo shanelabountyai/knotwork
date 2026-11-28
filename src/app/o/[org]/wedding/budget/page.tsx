@@ -9,7 +9,7 @@ import { Figs, Keys, Status, TableWrap } from '@/app/ui/kw';
 import { addCategory, addExpense, takeBudgetSnapshot, updateCategory } from '../actions';
 import { HiddenText, MineNote, NoWedding, PrivacySelect, privacyValue, WeddingNav } from '../bits';
 import { setCategoryPrivacy, setExpensePrivacy } from '../privacy/actions';
-import { nameOf, view } from '../view';
+import { nameOf, partnerName, view } from '../view';
 
 export const metadata = { title: 'Budget' };
 
@@ -96,7 +96,7 @@ export default async function Budget({ params }: { params: Promise<{ org: string
             {partner && <PrivacySelect />}
             <button type="submit">Record spend</button>
           </ActionForm>
-          <Keys on={0}>A spend over {usd(v.wedding.spendThresholdCents)} takes both keys: it goes to Approvals first.</Keys>
+          <Keys state="none" partner={partnerName(v, ctx.userId)} />
           </div>
           <div className="card">
           <h2>Snapshots</h2>

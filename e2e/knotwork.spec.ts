@@ -49,7 +49,7 @@ test('the date moves six weeks: preview, propose, and it commits only when the p
   // 24 tasks (20 from the template, 3 payments, the RSVP deadline); 4 are done in the seed (3 template tasks, the paid deposit).
   await expect(summary).toContainText('20 open tasks shift by 42 days');
   await expect(summary).toContainText('0 late after the move');
-  await expect(summary).toContainText('0 impossible after the move');
+  await expect(summary).toContainText("0 that can't fit before the new date");
   await expect(juniper.getByRole('region', { name: 'Move preview' })).toContainText(`From ${show(from)} to ${show(to)}: 42 days later`);
 
   // She proposes it. Nothing has moved.
@@ -76,11 +76,11 @@ test('the date moves six weeks: preview, propose, and it commits only when the p
   await expect(rowan.getByRole('row', { name: 'Task Alterations' })).toContainText(show(addDays(to, -14)));
   await expect(rowan.getByRole('row', { name: 'Task Alterations' })).toContainText('on track');
   await expect(rowan.getByRole('table', { name: 'Schedule' }).locator('tbody tr')).toHaveCount(24); // zero orphans: every task is still on the schedule
-  await expect(rowan.getByRole('region', { name: 'Critical path' })).toContainText('Choose the attire');
+  await expect(rowan.getByRole('region', { name: 'The longest chain' })).toContainText('Choose the attire');
 
   // Both booked vendors now need re-confirmation; the florist, only being considered, does not.
   await rowan.goto(`${ORG}/wedding/flags`);
-  const open = rowan.getByRole('region', { name: 'Open flags' });
+  const open = rowan.getByRole('region', { name: 'Needs re-confirmation' });
   await expect(open.getByRole('listitem')).toHaveCount(2);
   await expect(open).toContainText(`Cedar Hollow Barn: The wedding date moved from ${show(from)} to ${show(to)}`);
   await expect(open).toContainText('Fennel & Fig Catering: The wedding date moved');
@@ -160,12 +160,12 @@ test('a vendor-scope change raises a re-confirmation flag, on the dashboard too,
 
   // Rowan sees it in the flags list and marks the caterer re-confirmed.
   await rowan.goto(`${ORG}/wedding/flags`);
-  const open = rowan.getByRole('region', { name: 'Open flags' });
+  const open = rowan.getByRole('region', { name: 'Needs re-confirmation' });
   await expect(open.getByRole('listitem')).toHaveCount(1);
   await rowan.getByLabel('Note for Fennel & Fig Catering').fill('Sam confirmed 132 plates');
   await rowan.getByRole('button', { name: 'Mark Fennel & Fig Catering re-confirmed' }).click();
   await expect(open).toContainText('No vendor needs re-confirmation.');
-  await expect(rowan.getByRole('region', { name: 'Acknowledged flags' })).toContainText('Sam confirmed 132 plates');
+  await expect(rowan.getByRole('region', { name: 'Re-confirmed', exact: true })).toContainText('Sam confirmed 132 plates');
   await rowan.goto(ORG);
   await expect(rowan.getByRole('list', { name: 'At a glance' })).toContainText('0 vendors need re-confirmation');
 });

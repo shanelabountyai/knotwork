@@ -35,8 +35,8 @@ test.afterAll(async () => {
 
 test('the dashboard: every figure in one place, a private spend counted and never named, a helper\'s grants respected', async ({ browser }) => {
   await juniper.goto(ORG);
-  await juniper.getByRole('link', { name: 'Progress dashboard' }).click();
-  await expect(juniper.getByRole('heading', { name: 'Dashboard', level: 1 })).toBeVisible();
+  await juniper.getByRole('link', { name: 'Progress', exact: true }).first().click();
+  await expect(juniper.getByRole('heading', { name: 'Progress', level: 1 })).toBeVisible();
   const section = (p: Page, name: string) => p.getByRole('region', { name });
   await expect(section(juniper, 'Tasks')).toContainText('% on track');
   await expect(section(juniper, 'Tasks')).toContainText('Nothing is overdue.');
@@ -57,12 +57,12 @@ test('the dashboard: every figure in one place, a private spend counted and neve
   await maple.goto(`${ORG}/wedding/dashboard`);
   await expect(section(maple, 'Tasks')).toBeVisible();
   await expect(section(maple, 'Budget')).toBeVisible();
-  for (const name of ['Headcount', 'Approvals', 'Thank-you notes', 'Contingency plans', 'Vendor flags']) await expect(section(maple, name)).toHaveCount(0);
+  for (const name of ['Headcount', 'Approvals', 'Thank-you notes', 'Contingency plans', 'Re-confirmations']) await expect(section(maple, name)).toHaveCount(0);
 });
 
 test('the seating chart: a chart that cannot work is refused with its reason; a third table fixes it; a move by hand is kept', async () => {
   await juniper.goto(`${ORG}/wedding/guests`);
-  await juniper.getByRole('navigation', { name: 'Guest list' }).getByRole('link', { name: 'Seating' }).click();
+  await juniper.getByRole('navigation', { name: 'Wedding' }).getByRole('link', { name: 'Seating' }).click(); // round 2: Seating is a Guests tab of its own
   await expect(juniper.getByLabel('Seating summary')).toContainText('5 of 5 guests seated at 2 tables (8 seats).');
   await juniper.getByRole('button', { name: 'Also seat guests who have not answered' }).click();
   await expect(juniper.getByLabel('Seating summary')).toContainText('5 of 10 guests seated');

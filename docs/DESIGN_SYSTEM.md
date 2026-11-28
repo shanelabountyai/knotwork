@@ -52,14 +52,30 @@ Each family is a hue; lightness and chroma come from the scheme (`--k-bg-l/c`, `
 
 | Family | Hue | Glyph | Knotwork words |
 |---|---|---|---|
-| `ok` | 150 green | ✓ | on track, approved, attending, done, paid, signed, acknowledged |
-| `late` | 27 red | ▲ | late, impossible, over the estimate, declined (a request), refused |
-| `wait` | 75 amber | ○ | waiting for a key, not answered, needs re-confirmation, due soon |
-| `info` | 245 blue | ● | invited, queued, in progress, coming up |
-| `off` | grey (chroma × 0.15) | ■ | expired, withdrawn, archived, not invited, nobody yet |
+| `ok` | 150 green | ✓ | on track, approved, attending, done, paid, all paid, signed, acknowledged |
+| `late` | 27 red | ▲ | late, can't fit before the day (the engine's `impossible`, D-179), over the estimate, declined (a request), refused, a problem with a "must" seating rule |
+| `wait` | 75 amber | ○ | waiting for a key, not answered, needs re-confirmation, due soon, nobody yet (an open task with no owner), wish not met (a "would like" seating rule) |
+| `info` | 245 blue | ● | invited, queued, in progress, coming up, considering (a vendor), locked (a seat placed by hand) |
+| `off` | grey (chroma × 0.15) | ■ | expired, withdrawn, archived, not invited, declined (a guest's answer: not a failure, round 2), stopped by them |
 | `priv` | 300 violet (chroma × 0.6) | ◇ | private to one partner, until revealed |
 
-`role="alert"` is `late` with ▲; `role="status"` is `ok` with ✓; `role="note"` is a neutral well with ●.
+`role="alert"` is `late` with ▲; `role="status"` is `ok` with ✓; `role="note"` is a neutral well with ●. A guest who
+declines is an answer, not a failure: `off`, never `late` (round 2). An approval result card is `role="status"`, `ok`
+when approved and `off` when declined (D-177).
+
+### Keys (round 2, D-176)
+
+`<Keys state partner? short?>` owns its words; no page passes its own. `partner` is the other partner's name.
+
+| State | Rings | Words | Short (tables) |
+|---|---|---|---|
+| `none` | ○ ○ | No key turned yet. Proposing turns yours; it happens when *partner* turns theirs. | no key turned |
+| `yours` | ● ○ | Your key is turned; *partner*'s is the second. | 1 of 2 keys |
+| `theirs` | ● ○ | *partner*'s key is turned; yours is the second. | 1 of 2 keys |
+| `both` | ● ● | Both keys turned: approved and done in the same step. | both keys |
+| `solo` | ● ◌ (dashed) | Solo: your key alone is enough until a second partner joins, and it is marked solo. | solo |
+
+`<KeysLegend>` is the same four rows on Home and Approvals (none, one, both, solo). Rings are 20 px.
 
 ### Type
 
@@ -75,7 +91,7 @@ page and the guest-facing pages; `--mono` for links shown as text and the vendor
 | `--t-md` | 20 | `h2` (card titles) |
 | `--t-lg` | 25 | figures |
 | `--t-xl` | 31 | `h1` on a phone (36 from 720 px) |
-| `--t-2xl` | 39 | the countdown on the home page |
+| `--t-2xl` | 39 | the countdown on the home page, in `--ink` (round 2; none after the day) |
 
 ### Space, radius, size
 
@@ -91,8 +107,9 @@ Page width `--container` 72rem; guest-facing pages `--narrow` 34rem; the vendor 
   are not the only edge of anything a person must find; controls use `--ln-strong`.
 - Focus: a 3 px `--ac` outline with 2 px offset on `:focus-visible`, never removed.
 - Touch targets 44 px (`--tap`). Checkbox and radio labels are 44 px rows with a 22 px box.
-- Works at 390 px: one column; the top bar's account links and the tab rows scroll inside themselves; a wide table sits
-  in `.table-wrap`, a named focusable region that scrolls sideways.
+- Works at 390 px: one column; the top bar's account links and the tab rows scroll inside themselves (the five top
+  tabs fit); a wide table sits in `.table-wrap`, a named focusable region that scrolls sideways, with its row header
+  pinned on a phone; words in a table never break mid-word (round 2, D-178).
 - Motion: one 140 ms colour transition on buttons; `prefers-reduced-motion` removes it. The wall's slide timer is the
   product's, not decoration.
 - Landmarks: a skip link to `#content`, one `<nav>` for the workspace (top bar), one for the wedding's tabs, one per
@@ -103,11 +120,12 @@ Page width `--container` 72rem; guest-facing pages `--narrow` 34rem; the vendor 
 | Name | File | What it is |
 |---|---|---|
 | Top bar | `o/[org]/layout.tsx` | the mark, "Knotwork", the workspace name, the account links (template settings) |
-| `WeddingNav` | `o/[org]/wedding/bits.tsx` | the wedding's tabs (`nav.kw-tabs`), current tab marked by `NavLink` |
-| `GuestNav`, `GiftNav`, `PhotoNav` | their `nav.tsx` | a section's tabs (`nav.kw-subtabs`) |
+| `WeddingNav`, `weddingTabs` | `o/[org]/wedding/bits.tsx` | the wedding's tab map (round 2, D-173): five top tabs and each one's pages; hides what the viewer cannot open (D-162) |
+| `WeddingTabs` | `ui/nav-link.tsx` | the client half: one `nav.kw-tabs` with the top row and the current tab's pages as a second row; marks the current section `aria-current="true"` and the current page `"page"` |
+| `GuestNav`, `GiftNav`, `PhotoNav` | their `nav.tsx` | a section's own tabs inside one page group (`nav.kw-subtabs`): the guest list's, the registry's, a photo event's |
 | `NavLink` | `ui/nav-link.tsx` | a link that sets `aria-current="page"` on its own route |
 | `Status` | `ui/kw.tsx` | the pill: `<Status k="late">late</Status>` |
-| `Keys` | `ui/kw.tsx` | the two-key state: rings plus words ("1 of 2 keys", "both keys", "solo") |
+| `Keys`, `KeysLegend` | `ui/kw.tsx` | the two-key state: rings plus its own fixed words (see Keys above) |
 | `Figs` | `ui/kw.tsx` | a row of figures, each a number with its rule |
 | `TableWrap` | `ui/kw.tsx` | a table that scrolls sideways inside a named, focusable region |
 | `GuestHead` | `ui/kw.tsx` | the guest-facing header: the mark and the couple's name (`h1.display`) |

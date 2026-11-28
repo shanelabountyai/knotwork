@@ -8,6 +8,7 @@ import { CHANNEL_TEXT, CHANNELS, channelOf } from '@/lib/knotwork/guests/deliver
 import { entitlement } from '@/lib/knotwork/guests/plus-one';
 import { ACCESSIBILITY, DIETARY, TAG_LABEL } from '@/lib/knotwork/guests/projection';
 import { loadPlan, toIn } from '@/lib/knotwork/guests/store';
+import { rsvpKind, Status } from '@/app/ui/kw';
 import { NoWedding, WeddingNav } from '../../bits';
 import { view } from '../../view';
 import { addGuest, markSaveTheDate, newRsvpLink, proposeGuestRemoval, recordRsvp, setReminderChannel, showRsvpLink, updateGuest, updateHousehold } from '../actions';
@@ -69,7 +70,7 @@ export default async function HouseholdPage({ params }: { params: Promise<{ org:
       {people.map((g) => (
         <article key={g.id} aria-label={`Guest ${g.name}`}>
           <h3>{g.name}{g.isPlusOne && ' (their guest)'}</h3>
-          <p>{g.ageGroup} · {PARTNER[g.partnerStatus]}{g.inWeddingParty && ' · wedding party'} · <strong>{g.rsvp === 'pending' ? 'has not answered' : g.rsvp}</strong>{g.meal && ` · ${g.meal}`}{g.dietary.length > 0 && ` · ${g.dietary.map((d) => TAG_LABEL[d]).join(', ')}`}{g.accessibility.length > 0 && ` · ${g.accessibility.map((d) => TAG_LABEL[d]).join(', ')}`}{g.songRequest && ` · song: ${g.songRequest}`}</p>
+          <p>{g.ageGroup} · {PARTNER[g.partnerStatus]}{g.inWeddingParty && ' · wedding party'} · <Status k={rsvpKind(g.rsvp)}>{g.rsvp === 'pending' ? 'has not answered' : g.rsvp}</Status>{g.meal && ` · ${g.meal}`}{g.dietary.length > 0 && ` · ${g.dietary.map((d) => TAG_LABEL[d]).join(', ')}`}{g.accessibility.length > 0 && ` · ${g.accessibility.map((d) => TAG_LABEL[d]).join(', ')}`}{g.songRequest && ` · song: ${g.songRequest}`}</p>
           {canEdit && h.state === 'invited' && (
             <ActionForm action={bind(recordRsvp)}>
               <input type="hidden" name="id" value={g.id} />

@@ -9,7 +9,7 @@ import { hasPending } from '@/lib/knotwork/consent/store';
 import { lifeModeOpen } from '@/lib/knotwork/context';
 import { lifeDashboard, waitingFor } from '@/lib/knotwork/lifeadmin/store';
 import { documentsView, overviewView } from '@/lib/knotwork/secrecy/views';
-import { Keys, Status } from '@/app/ui/kw';
+import { Keys, KeysLegend, Status } from '@/app/ui/kw';
 import { usd } from '@/lib/knotwork/money';
 import { createWedding } from './wedding/actions';
 import { proposeMode } from './wedding/life/actions';
@@ -17,7 +17,7 @@ import { LifeHome } from './wedding/life/home';
 import { designatedSentence, WeddingNav } from './wedding/bits';
 import { view } from './wedding/view';
 
-export const metadata = { title: 'Overview' };
+export const metadata = { title: 'Home' };
 
 // The workspace home. No wedding yet: the form that creates one. Otherwise the four counts a couple checks first
 // (PRD P0-2: "unacknowledged flags surface on the dashboard"), and the link to the fuller P1-7 dashboard. Tasks and flags
@@ -66,6 +66,8 @@ export default async function OrgHome({ params }: { params: Promise<{ org: strin
   const { waiting, flags, late, impossible } = o!;
   const daysToGo = diffDays(v.date, v.today);
   const partner = isPartner(ctx.role);
+  const otherId = v.partners.find((id) => id !== ctx.userId);
+  const otherName = otherId ? (v.people.get(otherId) ?? 'your partner') : 'your partner';
   return (
     <main>
       <WeddingNav who={v.who} slug={ctx.slug} counts={{ approvals: partner ? waiting : 0, flags: flags.length }} />
@@ -73,18 +75,20 @@ export default async function OrgHome({ params }: { params: Promise<{ org: strin
         <div>
           <span className="kw-eyebrow">Your wedding</span>
           <h1 className="display">{v.wedding.title}</h1>
+          {/* Round 2 (D-174): the countdown is the hero, in --t-2xl. After the day there is no countdown (DUX-1). */}
+          {daysToGo >= 0 && <p className="kw-countdown">{daysToGo === 0 ? 'Today is the day' : daysToGo === 1 ? '1 day to go' : `${daysToGo} days to go`}</p>}
           <p aria-label="Wedding date" className="kw-when">
-            <strong>{showDay(v.date)}</strong> · {daysToGo >= 0 ? `${daysToGo} days to go` : `${-daysToGo} days ago`}
+            <strong>{showDay(v.date)}</strong>{daysToGo < 0 && <> · {-daysToGo === 1 ? '1 day ago' : `${-daysToGo} days ago`}</>}
             {partner && <> · <Link href={`/o/${ctx.slug}/wedding/date`}>Move the date</Link></>}
           </p>
         </div>
       </header>
-      <p><Link href={`/o/${ctx.slug}/wedding/dashboard`}><strong>Progress dashboard</strong></Link>: every figure you can see, in one place.</p>
+      <p><Link href={`/o/${ctx.slug}/wedding/dashboard`}><strong>Progress</strong></Link>: every figure you can see, in one place.</p>
       <div className="kw-split">
         <div className="kw-col">
           <ul aria-label="At a glance" className="kw-tiles">
-            <li><Link href={`/o/${ctx.slug}/wedding/schedule`}>{o!.open} open tasks</Link>: {late} late, {impossible} impossible{(late > 0 || impossible > 0) && <span className="kw-row">{late > 0 && <Status k="late">late</Status>}{impossible > 0 && <Status k="late">impossible</Status>}</span>}</li>
-            {partner && <li><Link href={`/o/${ctx.slug}/wedding/approvals`}>{waiting} waiting for your approval</Link>{waiting > 0 && <><br /><Keys on={1}>needs your key</Keys></>}</li>}
+            <li><Link href={`/o/${ctx.slug}/wedding/schedule`}>{o!.open} open tasks</Link>: {late} late, {impossible} that can&apos;t fit before the day{(late > 0 || impossible > 0) && <span className="kw-row">{late > 0 && <Status k="late">late</Status>}{impossible > 0 && <Status k="late">can&apos;t fit before the day</Status>}</span>}</li>
+            {partner && <li><Link href={`/o/${ctx.slug}/wedding/approvals`}>{waiting} waiting for your approval</Link>{waiting > 0 && <><br /><Keys state="theirs" partner={otherName} short /></>}</li>}
             {allows(v.who, 'vendors.view') && <li><Link href={`/o/${ctx.slug}/wedding/flags`}>{flags.length} vendors need re-confirmation</Link>{flags.length > 0 && <span className="kw-row"><Status k="wait">needs re-confirmation</Status></span>}</li>}
             {guests && guests.rows.length > 0 && <li><Link href={`/o/${ctx.slug}/wedding/guests`}>{guests.count.attending} guests attending</Link>, {guests.count.pending} not answered; {guests.cap.held} of {guests.plan.cap} seats held</li>}
             {o!.marginDays !== null && <li>{o!.marginDays >= 0 ? `${o!.marginDays} days of margin on the longest chain of tasks` : `${-o!.marginDays} days short on the longest chain of tasks`}{o!.marginDays < 0 && <span className="kw-row"><Status k="late">short</Status></span>}</li>}
@@ -105,11 +109,7 @@ export default async function OrgHome({ params }: { params: Promise<{ org: strin
             <div className="card">
               <h2>How the two keys work</h2>
               <p>{designatedSentence(usd(v.wedding.spendThresholdCents))}</p>
-              <ul className="kw-plain kw-rows">
-                <li><Keys on={1}>One key: proposed. Nothing has changed yet.</Keys></li>
-                <li><Keys on={2}>Both keys: approved and done in the same step.</Keys></li>
-                {v.partners.length < 2 && !v.wedding.pairedAt && <li><Keys on={1} solo>Solo: until your partner joins, yours is enough, and it is marked solo.</Keys></li>}
-              </ul>
+              <KeysLegend />
               <p><Link href={`/o/${ctx.slug}/wedding/approvals`}>Open approvals</Link></p>
             </div>
           )}

@@ -71,12 +71,12 @@ export default async function Insurance({ params, searchParams }: { params: Prom
           </ul>
         )}
 
-        <h3>What the move would leave late or impossible</h3>
+        <h3>What the move would leave late or unable to fit before the new date</h3>
         {!move ? <p>Pick a new date on the <Link href={`/o/${ctx.slug}/wedding/date`}>date move page</Link> and follow its link here to see this.</p> : (
           <>
             {move.late.length === 0 && move.impossible.length === 0 && <p>Nothing: every task still fits.</p>}
             {move.late.length > 0 && <ul aria-label="Late after the move">{move.late.map((t, i) => <li key={i}>{t.title}: due {showDay(t.due)}{t.isNew ? ' (new)' : ''}</li>)}</ul>}
-            {move.impossible.length > 0 && <ul aria-label="Impossible after the move">{move.impossible.map((t, i) => <li key={i}>{t.title}: cannot be finished by {showDay(t.due)}{t.isNew ? ' (new)' : ''}</li>)}</ul>}
+            {move.impossible.length > 0 && <ul aria-label="Can't fit before the new date">{move.impossible.map((t, i) => <li key={i}>{t.title}: cannot be finished by {showDay(t.due)}{t.isNew ? ' (new)' : ''}</li>)}</ul>}
           </>
         )}
       </section>

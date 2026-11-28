@@ -29,6 +29,7 @@ test.beforeAll(async ({ browser }) => {
 
 test('the couple sees the event, its QR code and its link; both of its days come from the wedding date', async () => {
   await juniper.goto(`${ORG}/wedding/schedule`);
+  await juniper.getByRole('navigation', { name: 'Wedding' }).getByRole('link', { name: 'Guests', exact: true }).click(); // round 2: Photos is under Guests
   await juniper.getByRole('navigation', { name: 'Wedding' }).getByRole('link', { name: 'Photos', exact: true }).click();
   const row = juniper.getByRole('row', { name: 'Photo event Reception' });
   await expect(row).toContainText('approve first');
