@@ -6,20 +6,18 @@ import { expireDue } from '@/lib/knotwork/consent/store';
 import { usd } from '@/lib/knotwork/money';
 import { movePreview } from '@/lib/knotwork/secrecy/views';
 import { approveRequest, declineRequest, proposeSettings, withdrawRequest } from '../actions';
-import { now } from '@/core/clock';
 import { Keys, KeysLegend, requestKind, Status, TableWrap } from '@/app/ui/kw';
 import { designatedSentence, MovePreviewView, NoWedding, WeddingNav } from '../bits';
 import { nameOf, partnerName, view } from '../view';
 
 export const metadata = { title: 'Approvals' };
 const when = (d: Date) => `${d.toISOString().slice(0, 16).replace('T', ' ')} UTC`;
-/** How long the result of your own approval or decline stays in place of its card. */
-const RESULT_MS = 10 * 60 * 1000;
 
 // PRD P0-2: the two-key requests. A request shows here until the OTHER partner approves or declines it, its
 // proposer withdraws it, or it expires. Approving runs the action in the same transaction.
-export default async function Approvals({ params }: { params: Promise<{ org: string }> }) {
+export default async function Approvals({ params, searchParams }: { params: Promise<{ org: string }>; searchParams: Promise<{ done?: string }> }) {
   const ctx = await requireOrg((await params).org);
+  const done = (await searchParams).done;
   const data = await view(ctx, 'consent.view', async (tx, v) => {
     await expireDue(tx, ctx); // overdue requests become expired before anything is listed
     const requests = await tx.consentRequest.findMany({ where: inOrg(ctx), orderBy: { proposedAt: 'desc' }, take: 100 });
@@ -40,12 +38,9 @@ export default async function Approvals({ params }: { params: Promise<{ org: str
   const w = v.wedding;
   // The other partner, by name, for the keys' words and the section heading (none yet: "your partner").
   const partner = partnerName(v, ctx.userId);
-  // Round 2 (D-177): after you approve or decline, the card becomes the result. The action still redirects here as it
-  // always did; the page shows the request you decided in the last few minutes, in place of its card.
-  const t = now().getTime();
-  const justDecided = decided
-    .filter((r) => r.deciderId === ctx.userId && (r.status === 'approved' || r.status === 'declined') && r.decidedAt && t - r.decidedAt.getTime() < RESULT_MS)
-    .sort((a, b) => b.decidedAt!.getTime() - a.decidedAt!.getTime())[0];
+  // Round 2 (D-177, D-184): after you approve or decline, the card becomes the result. The action redirects here with
+  // `?done=<id>`; the result shows only for that request, and only if you are the one who decided it.
+  const justDecided = done ? decided.find((r) => r.id === done && r.deciderId === ctx.userId && (r.status === 'approved' || r.status === 'declined')) : undefined;
 
   return (
     <main>

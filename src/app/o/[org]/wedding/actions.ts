@@ -436,7 +436,7 @@ export const approveRequest = orgAction(null, z.object({ id: ref('consentRequest
     return decide(tx, ctx, i.id, 'approve', { fingerprint: i.fingerprint || undefined });
   });
   if (!d.ok) throw new Refused(d.message);
-  redirect(home(ctx, '/approvals'));
+  redirect(home(ctx, `/approvals?done=${i.id}`)); // round 2 (D-184): the page shows this request's result in place of its card
 });
 
 export const declineRequest = orgAction(null, z.object({ id: ref('consentRequest'), reason: note(500) }), async (ctx, i) => {
@@ -445,7 +445,7 @@ export const declineRequest = orgAction(null, z.object({ id: ref('consentRequest
     return decide(tx, ctx, i.id, 'decline', { reason: i.reason });
   });
   if (!d.ok) throw new Refused(d.message);
-  redirect(home(ctx, '/approvals'));
+  redirect(home(ctx, `/approvals?done=${i.id}`)); // round 2 (D-184): the page shows this request's result in place of its card
 });
 
 export const withdrawRequest = orgAction(null, z.object({ id: ref('consentRequest') }), async (ctx, i) => {
