@@ -107,6 +107,9 @@ model Wedding {
   modeRequest         ConsentRequest? @relation("weddingMode", fields: [modeRequestId], references: [id], onDelete: NoAction)
   /// A date of fact: when the mode last changed (null while it never has). Never a deadline.
   modeChangedAt       DateTime?       @db.Timestamptz(6)
+  /// D-170: every request the date, the approval rules and the mode have ever been changed with. Kept by the database
+  /// (trigger Wedding_request_once), never written by the app: a change naming one of these again is refused.
+  usedRequestIds      String[]        @db.Uuid
   createdById         String?         @db.Uuid
   createdAt           DateTime        @default(now()) @db.Timestamptz(6)
   updatedAt           DateTime        @updatedAt @db.Timestamptz(6)

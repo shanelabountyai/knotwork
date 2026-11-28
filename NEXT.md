@@ -1,5 +1,24 @@
 # NEXT
 
+## ▶ 2026-11-28 (latest): PR #6 merged; the old-request guard fixed (branch `fix/guard-used-request`, draft PR, not merged, not deployed)
+Unattended run on Shane's instruction in chat (2026-11-27): "merge #6 now, then fix should-fix #2 only". No questions asked.
+
+- **PR #6 merged** (merge commit `6b6838a`, pinned to head `5641a1a`, whose three checks were green). `phase-5` kept (PR #7
+  is based on it). Main's CI on `6b6838a`: `ci (off)`, `modules-removed`, `oracles` all success.
+- **The fix (D-170, D-171):** the date, approval-rules and mode guards refused only the PREVIOUS request, so a direct
+  UPDATE could reuse an older executed one (mode A → B → A). New migration `20261128000002_knotwork_guard_used_request`:
+  `Wedding.usedRequestIds` (kept only by the trigger `Wedding_request_once`) lists every request those fields were changed
+  with; a change naming one again is refused, the list cannot be written by anyone, and existing weddings are backfilled
+  with every approved request of the three kinds. 3/3 guards. App code unchanged.
+- **Tests:** `tests/knotwork/guard-used-request.test.ts` (8: date, NULL-then-reuse, settings, mode with reversal and a
+  fresh request, solo mode, the list cannot be written, a re-created wedding, the backfill on existing data); 7 of the 8
+  fail with the trigger disabled. `structure.test.ts` +1. Nothing deleted, skipped or weakened.
+- **Independent review:** approve, no must-fix. Its should-fixes: the D-row (added) and an honest scope; its other
+  findings are recorded, not changed (D-172: raw-SQL forged approval, a pending request can be burned, the vendor and
+  expense guards' similar gaps, no wedding DELETE guard, no payload check on date and rules).
+- **Gate here:** see the PR body (lint, typecheck, build, vitest, fixtures, pytest, Playwright).
+- **You:** review and merge the draft PR (it adds a migration, so the merge loop will not). Then decide on D-172's list.
+
 ## ▶ 2026-11-26 (latest): independent pre-merge review of PR #6, three must-fixes fixed (D-153; not merged, not deployed)
 Unattended run (Thanksgiving; no questions asked). Two review passes: one by this session, one by four fresh agents
 given only the diff, the PR text and the PRD's future-considerations section. Verdict: **merge after must-fixes**. The

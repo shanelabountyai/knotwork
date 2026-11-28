@@ -166,6 +166,13 @@ describe('rule 2: designated actions only through the consent module', () => {
     expect(sql).toContain(`PERFORM knotwork_require_approved(NEW."modeRequestId", NEW."orgId", 'set_mode', 'changing the mode');`);
     expect(sql).toContain('ADD CONSTRAINT "Wedding_mode_check"');
   });
+  it('a request changes the date, the rules or the mode once (D-170): the database keeps the list, nothing in src writes it', () => {
+    expect(filesWith(/usedRequestIds/)).toEqual([]);
+    const sql = read('prisma/migrations/20261128000002_knotwork_guard_used_request/migration.sql');
+    expect(sql).toContain('CREATE TRIGGER "Wedding_request_once" BEFORE INSERT OR UPDATE ON "Wedding"');
+    for (const col of ['dateRequestId', 'settingsRequestId', 'modeRequestId']) expect(sql).toContain(`IF NEW."${col}" = ANY(used) THEN`);
+    expect(sql).toContain('the list of used requests is kept by the database');
+  });
   it('the archive (D-144): every write to the plan asks need() or allows() for one of the archived capabilities', () => {
     const access = read('src/lib/knotwork/access.ts');
     expect(access).toMatch(/export const ARCHIVED_CAPS: readonly Capability\[\] = \['schedule\.edit', 'budget\.edit', 'vendors\.edit', 'guests\.edit', 'contingency\.edit'\];/);
