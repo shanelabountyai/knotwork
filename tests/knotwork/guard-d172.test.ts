@@ -102,6 +102,10 @@ describe('finding 3 (D-191): a request books a vendor, or signs its contract, on
     await expect(sql(`UPDATE "Vendor" SET "contractRequestId" = NULL WHERE id = '${vendorId}'`)).resolves.toBe(1);
     await expect(sql(`UPDATE "Vendor" SET "contractSignedOn" = '2026-01-01', "contractRequestId" = '${a}' WHERE id = '${vendorId}'`)).rejects.toThrow(USED);
     expect((await vendor()).contractSignedOn).toBeNull();
+    // D-198: a contract is signed for the total its request approved, and no other.
+    const raw = await forged('sign_contract', { vendorId, totalCents: 100 });
+    await expect(sql(`UPDATE "Vendor" SET "contractSignedOn" = '2026-01-01', "contractTotalCents" = 99999999, "contractRequestId" = '${raw}' WHERE id = '${vendorId}'`)).rejects.toThrow(/that request approved a different contract total/);
+    expect(await vendor()).toMatchObject({ contractSignedOn: null, usedRequestIds: [a] });
     const b = await sign('9,000.00');
     expect(await vendor()).toMatchObject({ contractRequestId: b, contractTotalCents: 900_000, usedRequestIds: [a, b] });
     expect(dayOfDb((await vendor()).contractSignedOn!)).toBe(today());
@@ -308,6 +312,14 @@ describe('finding 4 (D-195): a wedding is never deleted on its own', () => {
     expect(await db.wedding.count({ where: { orgId: c.orgId } })).toBe(1);
   });
 
+  it('nor moved to another workspace to make room for a new one (review, D-198)', async () => {
+    const spare = await makeOrg('spare');
+    await expect(sql(`UPDATE "Wedding" SET "orgId" = '${spare.id}' WHERE "orgId" = '${c.orgId}'`)).rejects.toThrow(/a wedding stays in its workspace/);
+    await expect(sql(`INSERT INTO "Wedding" (id, "orgId", title, date, "spendThresholdCents", "updatedAt") VALUES (gen_random_uuid(), '${c.orgId}', 'x', '2031-01-01', 2147483647, now())`)).rejects.toThrow(/Wedding_orgId_key/);
+    expect(await wedding()).toMatchObject({ spendThresholdCents: 50_000 });
+    expect(dayOfDb((await wedding()).date)).toBe(date);
+  });
+
   it('deleting the workspace (the export-and-delete page) still takes the wedding, a booked vendor and an approved expense with it', async () => {
     await book();
     await sign();
@@ -340,11 +352,13 @@ describe('finding 1 (D-190), partly: the decider of an approval is a partner of 
     expect(await vendor()).toMatchObject({ status: 'booked', bookedRequestId: r.id });
   });
 
-  it('NOT closed, recorded in D-190: raw SQL naming the real other partner still passes (the database cannot know who is asking)', async () => {
+  it('NOT closed, recorded in D-190: raw SQL naming the real other partner still passes (the database cannot know who is asking), and the proposer is not checked at all', async () => {
     await as(c.a);
     await ok(proposeBooking(c.slug, { id: vendorId }));
     const r = await pending('book_vendor');
     await expect(approveAs(r.id, c.b)).resolves.toBe(1);
+    // One partner alone: a request "proposed" by a made-up id, approved under their own name (review, D-198).
+    await expect(forged('sign_contract', { vendorId, totalCents: 1 }, c.orgId, '00000000-0000-4000-8000-000000000002', c.a)).resolves.toEqual(expect.any(String));
   });
 });
 

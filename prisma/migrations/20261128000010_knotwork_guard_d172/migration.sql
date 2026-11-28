@@ -34,7 +34,8 @@ UPDATE "Vendor" v SET "usedRequestIds" = ARRAY(
 -- doing it again with the same request passed. Now, every time "Vendor_guard" asks for a request, that request must
 -- not be on the vendor's list, and it is added. The list is the database's own. A vendor is born with the approved
 -- requests that name its id already on it (normally none), and takes them on if its id or workspace is changed, so
--- deleting and re-creating the row does not make an old request new again.
+-- deleting and re-creating the row does not make an old request new again. And (finding 5's kind, D-198) a contract
+-- is signed for the total its request approved, as the date and the rules now are.
 CREATE FUNCTION knotwork_vendor_request_once() RETURNS trigger LANGUAGE plpgsql AS $$
 DECLARE
   used uuid[];
@@ -66,6 +67,9 @@ BEGIN
      AND (TG_OP = 'INSERT' OR OLD."contractSignedOn" IS NULL OR NEW."contractSignedOn" <> OLD."contractSignedOn" OR NEW."contractRequestId" IS DISTINCT FROM OLD."contractRequestId") THEN
     IF NEW."contractRequestId" = ANY(used) THEN
       RAISE EXCEPTION 'knotwork two-key: that request has already been used; signing a contract needs an approved request never used before' USING ERRCODE = 'check_violation';
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM "ConsentRequest" r WHERE r."id" = NEW."contractRequestId" AND r."payload"->'totalCents' = to_jsonb(NEW."contractTotalCents")) THEN
+      RAISE EXCEPTION 'knotwork two-key: that request approved a different contract total' USING ERRCODE = 'check_violation';
     END IF;
     used := used || NEW."contractRequestId";
   END IF;
@@ -109,7 +113,8 @@ CREATE TRIGGER "Expense_request_once" BEFORE INSERT OR DELETE ON "Expense" FOR E
 -- request's three. (2) A request's id could be written to dateRequestId or settingsRequestId without the date or the
 -- rules changing; it went on the used list, and its later approval was refused. Now either column takes a new request
 -- only together with the change that request approved (it may still be cleared, as before: the list keeps the id),
--- and a wedding is born naming none.
+-- and a wedding is born naming none. (4, with "Wedding_delete_guard" below) A wedding never moves to another
+-- workspace: moving it away and inserting a new one was the same as deleting it.
 CREATE FUNCTION knotwork_wedding_request_payload() RETURNS trigger LANGUAGE plpgsql AS $$
 BEGIN
   IF TG_OP = 'INSERT' THEN
@@ -117,6 +122,9 @@ BEGIN
       RAISE EXCEPTION 'knotwork two-key: a wedding starts with no request; a request is named only by the change it approved' USING ERRCODE = 'check_violation';
     END IF;
     RETURN NEW;
+  END IF;
+  IF NEW."orgId" <> OLD."orgId" THEN
+    RAISE EXCEPTION 'knotwork two-key: a wedding stays in its workspace' USING ERRCODE = 'check_violation';
   END IF;
   IF NEW."date" <> OLD."date" THEN
     IF NOT EXISTS (SELECT 1 FROM "ConsentRequest" r WHERE r."id" = NEW."dateRequestId" AND r."payload"->>'to' = to_char(NEW."date", 'YYYY-MM-DD')) THEN

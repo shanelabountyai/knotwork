@@ -1,5 +1,32 @@
 # NEXT
 
+## ▶ 2026-11-28 (latest): the D-172 guard findings (branch `fix/d172-guards`, draft PR, not merged, not deployed)
+Unattended run; Shane approved it in chat (2026-11-28 00:33 CT). No questions asked. Cut from `main` at `bba4823`. PR #7,
+`design/impl` and any `design/*` branch were not touched. Decisions D-190 to D-198 (numbered above tonight's other runs).
+
+- **One new migration, `20261128000010_knotwork_guard_d172`** (no applied migration edited, no old function replaced;
+  five new triggers, each named to fire after the guard it completes, D-196). App code unchanged (one comment in
+  `execute.ts`). One schema line: `Vendor.usedRequestIds`.
+- **Findings: 4 of 5 closed, 1 partly.**
+  1. Forged approval: **partly** (D-190). The decider of an approval must be a partner of the workspace
+     (`ConsentRequest_partner_guard`). Raw SQL naming the real other partner still passes: the database has no identity
+     it can trust. Not closable in the database layer as it is hosted now.
+  2. Burning a pending request: **closed** (D-193, D-192). A request is named on the wedding only in the statement that
+     changes the date or the rules, never at birth; any expense naming a request needs it approved, for that amount, unspent.
+  3. Vendor and expense reuse: **closed** (D-191, D-192). `Vendor.usedRequestIds` kept by `Vendor_request_once`
+     (backfilled); an expense that names a request is never deleted while its workspace exists (`Expense_request_once`).
+  4. Wedding DELETE: **closed** (D-195). `Wedding_delete_guard`; the workspace's own deletion still takes it (tested
+     through `destroyOrg`). A wedding also cannot change workspace (the review's must-fix, D-198).
+  5. Payload: **closed** (D-194). The new date is the request's `to`; the three rules are the request's three; and a
+     contract is signed for the total its request approved (D-198).
+- **Tests:** `tests/knotwork/guard-d172.test.ts`; `structure.test.ts` +1. With its trigger off, every attack test fails
+  (16 of 21, D-197). Nothing deleted, skipped or weakened.
+- **Independent review (D-198):** 2 must-fix, both fixed (the `orgId` route around the DELETE guard; the docs were not
+  yet committed); 2 should-fix (contract total: fixed; the unchecked proposer: recorded under finding 1); 2 nits fixed.
+- **Gate and CI:** in the PR body, per check.
+- **You:** review and merge the draft PR (it adds a migration, so the merge loop will not). Decide whether finding 1's
+  open half matters before any real couple uses this: closing it needs a database role per person (hosting), not a trigger.
+
 ## ▶ 2026-11-28 (latest): PR #6 merged; the old-request guard fixed (branch `fix/guard-used-request`, draft PR, not merged, not deployed)
 Unattended run on Shane's instruction in chat (2026-11-27): "merge #6 now, then fix should-fix #2 only". No questions asked.
 
